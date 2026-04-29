@@ -1,0 +1,31 @@
+# Environment
+.env
+
+# Java / Maven
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Logs
+*.log
+logs/
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+.project
+.classpath
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Angular futuro
+node_modules/
+dist/
+.angular/
+coverage/
