@@ -2,6 +2,7 @@ package br.com.financeiro.api.conta.service;
 
 import br.com.financeiro.api.common.exception.BusinessException;
 import br.com.financeiro.api.common.exception.ResourceNotFoundException;
+import br.com.financeiro.api.common.util.NormalizadorTexto;
 import br.com.financeiro.api.conta.dto.ContaResponse;
 import br.com.financeiro.api.conta.dto.CriarContaRequest;
 import br.com.financeiro.api.conta.entity.Conta;
@@ -27,11 +28,12 @@ public class ContaService {
     public ContaResponse criar(CriarContaRequest request) {
         Usuario usuario = buscarUsuario(request.usuarioId());
 
-        String nomeNormalizado = normalizarNome(request.nome());
+        String nomeNormalizado = NormalizadorTexto.normalizarNome(request.nome());
+        String nomeParaComparacao = NormalizadorTexto.normalizarParaComparacao(request.nome());
 
         validarDuplicidade(
                 request.usuarioId(),
-                nomeNormalizado
+                nomeParaComparacao
         );
 
         Conta conta = contaMapper.paraEntity(request);
