@@ -8,8 +8,6 @@ import br.com.financeiro.api.categoria.enums.TipoCategoria;
 import br.com.financeiro.api.categoria.mapper.CategoriaMapper;
 import br.com.financeiro.api.categoria.repository.CategoriaRepository;
 import br.com.financeiro.api.common.exception.BusinessException;
-import br.com.financeiro.api.common.exception.BusinessException;
-import br.com.financeiro.api.common.exception.ResourceNotFoundException;
 import br.com.financeiro.api.common.exception.ResourceNotFoundException;
 import br.com.financeiro.api.usuario.entity.Usuario;
 import br.com.financeiro.api.usuario.repository.UsuarioRepository;
@@ -52,7 +50,7 @@ public class CategoriaService {
         Categoria categoria = categoriaMapper.paraEntity(request);
         categoria.setUsuario(usuario);
         categoria.setCategoriaPai(categoriaPai);
-        categoria.setNome(nomeNormalizado);
+        categoria.setNome(nomeNormalizado.toUpperCase());
         categoria.setAtiva(true);
 
         Categoria categoriaSalva = categoriaRepository.save(categoria);
