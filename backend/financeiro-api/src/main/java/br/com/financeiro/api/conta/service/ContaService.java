@@ -3,6 +3,7 @@ package br.com.financeiro.api.conta.service;
 import br.com.financeiro.api.common.exception.BusinessException;
 import br.com.financeiro.api.common.exception.ResourceNotFoundException;
 import br.com.financeiro.api.common.util.NormalizadorTexto;
+import br.com.financeiro.api.conta.dto.AtualizarContaRequest;
 import br.com.financeiro.api.conta.dto.ContaResponse;
 import br.com.financeiro.api.conta.dto.CriarContaRequest;
 import br.com.financeiro.api.conta.entity.Conta;
@@ -36,7 +37,8 @@ public class ContaService {
 
         validarDuplicidade(
                 request.usuarioId(),
-                nomeParaComparacao
+                nomeParaComparacao,
+                null
         );
 
         Conta conta = contaMapper.paraEntity(request);
@@ -55,8 +57,8 @@ public class ContaService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
     }
 
-    private void validarDuplicidade(UUID usuarioId, String nome) {
-        boolean duplicada = contaRepository.existeContaDuplicada(usuarioId, nome);
+    private void validarDuplicidade(UUID usuarioId, String nome, UUID contaIdIgnorada) {
+        boolean duplicada = contaRepository.existeContaDuplicada(usuarioId, nome, contaIdIgnorada);
 
         if (duplicada) {
             throw new BusinessException("Já existe uma conta com esse nome para este usuário.");
@@ -82,5 +84,22 @@ public class ContaService {
     private Conta buscarContaDoUsuaurio(UUID contaId, UUID usuarioId) {
         return contaRepository.buscarPorIdEUsuarioId(contaId, usuarioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Conta não encontrada."));
+    }
+
+    @Transactional
+    public ContaResponse atualizar(UUID id, AtualizarContaRequest request) {
+        Conta conta = buscarContaDoUsuaurio(id, request.usuarioId());
+
+        String nomeNormalizado = NormalizadorTexto.normalizarNome(request.nome());
+        String nomeParaComparacao = NormalizadorTexto.normalizarParaComparacao(request.nome());
+
+        validarDuplicidade(request.usuarioId(), nomeParaComparacao, id);
+
+        conta.setNome(nomeNormalizado.toUpperCase());
+        conta.setTipo(request.tipo());
+        conta.setAtiva(request.ativa());
+
+        return contaMapper.paraResponse(conta);
+
     }
 }

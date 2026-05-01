@@ -48,4 +48,17 @@ public interface ContaRepository extends JpaRepository<Conta, UUID> {
             @Param("id") UUID id,
             @Param("usuarioId") UUID usuarioId
     );
+
+    @Query("""
+            SELECT CASE WHEN COUNT(c) > 0 THEN TRUE ELSE FALSE END
+            FROM Conta c
+            WHERE c.usuario.id = :usuarioId
+              AND LOWER(c.nome) = LOWER(:nome)
+              AND (:contaIdIgnorada IS NULL OR c.id <> :contaIdIgnorada)
+            """)
+    boolean existeContaDuplicada(
+            @Param("usuarioId") UUID usuarioId,
+            @Param("nome") String nome,
+            @Param("contaIdIgnorada") UUID contaIdIgnorada
+    );
 }

@@ -1,6 +1,7 @@
 package br.com.financeiro.api.conta.controller;
 
 import br.com.financeiro.api.categoria.service.CategoriaService;
+import br.com.financeiro.api.conta.dto.AtualizarContaRequest;
 import br.com.financeiro.api.conta.dto.ContaResponse;
 import br.com.financeiro.api.conta.dto.CriarContaRequest;
 import br.com.financeiro.api.conta.enums.TipoConta;
@@ -62,6 +63,15 @@ public class ContaController {
             @RequestParam UUID usuarioId
     ) {
         ContaResponse response = contaService.buscarPorId(id, usuarioId);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ContaResponse> atualizar(
+            @PathVariable UUID id,
+            @Valid @RequestBody AtualizarContaRequest request
+    ) {
+        ContaResponse response = contaService.atualizar(id, request);
         return ResponseEntity.ok(response);
     }
 }
