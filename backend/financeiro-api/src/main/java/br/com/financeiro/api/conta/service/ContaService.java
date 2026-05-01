@@ -73,5 +73,14 @@ public class ContaService {
                 .map(contaMapper::paraResponse);
     }
 
+    @Transactional(readOnly = true)
+    public ContaResponse buscarPorId(UUID id, UUID usuarioId) {
+        Conta conta = buscarContaDoUsuaurio(id, usuarioId);
+        return contaMapper.paraResponse(conta);
+    }
 
+    private Conta buscarContaDoUsuaurio(UUID contaId, UUID usuarioId) {
+        return contaRepository.buscarPorIdEUsuarioId(contaId, usuarioId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conta não encontrada."));
+    }
 }

@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ContaRepository extends JpaRepository<Conta, UUID> {
@@ -35,5 +36,16 @@ public interface ContaRepository extends JpaRepository<Conta, UUID> {
             @Param("tipo") TipoConta tipo,
             @Param("ativa") Boolean ativa,
             Pageable pageable
+    );
+
+    @Query("""
+            SELECT c
+            FROM Conta c
+            WHERE c.id = :id
+              AND c.usuario.id = :usuarioId
+            """)
+    Optional<Conta> buscarPorIdEUsuarioId(
+            @Param("id") UUID id,
+            @Param("usuarioId") UUID usuarioId
     );
 }

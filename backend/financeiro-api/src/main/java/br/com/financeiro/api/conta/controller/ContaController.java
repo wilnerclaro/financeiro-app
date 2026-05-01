@@ -1,5 +1,6 @@
 package br.com.financeiro.api.conta.controller;
 
+import br.com.financeiro.api.categoria.service.CategoriaService;
 import br.com.financeiro.api.conta.dto.ContaResponse;
 import br.com.financeiro.api.conta.dto.CriarContaRequest;
 import br.com.financeiro.api.conta.enums.TipoConta;
@@ -24,6 +25,7 @@ import java.util.UUID;
 public class ContaController {
 
     private final ContaService contaService;
+    private final CategoriaService categoriaService;
 
     @PostMapping
     public ResponseEntity<ContaResponse> criar(
@@ -52,5 +54,14 @@ public class ContaController {
 
         return ResponseEntity.ok(response);
 
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ContaResponse> buscarPorId(
+            @PathVariable UUID id,
+            @RequestParam UUID usuarioId
+    ) {
+        ContaResponse response = contaService.buscarPorId(id, usuarioId);
+        return ResponseEntity.ok(response);
     }
 }
