@@ -6,11 +6,14 @@ import br.com.financeiro.api.common.util.NormalizadorTexto;
 import br.com.financeiro.api.conta.dto.ContaResponse;
 import br.com.financeiro.api.conta.dto.CriarContaRequest;
 import br.com.financeiro.api.conta.entity.Conta;
+import br.com.financeiro.api.conta.enums.TipoConta;
 import br.com.financeiro.api.conta.mapper.ContaMapper;
 import br.com.financeiro.api.conta.repository.ContaRepository;
 import br.com.financeiro.api.usuario.entity.Usuario;
 import br.com.financeiro.api.usuario.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -60,7 +63,15 @@ public class ContaService {
         }
     }
 
-    private String normalizarNome(String nome) {
-        return nome == null ? null : nome.trim();
+    @Transactional(readOnly = true)
+    public Page<ContaResponse> listar(UUID usuarioId,
+                                      TipoConta tipoConta,
+                                      Boolean ativa,
+                                      Pageable pageable) {
+        buscarUsuario(usuarioId);
+        return contaRepository.buscarPorFiltros(usuarioId, tipoConta, ativa, pageable)
+                .map(contaMapper::paraResponse);
     }
+
+
 }

@@ -2,17 +2,20 @@ package br.com.financeiro.api.conta.controller;
 
 import br.com.financeiro.api.conta.dto.ContaResponse;
 import br.com.financeiro.api.conta.dto.CriarContaRequest;
+import br.com.financeiro.api.conta.enums.TipoConta;
 import br.com.financeiro.api.conta.service.ContaService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.util.UUID;
 
 @Tag(name = "Contas", description = "Gerenciamento de contas financeiras")
 @RestController
@@ -30,5 +33,24 @@ public class ContaController {
         URI location = URI.create("/api/contas/" + response.id());
 
         return ResponseEntity.created(location).body(response);
+    }
+
+    @GetMapping
+    public ResponseEntity<Page<ContaResponse>> listar(
+            @RequestParam UUID usuarioId,
+            @RequestParam(required = false) TipoConta tipoConta,
+            @RequestParam(required = false) Boolean ativa,
+            @PageableDefault(size = 20, sort = "nome", direction = Sort.Direction.ASC)
+            Pageable pageable
+    ) {
+        Page<ContaResponse> response = contaService.listar(
+                usuarioId,
+                tipoConta,
+                ativa,
+                pageable
+        );
+
+        return ResponseEntity.ok(response);
+
     }
 }
