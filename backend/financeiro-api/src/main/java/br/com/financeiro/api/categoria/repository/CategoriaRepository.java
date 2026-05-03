@@ -42,7 +42,7 @@ public interface CategoriaRepository extends JpaRepository<Categoria, UUID> {
             SELECT CASE WHEN COUNT(c) > 0 THEN TRUE ELSE FALSE END
             FROM Categoria c
             WHERE c.usuario.id = :usuarioId
-              AND LOWER(c.nome) = LOWER(:nome)
+              AND UPPER(c.nome) = UPPER(:nome) 
               AND c.tipo = :tipo
               AND (
                     (:categoriaPaiId IS NULL AND c.categoriaPai IS NULL)

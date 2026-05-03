@@ -8,9 +8,8 @@ import br.com.financeiro.api.categoria.enums.TipoCategoria;
 import br.com.financeiro.api.categoria.mapper.CategoriaMapper;
 import br.com.financeiro.api.categoria.repository.CategoriaRepository;
 import br.com.financeiro.api.common.exception.BusinessException;
-import br.com.financeiro.api.common.exception.BusinessException;
 import br.com.financeiro.api.common.exception.ResourceNotFoundException;
-import br.com.financeiro.api.common.exception.ResourceNotFoundException;
+import br.com.financeiro.api.common.util.NormalizadorTexto;
 import br.com.financeiro.api.usuario.entity.Usuario;
 import br.com.financeiro.api.usuario.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +32,8 @@ public class CategoriaService {
     public CategoriaResponse criar(CriarCategoriaRequest request) {
         Usuario usuario = buscarUsuario(request.usuarioId());
 
-        String nomeNormalizado = normalizarNome(request.nome());
+        String nomeNormalizado = NormalizadorTexto.normalizarNome(request.nome());
+        String nomeParaComparacao = NormalizadorTexto.normalizarParaComparacao(request.nome());
 
         Categoria categoriaPai = buscarCategoriaPai(
                 request.usuarioId(),
@@ -43,7 +43,7 @@ public class CategoriaService {
 
         validarDuplicidade(
                 request.usuarioId(),
-                nomeNormalizado,
+                nomeParaComparacao,
                 request.tipo(),
                 request.categoriaPaiId(),
                 null
@@ -52,7 +52,7 @@ public class CategoriaService {
         Categoria categoria = categoriaMapper.paraEntity(request);
         categoria.setUsuario(usuario);
         categoria.setCategoriaPai(categoriaPai);
-        categoria.setNome(nomeNormalizado);
+        categoria.setNome(nomeNormalizado.toUpperCase());
         categoria.setAtiva(true);
 
         Categoria categoriaSalva = categoriaRepository.save(categoria);
@@ -83,7 +83,8 @@ public class CategoriaService {
     public CategoriaResponse atualizar(UUID id, AtualizarCategoriaRequest request) {
         Categoria categoria = buscarCategoriaDoUsuario(id, request.usuarioId());
 
-        String nomeNormalizado = normalizarNome(request.nome());
+        String nomeNormalizado = NormalizadorTexto.normalizarNome(request.nome());
+        String nomeParaComparacao = NormalizadorTexto.normalizarParaComparacao(request.nome());
 
         if (request.categoriaPaiId() != null && request.categoriaPaiId().equals(id)) {
             throw new BusinessException("A categoria não pode ser pai dela mesma.");
@@ -104,14 +105,14 @@ public class CategoriaService {
 
         validarDuplicidade(
                 request.usuarioId(),
-                nomeNormalizado,
+                nomeParaComparacao,
                 request.tipo(),
                 request.categoriaPaiId(),
                 id
         );
 
         categoria.setCategoriaPai(categoriaPai);
-        categoria.setNome(nomeNormalizado);
+        categoria.setNome(nomeNormalizado.toUpperCase());
         categoria.setTipo(request.tipo());
         categoria.setAtiva(request.ativa());
 
@@ -199,7 +200,5 @@ public class CategoriaService {
         }
     }
 
-    private String normalizarNome(String nome) {
-        return nome == null ? null : nome.trim();
-    }
+
 }
