@@ -3,6 +3,7 @@ package br.com.financeiro.api.conta.controller;
 import br.com.financeiro.api.categoria.service.CategoriaService;
 import br.com.financeiro.api.conta.dto.AtualizarContaRequest;
 import br.com.financeiro.api.conta.dto.ContaResponse;
+import br.com.financeiro.api.conta.dto.CorrigirSaldoInicialContaRequest;
 import br.com.financeiro.api.conta.dto.CriarContaRequest;
 import br.com.financeiro.api.conta.enums.TipoConta;
 import br.com.financeiro.api.conta.service.ContaService;
@@ -72,6 +73,13 @@ public class ContaController {
             @Valid @RequestBody AtualizarContaRequest request
     ) {
         ContaResponse response = contaService.atualizar(id, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/{id}/corrigir-saldo-inicial")
+    public ResponseEntity<ContaResponse> corrigirSaldoInicial(@PathVariable UUID id,
+                                                              @Valid @RequestBody CorrigirSaldoInicialContaRequest request) {
+        ContaResponse response = contaService.corrigirSaldoInicial(id, request);
         return ResponseEntity.ok(response);
     }
 }

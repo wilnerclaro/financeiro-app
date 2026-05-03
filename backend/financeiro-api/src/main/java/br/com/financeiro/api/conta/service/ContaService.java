@@ -5,6 +5,7 @@ import br.com.financeiro.api.common.exception.ResourceNotFoundException;
 import br.com.financeiro.api.common.util.NormalizadorTexto;
 import br.com.financeiro.api.conta.dto.AtualizarContaRequest;
 import br.com.financeiro.api.conta.dto.ContaResponse;
+import br.com.financeiro.api.conta.dto.CorrigirSaldoInicialContaRequest;
 import br.com.financeiro.api.conta.dto.CriarContaRequest;
 import br.com.financeiro.api.conta.entity.Conta;
 import br.com.financeiro.api.conta.enums.TipoConta;
@@ -101,5 +102,13 @@ public class ContaService {
 
         return contaMapper.paraResponse(conta);
 
+    }
+
+    @Transactional
+    public ContaResponse corrigirSaldoInicial(UUID id, CorrigirSaldoInicialContaRequest request) {
+        Conta conta = buscarContaDoUsuaurio(id, request.usuarioId());
+        conta.setSaldoInicial(request.saldoInicial());
+        conta.setSaldoAtual(request.saldoInicial());
+        return contaMapper.paraResponse(conta);
     }
 }
