@@ -1,6 +1,5 @@
 package br.com.financeiro.api.conta.controller;
 
-import br.com.financeiro.api.categoria.service.CategoriaService;
 import br.com.financeiro.api.conta.dto.AtualizarContaRequest;
 import br.com.financeiro.api.conta.dto.ContaResponse;
 import br.com.financeiro.api.conta.dto.CorrigirSaldoInicialContaRequest;
@@ -27,7 +26,6 @@ import java.util.UUID;
 public class ContaController {
 
     private final ContaService contaService;
-    private final CategoriaService categoriaService;
 
     @PostMapping
     public ResponseEntity<ContaResponse> criar(
@@ -80,6 +78,24 @@ public class ContaController {
     public ResponseEntity<ContaResponse> corrigirSaldoInicial(@PathVariable UUID id,
                                                               @Valid @RequestBody CorrigirSaldoInicialContaRequest request) {
         ContaResponse response = contaService.corrigirSaldoInicial(id, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> inativar(
+            @PathVariable UUID id,
+            @RequestParam UUID usuarioId
+    ) {
+        contaService.inativar(id, usuarioId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/ativar")
+    public ResponseEntity<ContaResponse> ativar(
+            @PathVariable UUID id,
+            @RequestParam UUID usuarioId
+    ) {
+        ContaResponse response = contaService.ativar(id, usuarioId);
         return ResponseEntity.ok(response);
     }
 }

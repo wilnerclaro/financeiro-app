@@ -78,18 +78,18 @@ public class ContaService {
 
     @Transactional(readOnly = true)
     public ContaResponse buscarPorId(UUID id, UUID usuarioId) {
-        Conta conta = buscarContaDoUsuaurio(id, usuarioId);
+        Conta conta = buscarContaDoUsuario(id, usuarioId);
         return contaMapper.paraResponse(conta);
     }
 
-    private Conta buscarContaDoUsuaurio(UUID contaId, UUID usuarioId) {
+    private Conta buscarContaDoUsuario(UUID contaId, UUID usuarioId) {
         return contaRepository.buscarPorIdEUsuarioId(contaId, usuarioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Conta não encontrada."));
     }
 
     @Transactional
     public ContaResponse atualizar(UUID id, AtualizarContaRequest request) {
-        Conta conta = buscarContaDoUsuaurio(id, request.usuarioId());
+        Conta conta = buscarContaDoUsuario(id, request.usuarioId());
 
         String nomeNormalizado = NormalizadorTexto.normalizarNome(request.nome());
         String nomeParaComparacao = NormalizadorTexto.normalizarParaComparacao(request.nome());
@@ -106,9 +106,32 @@ public class ContaService {
 
     @Transactional
     public ContaResponse corrigirSaldoInicial(UUID id, CorrigirSaldoInicialContaRequest request) {
-        Conta conta = buscarContaDoUsuaurio(id, request.usuarioId());
+        Conta conta = buscarContaDoUsuario(id, request.usuarioId());
         conta.setSaldoInicial(request.saldoInicial());
         conta.setSaldoAtual(request.saldoInicial());
         return contaMapper.paraResponse(conta);
     }
+
+    @Transactional
+    public void inativar(UUID id, UUID usuarioId) {
+        Conta conta = buscarContaDoUsuario(id, usuarioId);
+        if (!Boolean.TRUE.equals(conta.getAtiva())) {
+            throw new BusinessException("A conta informada já está inativa.");
+        }
+        conta.setAtiva(false);
+    }
+
+    @Transactional
+    public ContaResponse ativar(UUID id, UUID usuarioId) {
+        Conta conta = buscarContaDoUsuario(id, usuarioId);
+
+        if (Boolean.TRUE.equals(conta.getAtiva())) {
+            throw new BusinessException("A conta informada já está ativa.");
+        }
+
+        conta.setAtiva(true);
+
+        return contaMapper.paraResponse(conta);
+    }
+
 }

@@ -61,4 +61,6 @@ public interface ContaRepository extends JpaRepository<Conta, UUID> {
             @Param("nome") String nome,
             @Param("contaIdIgnorada") UUID contaIdIgnorada
     );
+
+    
 }
