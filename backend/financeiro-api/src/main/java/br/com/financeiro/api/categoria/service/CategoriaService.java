@@ -31,9 +31,7 @@ public class CategoriaService {
     @Transactional
     public CategoriaResponse criar(CriarCategoriaRequest request) {
         Usuario usuario = buscarUsuario(request.usuarioId());
-
         String nomeNormalizado = NormalizadorTexto.normalizarNome(request.nome());
-        String nomeParaComparacao = NormalizadorTexto.normalizarParaComparacao(request.nome());
 
         Categoria categoriaPai = buscarCategoriaPai(
                 request.usuarioId(),
@@ -43,7 +41,7 @@ public class CategoriaService {
 
         validarDuplicidade(
                 request.usuarioId(),
-                nomeParaComparacao,
+                nomeNormalizado,
                 request.tipo(),
                 request.categoriaPaiId(),
                 null
@@ -56,7 +54,6 @@ public class CategoriaService {
         categoria.setAtiva(true);
 
         Categoria categoriaSalva = categoriaRepository.save(categoria);
-
         return categoriaMapper.paraResponse(categoriaSalva);
     }
 
@@ -82,18 +79,16 @@ public class CategoriaService {
     @Transactional
     public CategoriaResponse atualizar(UUID id, AtualizarCategoriaRequest request) {
         Categoria categoria = buscarCategoriaDoUsuario(id, request.usuarioId());
-
         String nomeNormalizado = NormalizadorTexto.normalizarNome(request.nome());
-        String nomeParaComparacao = NormalizadorTexto.normalizarParaComparacao(request.nome());
 
         if (request.categoriaPaiId() != null && request.categoriaPaiId().equals(id)) {
-            throw new BusinessException("A categoria não pode ser pai dela mesma.");
+            throw new BusinessException("A categoria nao pode ser pai dela mesma.");
         }
 
         if (!categoria.getTipo().equals(request.tipo())
                 && categoriaRepository.existeSubcategoriaAtiva(id)) {
             throw new BusinessException(
-                    "Não é possível alterar o tipo de uma categoria que possui subcategorias ativas."
+                    "Nao e possivel alterar o tipo de uma categoria que possui subcategorias ativas."
             );
         }
 
@@ -105,7 +100,7 @@ public class CategoriaService {
 
         validarDuplicidade(
                 request.usuarioId(),
-                nomeParaComparacao,
+                nomeNormalizado,
                 request.tipo(),
                 request.categoriaPaiId(),
                 id
@@ -125,7 +120,7 @@ public class CategoriaService {
 
         if (categoriaRepository.existeSubcategoriaAtiva(id)) {
             throw new BusinessException(
-                    "Não é possível inativar uma categoria que possui subcategorias ativas."
+                    "Nao e possivel inativar uma categoria que possui subcategorias ativas."
             );
         }
 
@@ -142,12 +137,12 @@ public class CategoriaService {
 
     private Usuario buscarUsuario(UUID usuarioId) {
         return usuarioRepository.findById(usuarioId)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario nao encontrado."));
     }
 
     private Categoria buscarCategoriaDoUsuario(UUID categoriaId, UUID usuarioId) {
         return categoriaRepository.buscarPorIdEUsuarioId(categoriaId, usuarioId)
-                .orElseThrow(() -> new ResourceNotFoundException("Categoria não encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException("Categoria nao encontrada."));
     }
 
     private Categoria buscarCategoriaPai(
@@ -162,7 +157,7 @@ public class CategoriaService {
         Categoria categoriaPai = buscarCategoriaDoUsuario(categoriaPaiId, usuarioId);
 
         if (!categoriaPai.getAtiva()) {
-            throw new BusinessException("A categoria pai informada está inativa.");
+            throw new BusinessException("A categoria pai informada esta inativa.");
         }
 
         if (!categoriaPai.getTipo().equals(tipo)) {
@@ -173,7 +168,7 @@ public class CategoriaService {
 
         if (categoriaPai.getCategoriaPai() != null) {
             throw new BusinessException(
-                    "A categoria pai informada já é uma subcategoria. O MVP permite apenas dois níveis."
+                    "A categoria pai informada ja e uma subcategoria. O MVP permite apenas dois niveis."
             );
         }
 
@@ -196,9 +191,7 @@ public class CategoriaService {
         );
 
         if (duplicada) {
-            throw new BusinessException("Já existe uma categoria com esse nome, tipo e categoria pai.");
+            throw new BusinessException("Ja existe uma categoria com esse nome, tipo e categoria pai.");
         }
     }
-
-
 }
