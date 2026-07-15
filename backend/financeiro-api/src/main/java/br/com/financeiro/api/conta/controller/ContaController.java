@@ -4,9 +4,9 @@ import br.com.financeiro.api.conta.dto.AtualizarContaRequest;
 import br.com.financeiro.api.conta.dto.ContaResponse;
 import br.com.financeiro.api.conta.dto.CorrigirSaldoInicialContaRequest;
 import br.com.financeiro.api.conta.dto.CriarContaRequest;
+import br.com.financeiro.api.conta.docs.ContaApiDoc;
 import br.com.financeiro.api.conta.enums.TipoConta;
 import br.com.financeiro.api.conta.service.ContaService;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -19,11 +19,10 @@ import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.util.UUID;
 
-@Tag(name = "Contas", description = "Gerenciamento de contas financeiras")
 @RestController
 @RequestMapping("/api/contas")
 @RequiredArgsConstructor
-public class ContaController {
+public class ContaController implements ContaApiDoc {
 
     private final ContaService contaService;
 

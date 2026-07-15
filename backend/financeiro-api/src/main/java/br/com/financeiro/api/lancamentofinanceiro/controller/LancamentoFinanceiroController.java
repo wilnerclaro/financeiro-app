@@ -1,5 +1,6 @@
 package br.com.financeiro.api.lancamentofinanceiro.controller;
 
+import br.com.financeiro.api.lancamentofinanceiro.docs.LancamentoFinanceiroApiDoc;
 import br.com.financeiro.api.lancamentofinanceiro.dto.AtualizarLancamentoFinanceiroRequest;
 import br.com.financeiro.api.lancamentofinanceiro.dto.CriarLancamentoFinanceiroRequest;
 import br.com.financeiro.api.lancamentofinanceiro.dto.LancamentoFinanceiroResponse;
@@ -7,7 +8,6 @@ import br.com.financeiro.api.lancamentofinanceiro.dto.PagarLancamentoFinanceiroR
 import br.com.financeiro.api.lancamentofinanceiro.enums.StatusLancamentoFinanceiro;
 import br.com.financeiro.api.lancamentofinanceiro.enums.TipoLancamentoFinanceiro;
 import br.com.financeiro.api.lancamentofinanceiro.service.LancamentoFinanceiroService;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -16,26 +16,16 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 import java.time.LocalDate;
 import java.util.UUID;
 
-@Tag(name = "Lancamentos Financeiros", description = "Gerenciamento de receitas e despesas")
 @RestController
 @RequestMapping("/api/lancamentos-financeiros")
 @RequiredArgsConstructor
-public class LancamentoFinanceiroController {
+public class LancamentoFinanceiroController implements LancamentoFinanceiroApiDoc {
 
     private final LancamentoFinanceiroService lancamentoFinanceiroService;
 
@@ -83,6 +73,8 @@ public class LancamentoFinanceiroController {
         LancamentoFinanceiroResponse response = lancamentoFinanceiroService.buscarPorId(id, usuarioId);
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/resumo-mensal")
 
     @PutMapping("/{id}")
     public ResponseEntity<LancamentoFinanceiroResponse> atualizar(
