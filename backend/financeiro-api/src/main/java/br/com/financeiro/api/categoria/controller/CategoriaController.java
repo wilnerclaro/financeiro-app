@@ -3,9 +3,9 @@ package br.com.financeiro.api.categoria.controller;
 import br.com.financeiro.api.categoria.dto.AtualizarCategoriaRequest;
 import br.com.financeiro.api.categoria.dto.CategoriaResponse;
 import br.com.financeiro.api.categoria.dto.CriarCategoriaRequest;
+import br.com.financeiro.api.categoria.docs.CategoriaApiDoc;
 import br.com.financeiro.api.categoria.enums.TipoCategoria;
 import br.com.financeiro.api.categoria.service.CategoriaService;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -27,11 +27,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.net.URI;
 import java.util.UUID;
 
-@Tag(name = "Categorias", description = "Gerenciamento de categorias financeiras")
 @RestController
 @RequestMapping("/api/categorias")
 @RequiredArgsConstructor
-public class CategoriaController {
+public class CategoriaController implements CategoriaApiDoc {
 
     private final CategoriaService categoriaService;
 
