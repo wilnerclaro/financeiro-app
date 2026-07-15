@@ -21,12 +21,10 @@ public class GlobalExceptionHandler {
     ) {
         HttpStatus status = HttpStatus.NOT_FOUND;
 
-        ApiErrorResponse response = new ApiErrorResponse(
-                OffsetDateTime.now(),
-                status.value(),
-                status.getReasonPhrase(),
+        ApiErrorResponse response = criarRespostaDeErro(
+                status,
                 exception.getMessage(),
-                request.getRequestURI(),
+                request,
                 List.of()
         );
 
@@ -40,12 +38,10 @@ public class GlobalExceptionHandler {
     ) {
         HttpStatus status = HttpStatus.BAD_REQUEST;
 
-        ApiErrorResponse response = new ApiErrorResponse(
-                OffsetDateTime.now(),
-                status.value(),
-                status.getReasonPhrase(),
+        ApiErrorResponse response = criarRespostaDeErro(
+                status,
                 exception.getMessage(),
-                request.getRequestURI(),
+                request,
                 List.of()
         );
 
@@ -65,12 +61,10 @@ public class GlobalExceptionHandler {
                 .map(this::paraErroDeCampo)
                 .toList();
 
-        ApiErrorResponse response = new ApiErrorResponse(
-                OffsetDateTime.now(),
-                status.value(),
-                status.getReasonPhrase(),
-                "Existem campos inválidos na requisição.",
-                request.getRequestURI(),
+        ApiErrorResponse response = criarRespostaDeErro(
+                status,
+                "Existem campos invalidos na requisicao.",
+                request,
                 fieldErrors
         );
 
@@ -84,16 +78,30 @@ public class GlobalExceptionHandler {
     ) {
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
 
-        ApiErrorResponse response = new ApiErrorResponse(
-                OffsetDateTime.now(),
-                status.value(),
-                status.getReasonPhrase(),
+        ApiErrorResponse response = criarRespostaDeErro(
+                status,
                 "Erro interno inesperado.",
-                request.getRequestURI(),
+                request,
                 List.of()
         );
 
         return ResponseEntity.status(status).body(response);
+    }
+
+    private ApiErrorResponse criarRespostaDeErro(
+            HttpStatus status,
+            String message,
+            HttpServletRequest request,
+            List<FieldErrorResponse> fieldErrors
+    ) {
+        return new ApiErrorResponse(
+                OffsetDateTime.now(),
+                status.value(),
+                status.getReasonPhrase(),
+                message,
+                request.getRequestURI(),
+                fieldErrors
+        );
     }
 
     private FieldErrorResponse paraErroDeCampo(FieldError fieldError) {

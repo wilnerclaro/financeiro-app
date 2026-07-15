@@ -11,6 +11,7 @@ import br.com.financeiro.api.conta.entity.Conta;
 import br.com.financeiro.api.conta.enums.TipoConta;
 import br.com.financeiro.api.conta.mapper.ContaMapper;
 import br.com.financeiro.api.conta.repository.ContaRepository;
+import br.com.financeiro.api.lancamentofinanceiro.repository.LancamentoFinanceiroRepository;
 import br.com.financeiro.api.usuario.entity.Usuario;
 import br.com.financeiro.api.usuario.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Service
@@ -28,17 +30,16 @@ public class ContaService {
     private final ContaRepository contaRepository;
     private final UsuarioRepository usuarioRepository;
     private final ContaMapper contaMapper;
+    private final LancamentoFinanceiroRepository lancamentoFinanceiroRepository;
 
     @Transactional
     public ContaResponse criar(CriarContaRequest request) {
         Usuario usuario = buscarUsuario(request.usuarioId());
-
         String nomeNormalizado = NormalizadorTexto.normalizarNome(request.nome());
-        String nomeParaComparacao = NormalizadorTexto.normalizarParaComparacao(request.nome());
 
         validarDuplicidade(
                 request.usuarioId(),
-                nomeParaComparacao,
+                nomeNormalizado,
                 null
         );
 
@@ -49,21 +50,7 @@ public class ContaService {
         conta.setAtiva(true);
 
         Conta contaSalva = contaRepository.save(conta);
-
         return contaMapper.paraResponse(contaSalva);
-    }
-
-    private Usuario buscarUsuario(UUID usuarioId) {
-        return usuarioRepository.findById(usuarioId)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
-    }
-
-    private void validarDuplicidade(UUID usuarioId, String nome, UUID contaIdIgnorada) {
-        boolean duplicada = contaRepository.existeContaDuplicada(usuarioId, nome, contaIdIgnorada);
-
-        if (duplicada) {
-            throw new BusinessException("Já existe uma conta com esse nome para este usuário.");
-        }
     }
 
     @Transactional(readOnly = true)
@@ -82,42 +69,42 @@ public class ContaService {
         return contaMapper.paraResponse(conta);
     }
 
-    private Conta buscarContaDoUsuario(UUID contaId, UUID usuarioId) {
-        return contaRepository.buscarPorIdEUsuarioId(contaId, usuarioId)
-                .orElseThrow(() -> new ResourceNotFoundException("Conta não encontrada."));
-    }
-
     @Transactional
     public ContaResponse atualizar(UUID id, AtualizarContaRequest request) {
         Conta conta = buscarContaDoUsuario(id, request.usuarioId());
-
         String nomeNormalizado = NormalizadorTexto.normalizarNome(request.nome());
-        String nomeParaComparacao = NormalizadorTexto.normalizarParaComparacao(request.nome());
 
-        validarDuplicidade(request.usuarioId(), nomeParaComparacao, id);
+        validarDuplicidade(request.usuarioId(), nomeNormalizado, id);
 
         conta.setNome(nomeNormalizado.toUpperCase());
         conta.setTipo(request.tipo());
         conta.setAtiva(request.ativa());
 
         return contaMapper.paraResponse(conta);
-
     }
 
     @Transactional
     public ContaResponse corrigirSaldoInicial(UUID id, CorrigirSaldoInicialContaRequest request) {
         Conta conta = buscarContaDoUsuario(id, request.usuarioId());
+        BigDecimal saldoMovimentado = lancamentoFinanceiroRepository.calcularSaldoMovimentadoPorConta(
+                id,
+                request.usuarioId()
+        );
+
         conta.setSaldoInicial(request.saldoInicial());
-        conta.setSaldoAtual(request.saldoInicial());
+        conta.setSaldoAtual(request.saldoInicial().add(saldoMovimentado));
+
         return contaMapper.paraResponse(conta);
     }
 
     @Transactional
     public void inativar(UUID id, UUID usuarioId) {
         Conta conta = buscarContaDoUsuario(id, usuarioId);
+
         if (!Boolean.TRUE.equals(conta.getAtiva())) {
-            throw new BusinessException("A conta informada já está inativa.");
+            throw new BusinessException("A conta informada ja esta inativa.");
         }
+
         conta.setAtiva(false);
     }
 
@@ -126,7 +113,7 @@ public class ContaService {
         Conta conta = buscarContaDoUsuario(id, usuarioId);
 
         if (Boolean.TRUE.equals(conta.getAtiva())) {
-            throw new BusinessException("A conta informada já está ativa.");
+            throw new BusinessException("A conta informada ja esta ativa.");
         }
 
         conta.setAtiva(true);
@@ -134,4 +121,21 @@ public class ContaService {
         return contaMapper.paraResponse(conta);
     }
 
+    private Usuario buscarUsuario(UUID usuarioId) {
+        return usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario nao encontrado."));
+    }
+
+    private Conta buscarContaDoUsuario(UUID contaId, UUID usuarioId) {
+        return contaRepository.buscarPorIdEUsuarioId(contaId, usuarioId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conta nao encontrada."));
+    }
+
+    private void validarDuplicidade(UUID usuarioId, String nome, UUID contaIdIgnorada) {
+        boolean duplicada = contaRepository.existeContaDuplicada(usuarioId, nome, contaIdIgnorada);
+
+        if (duplicada) {
+            throw new BusinessException("Ja existe uma conta com esse nome para este usuario.");
+        }
+    }
 }

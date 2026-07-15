@@ -14,17 +14,6 @@ import java.util.UUID;
 public interface ContaRepository extends JpaRepository<Conta, UUID> {
 
     @Query("""
-            SELECT CASE WHEN COUNT(c) > 0 THEN TRUE ELSE FALSE END
-            FROM Conta c
-            WHERE c.usuario.id = :usuarioId
-              AND UPPER(c.nome) = UPPER(:nome) 
-            """)
-    boolean existeContaDuplicada(
-            @Param("usuarioId") UUID usuarioId,
-            @Param("nome") String nome
-    );
-
-    @Query("""
             SELECT c
             FROM Conta c
             WHERE c.usuario.id = :usuarioId
@@ -61,6 +50,4 @@ public interface ContaRepository extends JpaRepository<Conta, UUID> {
             @Param("nome") String nome,
             @Param("contaIdIgnorada") UUID contaIdIgnorada
     );
-
-    
 }
