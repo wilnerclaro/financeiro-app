@@ -74,8 +74,6 @@ public class LancamentoFinanceiroController implements LancamentoFinanceiroApiDo
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/resumo-mensal")
-
     @PutMapping("/{id}")
     public ResponseEntity<LancamentoFinanceiroResponse> atualizar(
             @PathVariable UUID id,
