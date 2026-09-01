@@ -1,9 +1,7 @@
 package br.com.financeiro.api.usuario.repository;
 
 import br.com.financeiro.api.usuario.entity.Usuario;
+import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.UUID;
-
-public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
-}
+public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {}

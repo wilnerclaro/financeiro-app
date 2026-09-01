@@ -5,15 +5,29 @@ import br.com.financeiro.api.conta.entity.Conta;
 import br.com.financeiro.api.lancamentofinanceiro.enums.StatusLancamentoFinanceiro;
 import br.com.financeiro.api.lancamentofinanceiro.enums.TipoLancamentoFinanceiro;
 import br.com.financeiro.api.usuario.entity.Usuario;
-import jakarta.persistence.*;
-import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 @Getter
 @Setter
@@ -25,55 +39,54 @@ import java.util.UUID;
 @Table(name = "lancamentos_financeiros")
 public class LancamentoFinanceiro {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @EqualsAndHashCode.Include
-    private UUID id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  @EqualsAndHashCode.Include
+  private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "usuario_id", nullable = false)
-    private Usuario usuario;
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "usuario_id", nullable = false)
+  private Usuario usuario;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "conta_id", nullable = false)
-    private Conta conta;
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "conta_id", nullable = false)
+  private Conta conta;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "categoria_id", nullable = false)
-    private Categoria categoria;
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "categoria_id", nullable = false)
+  private Categoria categoria;
 
-    @Column(nullable = false, length = 180)
-    private String descricao;
+  @Column(nullable = false, length = 180)
+  private String descricao;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    private TipoLancamentoFinanceiro tipo;
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 30)
+  private TipoLancamentoFinanceiro tipo;
 
-    @Column(nullable = false, precision = 19, scale = 2)
-    private BigDecimal valor;
+  @Column(nullable = false, precision = 19, scale = 2)
+  private BigDecimal valor;
 
-    @Column(name = "data_competencia", nullable = false)
-    private LocalDate dataCompetencia;
+  @Column(name = "data_competencia", nullable = false)
+  private LocalDate dataCompetencia;
 
-    @Column(name = "data_vencimento")
-    private LocalDate dataVencimento;
+  @Column(name = "data_vencimento")
+  private LocalDate dataVencimento;
 
-    @Column(name = "data_pagamento")
-    private LocalDate dataPagamento;
+  @Column(name = "data_pagamento")
+  private LocalDate dataPagamento;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private StatusLancamentoFinanceiro status;
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 20)
+  private StatusLancamentoFinanceiro status;
 
-    @Column(columnDefinition = "TEXT")
-    private String observacao;
+  @Column(columnDefinition = "TEXT")
+  private String observacao;
 
-    @CreationTimestamp
-    @Column(name = "criado_em", nullable = false, updatable = false)
-    private OffsetDateTime criadoEm;
+  @CreationTimestamp
+  @Column(name = "criado_em", nullable = false, updatable = false)
+  private OffsetDateTime criadoEm;
 
-    @UpdateTimestamp
-    @Column(name = "atualizado_em", nullable = false)
-    private OffsetDateTime atualizadoEm;
-
+  @UpdateTimestamp
+  @Column(name = "atualizado_em", nullable = false)
+  private OffsetDateTime atualizadoEm;
 }
