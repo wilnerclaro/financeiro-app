@@ -1,0 +1,99 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+    "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+    "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<!--
+  Conjunto deliberadamente pequeno.
+
+  A configuracao padrao do Checkstyle (Sun/Google) reclama de dezenas de coisas
+  que este projeto nao considera defeito, e o resultado pratico e o time
+  desligar a ferramenta. Aqui ficam apenas regras que pegam defeito real e que
+  o codigo atual ja passa (com as supressoes de suppressions.xml).
+
+  Formatacao nao entra aqui: quem cuida disso e o Spotless.
+-->
+<module name="Checker">
+  <property name="severity" value="error"/>
+  <property name="fileExtensions" value="java"/>
+
+  <module name="SuppressionFilter">
+    <property name="file" value="${checkstyle.suppressions.file}"/>
+    <property name="optional" value="true"/>
+  </module>
+
+  <!-- Arquivo nao pode ser gigante. Limite folgado de proposito. -->
+  <module name="FileLength">
+    <property name="max" value="600"/>
+  </module>
+
+  <module name="TreeWalker">
+
+    <!-- Permite // CHECKSTYLE:OFF ... // CHECKSTYLE:ON quando houver motivo -->
+    <module name="SuppressionCommentFilter"/>
+
+    <!-- ===== Defeitos reais ===== -->
+
+    <!-- Pega o caso de CategoriaService: if (!objeto.getAtiva()) com Boolean -->
+    <module name="UnnecessaryParentheses"/>
+    <module name="EqualsHashCode"/>
+    <module name="StringLiteralEquality"/>
+    <module name="SimplifyBooleanExpression"/>
+    <module name="SimplifyBooleanReturn"/>
+    <module name="NoFinalizer"/>
+    <module name="EmptyStatement"/>
+    <module name="MissingSwitchDefault"/>
+    <module name="FallThrough"/>
+    <module name="IllegalCatch">
+      <property name="illegalClassNames" value="java.lang.Throwable, java.lang.Error"/>
+    </module>
+    <module name="IllegalThrows"/>
+    <module name="ModifiedControlVariable"/>
+    <module name="MultipleVariableDeclarations"/>
+    <module name="OneStatementPerLine"/>
+    <module name="DefaultComesLast"/>
+
+    <!-- Chaves obrigatorias: evita bug de linha adicionada sem bloco -->
+    <module name="NeedBraces"/>
+
+    <!-- ===== Higiene ===== -->
+
+    <module name="UnusedImports"/>
+    <module name="RedundantImport"/>
+    <module name="AvoidStarImport">
+      <property name="allowStaticMemberImports" value="true"/>
+    </module>
+
+    <!-- ===== Tamanho e complexidade ===== -->
+    <!-- Limites folgados: o objetivo e pegar exagero, nao forcar fatiamento. -->
+
+    <module name="MethodLength">
+      <property name="max" value="80"/>
+      <property name="countEmpty" value="false"/>
+    </module>
+
+    <module name="CyclomaticComplexity">
+      <property name="max" value="12"/>
+    </module>
+
+    <module name="NPathComplexity">
+      <property name="max" value="200"/>
+    </module>
+
+    <module name="ParameterNumber">
+      <property name="max" value="8"/>
+      <property name="ignoreOverriddenMethods" value="true"/>
+    </module>
+
+    <!-- ===== Nomenclatura ===== -->
+
+    <module name="TypeName"/>
+    <module name="MethodName"/>
+    <module name="LocalVariableName"/>
+    <module name="ParameterName"/>
+    <module name="MemberName"/>
+    <module name="ConstantName"/>
+    <module name="PackageName"/>
+
+  </module>
+</module>

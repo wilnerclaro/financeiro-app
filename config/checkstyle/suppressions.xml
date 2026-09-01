@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+
+<!--
+  Supressoes pontuais para codigo anterior ao gate.
+
+  Cada entrada aqui e divida tecnica com nome e endereco. Ao refatorar o
+  arquivo, remova a supressao correspondente — nao a estenda para arquivo novo.
+-->
+<suppressions>
+
+  <!--
+    LancamentoFinanceiroService concentra CRUD, mutacao de saldo e construcao
+    de Specification inline (~14 KB). O encaminhamento e extrair o builder de
+    filtros para uma classe propria; ate la, a regra de tamanho fica suspensa
+    apenas neste arquivo.
+    Ver docs/AUDITORIA-INICIAL.md, item 7.
+  -->
+  <suppress files="LancamentoFinanceiroService\.java" checks="FileLength|MethodLength"/>
+
+  <!-- Testes de arquitetura sao longos por natureza: uma regra por metodo. -->
+  <suppress files="ArquiteturaTest\.java" checks="FileLength"/>
+
+</suppressions>
