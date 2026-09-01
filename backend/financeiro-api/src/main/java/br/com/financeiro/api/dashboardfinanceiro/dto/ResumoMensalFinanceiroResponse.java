@@ -5,14 +5,12 @@ import java.util.List;
 import java.util.UUID;
 
 public record ResumoMensalFinanceiroResponse(
-        UUID usuarioId,
-        Integer ano,
-        Integer mes,
-        BigDecimal totalReceitas,
-        BigDecimal totalDespesas,
-        BigDecimal saldoPeriodo,
-        Long quantidadeLancamentos,
-        List<ResumoCategoriaFinanceiraResponse> receitasPorCategoria,
-        List<ResumoCategoriaFinanceiraResponse> despesasPorCategoria
-) {
-}
+    UUID usuarioId,
+    Integer ano,
+    Integer mes,
+    BigDecimal totalReceitas,
+    BigDecimal totalDespesas,
+    BigDecimal saldoPeriodo,
+    Long quantidadeLancamentos,
+    List<ResumoCategoriaFinanceiraResponse> receitasPorCategoria,
+    List<ResumoCategoriaFinanceiraResponse> despesasPorCategoria) {}

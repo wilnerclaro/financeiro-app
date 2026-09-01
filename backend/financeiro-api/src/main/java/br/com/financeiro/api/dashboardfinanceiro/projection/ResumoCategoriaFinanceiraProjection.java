@@ -5,11 +5,11 @@ import java.util.UUID;
 
 public interface ResumoCategoriaFinanceiraProjection {
 
-    UUID getCategoriaId();
+  UUID getCategoriaId();
 
-    String getCategoriaNome();
+  String getCategoriaNome();
 
-    BigDecimal getTotal();
+  BigDecimal getTotal();
 
-    Long getQuantidadeLancamentos();
+  Long getQuantidadeLancamentos();
 }

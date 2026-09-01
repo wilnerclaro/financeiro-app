@@ -4,9 +4,9 @@ import java.math.BigDecimal;
 
 public interface ResumoMensalFinanceiroProjection {
 
-    BigDecimal getTotalReceitas();
+  BigDecimal getTotalReceitas();
 
-    BigDecimal getTotalDespesas();
+  BigDecimal getTotalDespesas();
 
-    Long getQuantidadeLancamentos();
+  Long getQuantidadeLancamentos();
 }
