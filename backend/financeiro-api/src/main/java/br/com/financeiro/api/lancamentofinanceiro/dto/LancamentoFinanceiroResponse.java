@@ -20,7 +20,30 @@ public record LancamentoFinanceiroResponse(
     LocalDate dataCompetencia,
     LocalDate dataVencimento,
     LocalDate dataPagamento,
+    LocalDate dataCompra,
     StatusLancamentoFinanceiro status,
     String observacao,
     OffsetDateTime criadoEm,
-    OffsetDateTime atualizadoEm) {}
+    OffsetDateTime atualizadoEm) {
+
+  public LancamentoFinanceiroResponse comStatus(StatusLancamentoFinanceiro novoStatus) {
+    return new LancamentoFinanceiroResponse(
+        id,
+        usuarioId,
+        contaId,
+        nomeConta,
+        categoriaId,
+        nomeCategoria,
+        descricao,
+        tipo,
+        valor,
+        dataCompetencia,
+        dataVencimento,
+        dataPagamento,
+        dataCompra,
+        novoStatus,
+        observacao,
+        criadoEm,
+        atualizadoEm);
+  }
+}

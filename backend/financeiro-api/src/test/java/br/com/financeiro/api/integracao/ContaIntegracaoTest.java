@@ -134,4 +134,29 @@ class ContaIntegracaoTest extends IntegracaoTest {
   void contaInexistente() throws Exception {
     consultar(URL + "/" + UUID.randomUUID(), usuario).andExpect(status().isNotFound());
   }
+
+  @Test
+  @DisplayName("resumo soma o patrimônio das contas ativas por tipo, com o cartão negativo")
+  void resumoDasContas() throws Exception {
+    Sessao dono = criarUsuario();
+    criarConta(dono, "Banco", "1000.00");
+    criarConta(dono, "Outro banco", "500.00");
+    UUID cartao = criarCartao(dono, "Cartão", 10, 20);
+    UUID inativa = criarConta(dono, "Antiga", "300.00");
+    remover("/api/contas/" + inativa, dono);
+    UUID categoria = categoriaPadrao(dono, "Supermercado");
+    criarLancamentoEm(dono, cartao, categoria, "DESPESA", "200.00", HOJE, null, HOJE);
+
+    consultar("/api/contas/resumo", dono)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.patrimonio").value(1300.00))
+        .andExpect(jsonPath("$.porTipo[0].tipo").value("CONTA_CORRENTE"))
+        .andExpect(jsonPath("$.porTipo[0].total").value(1500.00))
+        .andExpect(jsonPath("$.porTipo[0].quantidadeDeContas").value(2))
+        .andExpect(jsonPath("$.porTipo[1].tipo").value("CARTAO_CREDITO"))
+        .andExpect(jsonPath("$.porTipo[1].total").value(-200.00));
+
+    consultar("/api/contas/" + cartao, dono)
+        .andExpect(jsonPath("$.variacaoDesdeSaldoInicial").value(-200.00));
+  }
 }

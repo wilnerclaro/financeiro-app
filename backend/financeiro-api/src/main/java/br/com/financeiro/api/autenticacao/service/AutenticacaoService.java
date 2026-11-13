@@ -5,13 +5,13 @@ import br.com.financeiro.api.autenticacao.dto.LoginRequest;
 import br.com.financeiro.api.autenticacao.dto.RefreshTokenRequest;
 import br.com.financeiro.api.autenticacao.dto.TokenResponse;
 import br.com.financeiro.api.autenticacao.dto.UsuarioResponse;
+import br.com.financeiro.api.categoria.service.CategoriasPadraoService;
 import br.com.financeiro.api.common.exception.BusinessException;
 import br.com.financeiro.api.common.exception.NaoAutenticadoException;
-import br.com.financeiro.api.common.exception.ResourceNotFoundException;
 import br.com.financeiro.api.common.util.NormalizadorTexto;
 import br.com.financeiro.api.security.TokenJwt;
 import br.com.financeiro.api.usuario.entity.Usuario;
-import br.com.financeiro.api.usuario.repository.UsuarioRepository;
+import br.com.financeiro.api.usuario.service.UsuarioService;
 import java.util.Locale;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +26,8 @@ public class AutenticacaoService {
 
   private static final String CREDENCIAIS_INVALIDAS = "E-mail ou senha inválidos.";
 
-  private final UsuarioRepository usuarioRepository;
+  private final UsuarioService usuarioService;
+  private final CategoriasPadraoService categoriasPadraoService;
   private final PasswordEncoder passwordEncoder;
   private final TokenJwt tokenJwt;
 
@@ -34,7 +35,7 @@ public class AutenticacaoService {
   public TokenResponse cadastrar(CadastroRequest request) {
     String email = normalizarEmail(request.email());
 
-    if (usuarioRepository.existsByEmailIgnoreCase(email)) {
+    if (usuarioService.existeComEmail(email)) {
       throw new BusinessException("Já existe um usuário cadastrado com esse e-mail.");
     }
 
@@ -44,14 +45,16 @@ public class AutenticacaoService {
     usuario.setSenhaHash(passwordEncoder.encode(request.senha()));
     usuario.setAtivo(true);
 
-    return emitirTokens(usuarioRepository.saveAndFlush(usuario));
+    Usuario salvo = usuarioService.salvar(usuario);
+    categoriasPadraoService.criarPara(salvo);
+    return emitirTokens(salvo);
   }
 
   @Transactional(readOnly = true)
   public TokenResponse login(LoginRequest request) {
     Usuario usuario =
-        usuarioRepository
-            .findByEmailIgnoreCase(normalizarEmail(request.email()))
+        usuarioService
+            .buscarPorEmail(normalizarEmail(request.email()))
             .filter(
                 encontrado -> passwordEncoder.matches(request.senha(), encontrado.getSenhaHash()))
             .orElseThrow(() -> new NaoAutenticadoException(CREDENCIAIS_INVALIDAS));
@@ -71,8 +74,8 @@ public class AutenticacaoService {
     }
 
     Usuario usuario =
-        usuarioRepository
-            .findById(usuarioId)
+        usuarioService
+            .buscarSeExistir(usuarioId)
             .orElseThrow(() -> new NaoAutenticadoException("Refresh token inválido ou expirado."));
 
     validarAtivo(usuario);
@@ -81,10 +84,7 @@ public class AutenticacaoService {
 
   @Transactional(readOnly = true)
   public UsuarioResponse buscarUsuarioLogado(UUID usuarioId) {
-    return usuarioRepository
-        .findById(usuarioId)
-        .map(this::paraResponse)
-        .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
+    return paraResponse(usuarioService.buscar(usuarioId));
   }
 
   private TokenResponse emitirTokens(Usuario usuario) {

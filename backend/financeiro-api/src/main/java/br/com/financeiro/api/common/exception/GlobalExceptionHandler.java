@@ -8,6 +8,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
@@ -114,6 +115,16 @@ public class GlobalExceptionHandler {
       HttpRequestMethodNotSupportedException exception, HttpServletRequest request) {
     return responder(
         HttpStatus.METHOD_NOT_ALLOWED, "Método HTTP não suportado para este recurso.", request);
+  }
+
+  @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+  public ResponseEntity<ApiErrorResponse> tratarConflitoDeConcorrencia(
+      ObjectOptimisticLockingFailureException exception, HttpServletRequest request) {
+    log.info("Conflito de concorrência em {}: {}", request.getRequestURI(), exception.getMessage());
+    return responder(
+        HttpStatus.CONFLICT,
+        "Os dados foram alterados por outra operação ao mesmo tempo. Tente novamente.",
+        request);
   }
 
   @ExceptionHandler(DataIntegrityViolationException.class)

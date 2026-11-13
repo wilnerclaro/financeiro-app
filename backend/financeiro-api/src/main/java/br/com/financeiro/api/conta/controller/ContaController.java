@@ -5,6 +5,7 @@ import br.com.financeiro.api.conta.dto.AtualizarContaRequest;
 import br.com.financeiro.api.conta.dto.ContaResponse;
 import br.com.financeiro.api.conta.dto.CorrigirSaldoInicialContaRequest;
 import br.com.financeiro.api.conta.dto.CriarContaRequest;
+import br.com.financeiro.api.conta.dto.ResumoContasResponse;
 import br.com.financeiro.api.conta.enums.TipoConta;
 import br.com.financeiro.api.conta.service.ContaService;
 import br.com.financeiro.api.security.UsuarioLogado;
@@ -54,6 +55,11 @@ public class ContaController implements ContaApiDoc {
     Page<ContaResponse> response = contaService.listar(usuarioId, tipoConta, ativa, pageable);
 
     return ResponseEntity.ok(response);
+  }
+
+  @GetMapping("/resumo")
+  public ResponseEntity<ResumoContasResponse> resumir(@UsuarioLogado UUID usuarioId) {
+    return ResponseEntity.ok(contaService.resumir(usuarioId));
   }
 
   @GetMapping("/{id}")

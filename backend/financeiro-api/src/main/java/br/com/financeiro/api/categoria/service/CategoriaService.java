@@ -4,6 +4,7 @@ import br.com.financeiro.api.categoria.dto.AtualizarCategoriaRequest;
 import br.com.financeiro.api.categoria.dto.CategoriaResponse;
 import br.com.financeiro.api.categoria.dto.CriarCategoriaRequest;
 import br.com.financeiro.api.categoria.entity.Categoria;
+import br.com.financeiro.api.categoria.enums.FonteReceita;
 import br.com.financeiro.api.categoria.enums.TipoCategoria;
 import br.com.financeiro.api.categoria.mapper.CategoriaMapper;
 import br.com.financeiro.api.categoria.repository.CategoriaRepository;
@@ -11,7 +12,8 @@ import br.com.financeiro.api.common.exception.BusinessException;
 import br.com.financeiro.api.common.exception.ResourceNotFoundException;
 import br.com.financeiro.api.common.util.NormalizadorTexto;
 import br.com.financeiro.api.usuario.entity.Usuario;
-import br.com.financeiro.api.usuario.repository.UsuarioRepository;
+import br.com.financeiro.api.usuario.service.UsuarioService;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -24,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class CategoriaService {
 
   private final CategoriaRepository categoriaRepository;
-  private final UsuarioRepository usuarioRepository;
+  private final UsuarioService usuarioService;
   private final CategoriaMapper categoriaMapper;
 
   @Transactional
@@ -42,6 +44,7 @@ public class CategoriaService {
     categoria.setCategoriaPai(categoriaPai);
     categoria.setNome(nomeNormalizado);
     categoria.setAtiva(true);
+    categoria.setFonteReceita(definirFonte(request.tipo(), categoriaPai, request.fonteReceita()));
 
     Categoria categoriaSalva = categoriaRepository.saveAndFlush(categoria);
     return categoriaMapper.paraResponse(categoriaSalva);
@@ -93,7 +96,12 @@ public class CategoriaService {
     categoria.setCategoriaPai(categoriaPai);
     categoria.setNome(nomeNormalizado);
     categoria.setTipo(request.tipo());
+    categoria.setFonteReceita(definirFonte(request.tipo(), categoriaPai, request.fonteReceita()));
     categoriaRepository.flush();
+
+    if (possuiSubcategorias) {
+      categoriaRepository.atualizarFonteDasSubcategorias(id, categoria.getFonteReceita());
+    }
 
     return categoriaMapper.paraResponse(categoria);
   }
@@ -126,10 +134,44 @@ public class CategoriaService {
     return categoriaMapper.paraResponse(categoria);
   }
 
+  private FonteReceita definirFonte(
+      TipoCategoria tipo, Categoria categoriaPai, FonteReceita fonteInformada) {
+    if (!TipoCategoria.RECEITA.equals(tipo)) {
+      return null;
+    }
+
+    if (categoriaPai != null) {
+      return categoriaPai.getFonteReceita();
+    }
+
+    return fonteInformada == null ? FonteReceita.ATIVA : fonteInformada;
+  }
+
   private Usuario buscarUsuario(UUID usuarioId) {
-    return usuarioRepository
-        .findById(usuarioId)
-        .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
+    return usuarioService.buscar(usuarioId);
+  }
+
+  @Transactional(readOnly = true)
+  public Categoria buscarCategoriaAtiva(UUID categoriaId, UUID usuarioId) {
+    Categoria categoria = buscarCategoriaDoUsuario(categoriaId, usuarioId);
+
+    if (!Boolean.TRUE.equals(categoria.getAtiva())) {
+      throw new BusinessException("A categoria informada está inativa.");
+    }
+
+    return categoria;
+  }
+
+  @Transactional(readOnly = true)
+  public void validarCategoriaDoUsuario(UUID categoriaId, UUID usuarioId) {
+    if (categoriaId != null) {
+      buscarCategoriaDoUsuario(categoriaId, usuarioId);
+    }
+  }
+
+  @Transactional(readOnly = true)
+  public List<Categoria> listarTodasDoUsuario(UUID usuarioId) {
+    return categoriaRepository.buscarTodasDoUsuario(usuarioId);
   }
 
   private Categoria buscarCategoriaDoUsuario(UUID categoriaId, UUID usuarioId) {

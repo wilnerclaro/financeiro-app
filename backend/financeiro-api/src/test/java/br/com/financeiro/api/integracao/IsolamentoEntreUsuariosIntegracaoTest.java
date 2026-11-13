@@ -28,7 +28,7 @@ class IsolamentoEntreUsuariosIntegracaoTest extends IntegracaoTest {
     usuarioA = criarUsuario();
     usuarioB = criarUsuario();
     contaA = criarConta(usuarioA, "Conta do A", "100.00");
-    categoriaA = criarCategoria(usuarioA, "Lazer", "DESPESA", null);
+    categoriaA = criarCategoria(usuarioA, "Diversão", "DESPESA", null);
     lancamentoA =
         idDe(
             criarLancamento(usuarioA, contaA, categoriaA, "DESPESA", "10.00", null, HOJE)
@@ -45,22 +45,33 @@ class IsolamentoEntreUsuariosIntegracaoTest extends IntegracaoTest {
   }
 
   @Test
-  @DisplayName("as listagens de B vêm vazias")
+  @DisplayName("as listagens de B vêm vazias (categorias: só as padrão do próprio B)")
   void listagensVazias() throws Exception {
     for (String url :
-        new String[] {"/api/contas", "/api/categorias", "/api/lancamentos-financeiros"}) {
+        new String[] {"/api/contas", "/api/lancamentos-financeiros", "/api/transferencias"}) {
       mockMvc
           .perform(get(url).header(HttpHeaders.AUTHORIZATION, usuarioB.bearer()))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.page.totalElements").value(0));
     }
+    mockMvc
+        .perform(
+            get("/api/categorias")
+                .header(HttpHeaders.AUTHORIZATION, usuarioB.bearer())
+                .param("size", "200"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.page.totalElements").value(100))
+        .andExpect(jsonPath("$.content[?(@.id == '" + categoriaA + "')]").isEmpty());
+    mockMvc
+        .perform(get("/api/metas").header(HttpHeaders.AUTHORIZATION, usuarioB.bearer()))
+        .andExpect(jsonPath("$.metas").isEmpty());
   }
 
   @Test
   @DisplayName("B não lança na conta de A nem usa a categoria de A")
   void naoUsaRecursosDeOutro() throws Exception {
     UUID contaB = criarConta(usuarioB, "Conta do B", "0.00");
-    UUID categoriaB = criarCategoria(usuarioB, "Lazer", "DESPESA", null);
+    UUID categoriaB = criarCategoria(usuarioB, "Diversão", "DESPESA", null);
 
     criarLancamento(usuarioB, contaA, categoriaB, "DESPESA", "5.00", null, null)
         .andExpect(status().isNotFound());

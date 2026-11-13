@@ -1,14 +1,13 @@
 package br.com.financeiro.api.dashboardfinanceiro.service;
 
 import br.com.financeiro.api.common.exception.BusinessException;
-import br.com.financeiro.api.common.exception.ResourceNotFoundException;
 import br.com.financeiro.api.dashboardfinanceiro.dto.ResumoCategoriaFinanceiraResponse;
 import br.com.financeiro.api.dashboardfinanceiro.dto.ResumoMensalFinanceiroResponse;
 import br.com.financeiro.api.dashboardfinanceiro.projection.ResumoCategoriaFinanceiraProjection;
 import br.com.financeiro.api.dashboardfinanceiro.projection.ResumoMensalFinanceiroProjection;
 import br.com.financeiro.api.dashboardfinanceiro.repository.DashboardFinanceiroRepository;
 import br.com.financeiro.api.lancamentofinanceiro.enums.TipoLancamentoFinanceiro;
-import br.com.financeiro.api.usuario.repository.UsuarioRepository;
+import br.com.financeiro.api.usuario.service.UsuarioService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -27,7 +26,7 @@ public class DashboardFinanceiroService {
   private static final int ESCALA_PERCENTUAL = 4;
 
   private final DashboardFinanceiroRepository dashboardFinanceiroRepository;
-  private final UsuarioRepository usuarioRepository;
+  private final UsuarioService usuarioService;
 
   @Transactional(readOnly = true)
   public ResumoMensalFinanceiroResponse buscarResumoMensal(
@@ -103,9 +102,7 @@ public class DashboardFinanceiroService {
   }
 
   private void validarUsuario(UUID usuarioId) {
-    if (!usuarioRepository.existsById(usuarioId)) {
-      throw new ResourceNotFoundException("Usuário não encontrado.");
-    }
+    usuarioService.validarExistencia(usuarioId);
   }
 
   private YearMonth validarCompetencia(Integer ano, Integer mes) {
