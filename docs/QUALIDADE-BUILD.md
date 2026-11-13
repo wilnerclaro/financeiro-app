@@ -147,22 +147,6 @@ Em `<build><plugins>`:
       <exclude>**/*Application.class</exclude>
       <exclude>**/*MapperImpl.class</exclude>
 
-      <!--
-        ================== DIVIDA TECNICA ==================
-        Modulos anteriores ao gate de cobertura. Cada um sai desta lista
-        conforme o qa-e-revisao cobrir.
-
-        NENHUM MODULO NOVO ENTRA AQUI. Codigo novo nasce coberto.
-      -->
-      <exclude>**/categoria/service/**</exclude>
-      <exclude>**/conta/service/**</exclude>
-      <exclude>**/lancamentofinanceiro/service/**</exclude>
-      <exclude>**/dashboardfinanceiro/service/**</exclude>
-      <exclude>**/categoria/controller/**</exclude>
-      <exclude>**/conta/controller/**</exclude>
-      <exclude>**/lancamentofinanceiro/controller/**</exclude>
-      <exclude>**/dashboardfinanceiro/controller/**</exclude>
-      <!-- ==================================================== -->
     </excludes>
   </configuration>
   <executions>
@@ -247,15 +231,23 @@ do `checkstyle.xml` — mas remova conscientemente, não por incômodo.
 
 ## Sobre o gate de cobertura
 
-O projeto começa em 0%. O gate global de 80% só é alcançável porque os módulos
-legados estão excluídos: a métrica incide sobre o que for escrito de agora em
-diante.
+Os módulos legados (services e controllers de categoria, conta, lançamento e
+dashboard) já saíram da lista de exclusão: eles são cobertos pelos testes de
+integração em `src/test/java/br/com/financeiro/api/integracao/`, que sobem a
+aplicação contra um PostgreSQL real (Testcontainers) e chamam a API via MockMvc.
 
-Isso é intencional. Um gate que já nasce vermelho ensina o time a pular o gate.
+Só fica excluído o que não tem lógica (DTO, entidade, enum, docs, config,
+mappers gerados).
 
-**A regra que sustenta tudo**: nenhum módulo novo entra na lista de exclusão.
-Cada módulo legado que sai da lista é progresso mensurável, e é bom sinal ver
-essa lista encolher a cada PR.
+**A regra que sustenta tudo**: nada entra na lista de exclusão. Código novo
+nasce coberto.
+
+## CI
+
+`.github/workflows/ci.yml` roda `./mvnw verify` em todo push para `main` e
+`develop` e em todo pull request, com Java 25 (Temurin) e o Docker do runner
+para o Testcontainers. O Dependabot (`.github/dependabot.yml`) abre PRs semanais
+contra `develop` com atualizações do Maven e mensais das Actions.
 
 ---
 

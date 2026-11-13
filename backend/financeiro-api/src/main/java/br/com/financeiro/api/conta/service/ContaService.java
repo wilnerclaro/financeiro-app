@@ -11,7 +11,6 @@ import br.com.financeiro.api.conta.entity.Conta;
 import br.com.financeiro.api.conta.enums.TipoConta;
 import br.com.financeiro.api.conta.mapper.ContaMapper;
 import br.com.financeiro.api.conta.repository.ContaRepository;
-import br.com.financeiro.api.lancamentofinanceiro.repository.LancamentoFinanceiroRepository;
 import br.com.financeiro.api.usuario.entity.Usuario;
 import br.com.financeiro.api.usuario.repository.UsuarioRepository;
 import java.math.BigDecimal;
@@ -29,7 +28,6 @@ public class ContaService {
   private final ContaRepository contaRepository;
   private final UsuarioRepository usuarioRepository;
   private final ContaMapper contaMapper;
-  private final LancamentoFinanceiroRepository lancamentoFinanceiroRepository;
 
   @Transactional
   public ContaResponse criar(CriarContaRequest request) {
@@ -40,11 +38,11 @@ public class ContaService {
 
     Conta conta = contaMapper.paraEntity(request);
     conta.setUsuario(usuario);
-    conta.setNome(nomeNormalizado.toUpperCase());
+    conta.setNome(nomeNormalizado);
     conta.setSaldoAtual(request.saldoInicial());
     conta.setAtiva(true);
 
-    Conta contaSalva = contaRepository.save(conta);
+    Conta contaSalva = contaRepository.saveAndFlush(conta);
     return contaMapper.paraResponse(contaSalva);
   }
 
@@ -70,9 +68,9 @@ public class ContaService {
 
     validarDuplicidade(request.usuarioId(), nomeNormalizado, id);
 
-    conta.setNome(nomeNormalizado.toUpperCase());
+    conta.setNome(nomeNormalizado);
     conta.setTipo(request.tipo());
-    conta.setAtiva(request.ativa());
+    contaRepository.flush();
 
     return contaMapper.paraResponse(conta);
   }
@@ -80,11 +78,11 @@ public class ContaService {
   @Transactional
   public ContaResponse corrigirSaldoInicial(UUID id, CorrigirSaldoInicialContaRequest request) {
     Conta conta = buscarContaDoUsuario(id, request.usuarioId());
-    BigDecimal saldoMovimentado =
-        lancamentoFinanceiroRepository.calcularSaldoMovimentadoPorConta(id, request.usuarioId());
+    BigDecimal saldoMovimentado = contaRepository.calcularSaldoMovimentado(id, request.usuarioId());
 
     conta.setSaldoInicial(request.saldoInicial());
     conta.setSaldoAtual(request.saldoInicial().add(saldoMovimentado));
+    contaRepository.flush();
 
     return contaMapper.paraResponse(conta);
   }
@@ -92,23 +90,14 @@ public class ContaService {
   @Transactional
   public void inativar(UUID id, UUID usuarioId) {
     Conta conta = buscarContaDoUsuario(id, usuarioId);
-
-    if (!Boolean.TRUE.equals(conta.getAtiva())) {
-      throw new BusinessException("A conta informada ja esta inativa.");
-    }
-
     conta.setAtiva(false);
   }
 
   @Transactional
   public ContaResponse ativar(UUID id, UUID usuarioId) {
     Conta conta = buscarContaDoUsuario(id, usuarioId);
-
-    if (Boolean.TRUE.equals(conta.getAtiva())) {
-      throw new BusinessException("A conta informada ja esta ativa.");
-    }
-
     conta.setAtiva(true);
+    contaRepository.flush();
 
     return contaMapper.paraResponse(conta);
   }
@@ -116,20 +105,20 @@ public class ContaService {
   private Usuario buscarUsuario(UUID usuarioId) {
     return usuarioRepository
         .findById(usuarioId)
-        .orElseThrow(() -> new ResourceNotFoundException("Usuario nao encontrado."));
+        .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
   }
 
   private Conta buscarContaDoUsuario(UUID contaId, UUID usuarioId) {
     return contaRepository
         .buscarPorIdEUsuarioId(contaId, usuarioId)
-        .orElseThrow(() -> new ResourceNotFoundException("Conta nao encontrada."));
+        .orElseThrow(() -> new ResourceNotFoundException("Conta não encontrada."));
   }
 
   private void validarDuplicidade(UUID usuarioId, String nome, UUID contaIdIgnorada) {
     boolean duplicada = contaRepository.existeContaDuplicada(usuarioId, nome, contaIdIgnorada);
 
     if (duplicada) {
-      throw new BusinessException("Ja existe uma conta com esse nome para este usuario.");
+      throw new BusinessException("Já existe uma conta com esse nome para este usuário.");
     }
   }
 }

@@ -3,36 +3,40 @@ package br.com.financeiro.api.common.exception;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.OffsetDateTime;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
   @ExceptionHandler(ResourceNotFoundException.class)
   public ResponseEntity<ApiErrorResponse> tratarRecursoNaoEncontrado(
       ResourceNotFoundException exception, HttpServletRequest request) {
-    HttpStatus status = HttpStatus.NOT_FOUND;
+    return responder(HttpStatus.NOT_FOUND, exception.getMessage(), request);
+  }
 
-    ApiErrorResponse response =
-        criarRespostaDeErro(status, exception.getMessage(), request, List.of());
-
-    return ResponseEntity.status(status).body(response);
+  @ExceptionHandler(NoResourceFoundException.class)
+  public ResponseEntity<ApiErrorResponse> tratarRotaNaoEncontrada(
+      NoResourceFoundException exception, HttpServletRequest request) {
+    return responder(HttpStatus.NOT_FOUND, "Recurso não encontrado.", request);
   }
 
   @ExceptionHandler(BusinessException.class)
   public ResponseEntity<ApiErrorResponse> tratarExcecaoDeNegocio(
       BusinessException exception, HttpServletRequest request) {
-    HttpStatus status = HttpStatus.BAD_REQUEST;
-
-    ApiErrorResponse response =
-        criarRespostaDeErro(status, exception.getMessage(), request, List.of());
-
-    return ResponseEntity.status(status).body(response);
+    return responder(HttpStatus.BAD_REQUEST, exception.getMessage(), request);
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -45,20 +49,70 @@ public class GlobalExceptionHandler {
 
     ApiErrorResponse response =
         criarRespostaDeErro(
-            status, "Existem campos invalidos na requisicao.", request, fieldErrors);
+            status, "Existem campos inválidos na requisição.", request, fieldErrors);
 
     return ResponseEntity.status(status).body(response);
+  }
+
+  @ExceptionHandler(HttpMessageNotReadableException.class)
+  public ResponseEntity<ApiErrorResponse> tratarCorpoInvalido(
+      HttpMessageNotReadableException exception, HttpServletRequest request) {
+    log.debug("Corpo da requisição inválido em {}", request.getRequestURI(), exception);
+    return responder(
+        HttpStatus.BAD_REQUEST,
+        "O corpo da requisição está ausente ou com formato inválido.",
+        request);
+  }
+
+  @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+  public ResponseEntity<ApiErrorResponse> tratarParametroComTipoInvalido(
+      MethodArgumentTypeMismatchException exception, HttpServletRequest request) {
+    return responder(
+        HttpStatus.BAD_REQUEST,
+        "O parâmetro '%s' possui um valor inválido.".formatted(exception.getName()),
+        request);
+  }
+
+  @ExceptionHandler(MissingServletRequestParameterException.class)
+  public ResponseEntity<ApiErrorResponse> tratarParametroAusente(
+      MissingServletRequestParameterException exception, HttpServletRequest request) {
+    return responder(
+        HttpStatus.BAD_REQUEST,
+        "O parâmetro '%s' é obrigatório.".formatted(exception.getParameterName()),
+        request);
+  }
+
+  @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+  public ResponseEntity<ApiErrorResponse> tratarMetodoNaoSuportado(
+      HttpRequestMethodNotSupportedException exception, HttpServletRequest request) {
+    return responder(
+        HttpStatus.METHOD_NOT_ALLOWED, "Método HTTP não suportado para este recurso.", request);
+  }
+
+  @ExceptionHandler(DataIntegrityViolationException.class)
+  public ResponseEntity<ApiErrorResponse> tratarViolacaoDeIntegridade(
+      DataIntegrityViolationException exception, HttpServletRequest request) {
+    log.warn(
+        "Violação de integridade em {}: {}",
+        request.getRequestURI(),
+        exception.getMostSpecificCause().getMessage());
+    return responder(
+        HttpStatus.CONFLICT,
+        "A operação conflita com dados já existentes (por exemplo, um registro duplicado).",
+        request);
   }
 
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ApiErrorResponse> tratarErroGenerico(
       Exception exception, HttpServletRequest request) {
-    HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
+    log.error("Erro inesperado em {} {}", request.getMethod(), request.getRequestURI(), exception);
+    return responder(HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno inesperado.", request);
+  }
 
-    ApiErrorResponse response =
-        criarRespostaDeErro(status, "Erro interno inesperado.", request, List.of());
-
-    return ResponseEntity.status(status).body(response);
+  private ResponseEntity<ApiErrorResponse> responder(
+      HttpStatus status, String message, HttpServletRequest request) {
+    return ResponseEntity.status(status)
+        .body(criarRespostaDeErro(status, message, request, List.of()));
   }
 
   private ApiErrorResponse criarRespostaDeErro(

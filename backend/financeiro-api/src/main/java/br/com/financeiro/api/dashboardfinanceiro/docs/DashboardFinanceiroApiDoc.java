@@ -14,10 +14,10 @@ public interface DashboardFinanceiroApiDoc {
   @Operation(
       summary = "Buscar resumo mensal",
       description =
-          "Retorna receitas, despesas, saldo do periodo e distribuicao por categoria para um mes.")
+          "Retorna receitas, despesas, saldo do período e distribuição por categoria para um mês.")
   @ApiResponse(responseCode = "200", description = "Resumo mensal retornado com sucesso")
-  @ApiResponse(responseCode = "400", description = "Ano ou mes invalido")
-  @ApiResponse(responseCode = "404", description = "Usuario nao encontrado")
+  @ApiResponse(responseCode = "400", description = "Ano ou mês inválido")
+  @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
   ResponseEntity<ResumoMensalFinanceiroResponse> buscarResumoMensal(
       @RequestParam UUID usuarioId, @RequestParam Integer ano, @RequestParam Integer mes);
 }

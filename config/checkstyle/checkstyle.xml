@@ -34,7 +34,8 @@
 
     <!-- ===== Defeitos reais ===== -->
 
-    <!-- Pega o caso de CategoriaService: if (!objeto.getAtiva()) com Boolean -->
+    <!-- Boolean nulo em if (!objeto.getAtiva()) nao e detectado aqui: a convencao e
+         usar Boolean.TRUE.equals(...), conferida em revisao. -->
     <module name="UnnecessaryParentheses"/>
     <module name="EqualsHashCode"/>
     <module name="StringLiteralEquality"/>

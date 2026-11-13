@@ -19,6 +19,7 @@ import br.com.financeiro.api.lancamentofinanceiro.repository.LancamentoFinanceir
 import br.com.financeiro.api.usuario.entity.Usuario;
 import br.com.financeiro.api.usuario.repository.UsuarioRepository;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,7 @@ public class LancamentoFinanceiroService {
   private final ContaRepository contaRepository;
   private final CategoriaRepository categoriaRepository;
   private final LancamentoFinanceiroMapper lancamentoFinanceiroMapper;
+  private final Clock clock;
 
   @Transactional
   public LancamentoFinanceiroResponse criar(CriarLancamentoFinanceiroRequest request) {
@@ -60,7 +62,7 @@ public class LancamentoFinanceiroService {
     movimentarSaldoSePago(lancamentoFinanceiro);
 
     LancamentoFinanceiro lancamentoSalvo =
-        lancamentoFinanceiroRepository.save(lancamentoFinanceiro);
+        lancamentoFinanceiroRepository.saveAndFlush(lancamentoFinanceiro);
     return lancamentoFinanceiroMapper.paraResponse(lancamentoSalvo);
   }
 
@@ -96,6 +98,11 @@ public class LancamentoFinanceiroService {
   public LancamentoFinanceiroResponse atualizar(
       UUID id, AtualizarLancamentoFinanceiroRequest request) {
     LancamentoFinanceiro lancamentoFinanceiro = buscarLancamentoDoUsuario(id, request.usuarioId());
+
+    if (StatusLancamentoFinanceiro.CANCELADO.equals(lancamentoFinanceiro.getStatus())) {
+      throw new BusinessException("Não é possível editar um lançamento cancelado.");
+    }
+
     Conta conta = buscarContaAtivaDoUsuario(request.contaId(), request.usuarioId());
     Categoria categoria = buscarCategoriaAtivaDoUsuario(request.categoriaId(), request.usuarioId());
 
@@ -119,6 +126,7 @@ public class LancamentoFinanceiroService {
     lancamentoFinanceiro.setObservacao(request.observacao());
 
     movimentarSaldoSePago(lancamentoFinanceiro);
+    lancamentoFinanceiroRepository.flush();
 
     return lancamentoFinanceiroMapper.paraResponse(lancamentoFinanceiro);
   }
@@ -128,11 +136,11 @@ public class LancamentoFinanceiroService {
     LancamentoFinanceiro lancamentoFinanceiro = buscarLancamentoDoUsuario(id, request.usuarioId());
 
     if (StatusLancamentoFinanceiro.CANCELADO.equals(lancamentoFinanceiro.getStatus())) {
-      throw new BusinessException("Nao e possivel pagar um lancamento cancelado.");
+      throw new BusinessException("Não é possível pagar um lançamento cancelado.");
     }
 
     if (StatusLancamentoFinanceiro.PAGO.equals(lancamentoFinanceiro.getStatus())) {
-      throw new BusinessException("O lancamento informado ja esta pago.");
+      throw new BusinessException("O lançamento informado já está pago.");
     }
 
     validarDataPagamento(request.dataPagamento());
@@ -143,6 +151,7 @@ public class LancamentoFinanceiroService {
         lancamentoFinanceiro.getConta(),
         lancamentoFinanceiro.getTipo(),
         lancamentoFinanceiro.getValor());
+    lancamentoFinanceiroRepository.flush();
 
     return lancamentoFinanceiroMapper.paraResponse(lancamentoFinanceiro);
   }
@@ -152,7 +161,7 @@ public class LancamentoFinanceiroService {
     LancamentoFinanceiro lancamentoFinanceiro = buscarLancamentoDoUsuario(id, usuarioId);
 
     if (StatusLancamentoFinanceiro.CANCELADO.equals(lancamentoFinanceiro.getStatus())) {
-      throw new BusinessException("O lancamento informado ja esta cancelado.");
+      throw new BusinessException("O lançamento informado já está cancelado.");
     }
 
     estornarSaldoSePago(lancamentoFinanceiro);
@@ -206,7 +215,7 @@ public class LancamentoFinanceiroService {
       return StatusLancamentoFinanceiro.PAGO;
     }
 
-    if (dataVencimento != null && dataVencimento.isBefore(LocalDate.now())) {
+    if (dataVencimento != null && dataVencimento.isBefore(LocalDate.now(clock))) {
       return StatusLancamentoFinanceiro.ATRASADO;
     }
 
@@ -215,7 +224,7 @@ public class LancamentoFinanceiroService {
 
   private void validarPeriodo(LocalDate dataInicio, LocalDate dataFim) {
     if (dataInicio != null && dataFim != null && dataInicio.isAfter(dataFim)) {
-      throw new BusinessException("A data inicial nao pode ser posterior a data final.");
+      throw new BusinessException("A data inicial não pode ser posterior a data final.");
     }
   }
 
@@ -269,39 +278,39 @@ public class LancamentoFinanceiroService {
   }
 
   private void validarDataPagamento(LocalDate dataPagamento) {
-    if (dataPagamento != null && dataPagamento.isAfter(LocalDate.now())) {
-      throw new BusinessException("A data de pagamento nao pode ser futura.");
+    if (dataPagamento != null && dataPagamento.isAfter(LocalDate.now(clock))) {
+      throw new BusinessException("A data de pagamento não pode ser futura.");
     }
   }
 
   private void validarCategoriaCompativelComTipo(
       Categoria categoria, TipoLancamentoFinanceiro tipoLancamento) {
-    if (!categoria.getTipo().name().equals(tipoLancamento.name())) {
+    if (!tipoLancamento.aceitaCategoria(categoria.getTipo())) {
       throw new BusinessException(
-          "A categoria informada nao e compativel com o tipo do lancamento.");
+          "A categoria informada não é compatível com o tipo do lançamento.");
     }
   }
 
   private Usuario buscarUsuario(UUID usuarioId) {
     return usuarioRepository
         .findById(usuarioId)
-        .orElseThrow(() -> new ResourceNotFoundException("Usuario nao encontrado."));
+        .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
   }
 
   private LancamentoFinanceiro buscarLancamentoDoUsuario(UUID id, UUID usuarioId) {
     return lancamentoFinanceiroRepository
         .buscarPorIdEUsuarioId(id, usuarioId)
-        .orElseThrow(() -> new ResourceNotFoundException("Lancamento financeiro nao encontrado."));
+        .orElseThrow(() -> new ResourceNotFoundException("Lançamento financeiro não encontrado."));
   }
 
   private Conta buscarContaAtivaDoUsuario(UUID contaId, UUID usuarioId) {
     Conta conta =
         contaRepository
             .buscarPorIdEUsuarioId(contaId, usuarioId)
-            .orElseThrow(() -> new ResourceNotFoundException("Conta nao encontrada."));
+            .orElseThrow(() -> new ResourceNotFoundException("Conta não encontrada."));
 
     if (!Boolean.TRUE.equals(conta.getAtiva())) {
-      throw new BusinessException("A conta informada esta inativa.");
+      throw new BusinessException("A conta informada está inativa.");
     }
 
     return conta;
@@ -311,10 +320,10 @@ public class LancamentoFinanceiroService {
     Categoria categoria =
         categoriaRepository
             .buscarPorIdEUsuarioId(categoriaId, usuarioId)
-            .orElseThrow(() -> new ResourceNotFoundException("Categoria nao encontrada."));
+            .orElseThrow(() -> new ResourceNotFoundException("Categoria não encontrada."));
 
     if (!Boolean.TRUE.equals(categoria.getAtiva())) {
-      throw new BusinessException("A categoria informada esta inativa.");
+      throw new BusinessException("A categoria informada está inativa.");
     }
 
     return categoria;
@@ -327,7 +336,7 @@ public class LancamentoFinanceiroService {
 
     contaRepository
         .buscarPorIdEUsuarioId(contaId, usuarioId)
-        .orElseThrow(() -> new ResourceNotFoundException("Conta nao encontrada."));
+        .orElseThrow(() -> new ResourceNotFoundException("Conta não encontrada."));
   }
 
   private void validarCategoriaDoUsuario(UUID categoriaId, UUID usuarioId) {
@@ -337,6 +346,6 @@ public class LancamentoFinanceiroService {
 
     categoriaRepository
         .buscarPorIdEUsuarioId(categoriaId, usuarioId)
-        .orElseThrow(() -> new ResourceNotFoundException("Categoria nao encontrada."));
+        .orElseThrow(() -> new ResourceNotFoundException("Categoria não encontrada."));
   }
 }

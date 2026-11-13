@@ -11,22 +11,22 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 public record AtualizarLancamentoFinanceiroRequest(
-    @NotNull(message = "O usuario e obrigatorio.") UUID usuarioId,
-    @NotNull(message = "A conta e obrigatoria.") UUID contaId,
-    @NotNull(message = "A categoria e obrigatoria.") UUID categoriaId,
-    @NotBlank(message = "A descricao e obrigatoria.")
-        @Size(max = 180, message = "A descricao deve ter no maximo 180 caracteres.")
+    @NotNull(message = "O usuário é obrigatório.") UUID usuarioId,
+    @NotNull(message = "A conta é obrigatória.") UUID contaId,
+    @NotNull(message = "A categoria é obrigatória.") UUID categoriaId,
+    @NotBlank(message = "A descrição é obrigatória.")
+        @Size(max = 180, message = "A descrição deve ter no máximo 180 caracteres.")
         String descricao,
-    @NotNull(message = "O tipo do lancamento e obrigatorio.") TipoLancamentoFinanceiro tipo,
-    @NotNull(message = "O valor e obrigatorio.")
+    @NotNull(message = "O tipo do lançamento é obrigatório.") TipoLancamentoFinanceiro tipo,
+    @NotNull(message = "O valor é obrigatório.")
         @DecimalMin(value = "0.01", message = "O valor deve ser maior que zero.")
         @Digits(
             integer = 17,
             fraction = 2,
-            message = "O valor deve ter no maximo 17 digitos inteiros e 2 casas decimais.")
+            message = "O valor deve ter no máximo 17 dígitos inteiros e 2 casas decimais.")
         BigDecimal valor,
-    @NotNull(message = "A data de competencia e obrigatoria.") LocalDate dataCompetencia,
+    @NotNull(message = "A data de competência é obrigatória.") LocalDate dataCompetencia,
     LocalDate dataVencimento,
     LocalDate dataPagamento,
-    @Size(max = 2000, message = "A observacao deve ter no maximo 2000 caracteres.")
+    @Size(max = 2000, message = "A observação deve ter no máximo 2000 caracteres.")
         String observacao) {}

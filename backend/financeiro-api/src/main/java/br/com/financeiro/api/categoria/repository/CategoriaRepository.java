@@ -64,4 +64,12 @@ public interface CategoriaRepository extends JpaRepository<Categoria, UUID> {
               AND c.ativa = TRUE
             """)
   boolean existeSubcategoriaAtiva(@Param("categoriaPaiId") UUID categoriaPaiId);
+
+  @Query(
+      """
+            SELECT CASE WHEN COUNT(c) > 0 THEN TRUE ELSE FALSE END
+            FROM Categoria c
+            WHERE c.categoriaPai.id = :categoriaPaiId
+            """)
+  boolean existeSubcategoria(@Param("categoriaPaiId") UUID categoriaPaiId);
 }

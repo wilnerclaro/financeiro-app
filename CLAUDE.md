@@ -60,9 +60,22 @@ privados: `buscarXDoUsuario`, `validarY`.
 Entidade **nunca** cruza a fronteira do controller.
 
 **Erros**: `BusinessException` → 400, `ResourceNotFoundException` → 404,
-tratados no `GlobalExceptionHandler` com envelope `ApiErrorResponse`.
-Mensagens em português **sem acento** ("Nao e possivel...") — convenção
-existente, mantenha.
+conflito de banco (`DataIntegrityViolationException`) → 409, JSON ou parâmetro
+inválido → 400, tudo tratado no `GlobalExceptionHandler` com envelope
+`ApiErrorResponse`. Erro 500 é sempre logado com stack trace.
+Mensagens em português **com acento** ("Não é possível...") — elas chegam à
+tela do usuário.
+
+**Contrato da API**:
+- `PUT` não altera `ativa`; status só muda por `DELETE` (inativa) e
+  `PATCH /{id}/ativar` (reativa), ambos idempotentes.
+- Nomes são guardados como digitados (só espaços normalizados); a checagem de
+  duplicidade ignora maiúsculas.
+- Listagens devolvem `{ "content": [...], "page": { size, number,
+  totalElements, totalPages } }` (`WebConfig`, `VIA_DTO`).
+- Percentual é fração de 0 a 1 com 4 casas (`0.2500` = 25%); o front formata.
+- "Hoje" vem do bean `Clock` (fuso `America/Sao_Paulo`); nunca use
+  `LocalDate.now()` sem o `clock`.
 
 **Migrations**: `V<n>__nome_em_portugues.sql`. Prefixos `fk_`, `uk_`, `ck_`,
 `idx_`. Trigger `definir_atualizado_em` em toda tabela. Nunca edite uma
