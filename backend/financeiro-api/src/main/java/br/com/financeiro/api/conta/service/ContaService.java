@@ -30,11 +30,11 @@ public class ContaService {
   private final ContaMapper contaMapper;
 
   @Transactional
-  public ContaResponse criar(CriarContaRequest request) {
-    Usuario usuario = buscarUsuario(request.usuarioId());
+  public ContaResponse criar(UUID usuarioId, CriarContaRequest request) {
+    Usuario usuario = buscarUsuario(usuarioId);
     String nomeNormalizado = NormalizadorTexto.normalizarNome(request.nome());
 
-    validarDuplicidade(request.usuarioId(), nomeNormalizado, null);
+    validarDuplicidade(usuarioId, nomeNormalizado, null);
 
     Conta conta = contaMapper.paraEntity(request);
     conta.setUsuario(usuario);
@@ -62,11 +62,11 @@ public class ContaService {
   }
 
   @Transactional
-  public ContaResponse atualizar(UUID id, AtualizarContaRequest request) {
-    Conta conta = buscarContaDoUsuario(id, request.usuarioId());
+  public ContaResponse atualizar(UUID id, UUID usuarioId, AtualizarContaRequest request) {
+    Conta conta = buscarContaDoUsuario(id, usuarioId);
     String nomeNormalizado = NormalizadorTexto.normalizarNome(request.nome());
 
-    validarDuplicidade(request.usuarioId(), nomeNormalizado, id);
+    validarDuplicidade(usuarioId, nomeNormalizado, id);
 
     conta.setNome(nomeNormalizado);
     conta.setTipo(request.tipo());
@@ -76,9 +76,10 @@ public class ContaService {
   }
 
   @Transactional
-  public ContaResponse corrigirSaldoInicial(UUID id, CorrigirSaldoInicialContaRequest request) {
-    Conta conta = buscarContaDoUsuario(id, request.usuarioId());
-    BigDecimal saldoMovimentado = contaRepository.calcularSaldoMovimentado(id, request.usuarioId());
+  public ContaResponse corrigirSaldoInicial(
+      UUID id, UUID usuarioId, CorrigirSaldoInicialContaRequest request) {
+    Conta conta = buscarContaDoUsuario(id, usuarioId);
+    BigDecimal saldoMovimentado = contaRepository.calcularSaldoMovimentado(id, usuarioId);
 
     conta.setSaldoInicial(request.saldoInicial());
     conta.setSaldoAtual(request.saldoInicial().add(saldoMovimentado));

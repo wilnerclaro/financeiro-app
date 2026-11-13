@@ -3,6 +3,7 @@ package br.com.financeiro.api.dashboardfinanceiro.controller;
 import br.com.financeiro.api.dashboardfinanceiro.docs.DashboardFinanceiroApiDoc;
 import br.com.financeiro.api.dashboardfinanceiro.dto.ResumoMensalFinanceiroResponse;
 import br.com.financeiro.api.dashboardfinanceiro.service.DashboardFinanceiroService;
+import br.com.financeiro.api.security.UsuarioLogado;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +21,7 @@ public class DashboardFinanceiroController implements DashboardFinanceiroApiDoc 
 
   @GetMapping("/resumo-mensal")
   public ResponseEntity<ResumoMensalFinanceiroResponse> buscarResumoMensal(
-      @RequestParam UUID usuarioId, @RequestParam Integer ano, @RequestParam Integer mes) {
+      @UsuarioLogado UUID usuarioId, @RequestParam Integer ano, @RequestParam Integer mes) {
     ResumoMensalFinanceiroResponse response =
         dashboardFinanceiroService.buscarResumoMensal(usuarioId, ano, mes);
 

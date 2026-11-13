@@ -6,6 +6,7 @@ import br.com.financeiro.api.lancamentofinanceiro.dto.LancamentoFinanceiroRespon
 import br.com.financeiro.api.lancamentofinanceiro.dto.PagarLancamentoFinanceiroRequest;
 import br.com.financeiro.api.lancamentofinanceiro.enums.StatusLancamentoFinanceiro;
 import br.com.financeiro.api.lancamentofinanceiro.enums.TipoLancamentoFinanceiro;
+import br.com.financeiro.api.security.UsuarioLogado;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -32,7 +33,7 @@ public interface LancamentoFinanceiroApiDoc {
       description = "Requisição inválida ou regra de negócio violada")
   @ApiResponse(responseCode = "404", description = "Usuário, conta ou categoria não encontrada")
   ResponseEntity<LancamentoFinanceiroResponse> criar(
-      @Valid @RequestBody CriarLancamentoFinanceiroRequest request);
+      @UsuarioLogado UUID usuarioId, @Valid @RequestBody CriarLancamentoFinanceiroRequest request);
 
   @Operation(
       summary = "Listar lançamentos",
@@ -41,7 +42,7 @@ public interface LancamentoFinanceiroApiDoc {
   @ApiResponse(responseCode = "400", description = "Período inválido")
   @ApiResponse(responseCode = "404", description = "Usuário, conta ou categoria não encontrada")
   ResponseEntity<Page<LancamentoFinanceiroResponse>> listar(
-      @RequestParam UUID usuarioId,
+      @UsuarioLogado UUID usuarioId,
       @RequestParam(required = false) TipoLancamentoFinanceiro tipo,
       @RequestParam(required = false) StatusLancamentoFinanceiro status,
       @RequestParam(required = false) UUID contaId,
@@ -58,7 +59,7 @@ public interface LancamentoFinanceiroApiDoc {
   @ApiResponse(responseCode = "200", description = "Lançamento encontrado")
   @ApiResponse(responseCode = "404", description = "Lançamento não encontrado")
   ResponseEntity<LancamentoFinanceiroResponse> buscarPorId(
-      @PathVariable UUID id, @RequestParam UUID usuarioId);
+      @PathVariable UUID id, @UsuarioLogado UUID usuarioId);
 
   @Operation(
       summary = "Atualizar lançamento",
@@ -69,7 +70,9 @@ public interface LancamentoFinanceiroApiDoc {
       description = "Requisição inválida ou regra de negócio violada")
   @ApiResponse(responseCode = "404", description = "Lançamento, conta ou categoria não encontrada")
   ResponseEntity<LancamentoFinanceiroResponse> atualizar(
-      @PathVariable UUID id, @Valid @RequestBody AtualizarLancamentoFinanceiroRequest request);
+      @PathVariable UUID id,
+      @UsuarioLogado UUID usuarioId,
+      @Valid @RequestBody AtualizarLancamentoFinanceiroRequest request);
 
   @Operation(
       summary = "Pagar lançamento",
@@ -78,7 +81,9 @@ public interface LancamentoFinanceiroApiDoc {
   @ApiResponse(responseCode = "400", description = "Lançamento já pago, cancelado ou data inválida")
   @ApiResponse(responseCode = "404", description = "Lançamento não encontrado")
   ResponseEntity<LancamentoFinanceiroResponse> pagar(
-      @PathVariable UUID id, @Valid @RequestBody PagarLancamentoFinanceiroRequest request);
+      @PathVariable UUID id,
+      @UsuarioLogado UUID usuarioId,
+      @Valid @RequestBody PagarLancamentoFinanceiroRequest request);
 
   @Operation(
       summary = "Cancelar lançamento",
@@ -86,5 +91,5 @@ public interface LancamentoFinanceiroApiDoc {
   @ApiResponse(responseCode = "204", description = "Lançamento cancelado com sucesso")
   @ApiResponse(responseCode = "400", description = "Lançamento já cancelado")
   @ApiResponse(responseCode = "404", description = "Lançamento não encontrado")
-  ResponseEntity<Void> cancelar(@PathVariable UUID id, @RequestParam UUID usuarioId);
+  ResponseEntity<Void> cancelar(@PathVariable UUID id, @UsuarioLogado UUID usuarioId);
 }

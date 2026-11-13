@@ -1,6 +1,7 @@
 package br.com.financeiro.api.dashboardfinanceiro.docs;
 
 import br.com.financeiro.api.dashboardfinanceiro.dto.ResumoMensalFinanceiroResponse;
+import br.com.financeiro.api.security.UsuarioLogado;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,5 +20,5 @@ public interface DashboardFinanceiroApiDoc {
   @ApiResponse(responseCode = "400", description = "Ano ou mês inválido")
   @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
   ResponseEntity<ResumoMensalFinanceiroResponse> buscarResumoMensal(
-      @RequestParam UUID usuarioId, @RequestParam Integer ano, @RequestParam Integer mes);
+      @UsuarioLogado UUID usuarioId, @RequestParam Integer ano, @RequestParam Integer mes);
 }

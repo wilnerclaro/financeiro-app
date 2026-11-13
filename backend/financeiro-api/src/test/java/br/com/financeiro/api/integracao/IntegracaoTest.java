@@ -8,8 +8,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import br.com.financeiro.api.TestcontainersConfiguration;
-import br.com.financeiro.api.usuario.entity.Usuario;
-import br.com.financeiro.api.usuario.repository.UsuarioRepository;
 import com.jayway.jsonpath.JsonPath;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -23,27 +21,41 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 /**
  * Base dos testes de integração: sobe a aplicação inteira contra um PostgreSQL real
- * (Testcontainers) e conversa com ela por HTTP via MockMvc.
+ * (Testcontainers) e conversa com ela por HTTP via MockMvc, autenticada com JWT.
  *
- * <p>Cada teste cria o próprio usuário, então os testes não dependem de ordem nem de limpeza do
- * banco. O relógio é fixo em {@link #HOJE} para que regras de data sejam determinísticas.
+ * <p>Cada teste cadastra o próprio usuário pela API, então os testes não dependem de ordem nem de
+ * limpeza do banco. O relógio é fixo em {@link #HOJE} para que regras de data sejam
+ * determinísticas.
  */
-@SpringBootTest
+@SpringBootTest(properties = IntegracaoTest.SEGREDO_JWT_DE_TESTE)
 @AutoConfigureMockMvc
 @Import({TestcontainersConfiguration.class, IntegracaoTest.RelogioFixo.class})
 abstract class IntegracaoTest {
 
+  static final String SEGREDO_JWT_DE_TESTE =
+      "app.jwt.segredo=segredo-apenas-para-testes-com-mais-de-32-bytes";
+
   static final LocalDate HOJE = LocalDate.of(2026, 6, 15);
+
+  static final String SENHA_PADRAO = "senha-forte-123";
 
   @Autowired protected MockMvc mockMvc;
 
-  @Autowired private UsuarioRepository usuarioRepository;
+  /** Usuário cadastrado e logado: o id e o token de acesso dele. */
+  record Sessao(UUID id, String email, String accessToken, String refreshToken) {
+
+    String bearer() {
+      return "Bearer " + accessToken;
+    }
+  }
 
   @TestConfiguration(proxyBeanMethods = false)
   static class RelogioFixo {
@@ -56,37 +68,57 @@ abstract class IntegracaoTest {
     }
   }
 
-  protected UUID criarUsuario() {
-    Usuario usuario = new Usuario();
-    usuario.setNome("Usuário de teste");
-    usuario.setEmail(UUID.randomUUID() + "@teste.local");
-    usuario.setSenhaHash("nao-usado");
-    usuario.setAtivo(true);
-    return usuarioRepository.saveAndFlush(usuario).getId();
+  protected Sessao criarUsuario() throws Exception {
+    return cadastrar(UUID.randomUUID() + "@teste.local");
   }
 
-  protected UUID criarConta(UUID usuarioId, String nome, String saldoInicial) throws Exception {
+  protected Sessao cadastrar(String email) throws Exception {
     String corpo =
         """
-        {"usuarioId":"%s","nome":"%s","tipo":"CONTA_CORRENTE","saldoInicial":%s}
+        {"nome":"Usuário de teste","email":"%s","senha":"%s"}
         """
-            .formatted(usuarioId, nome, saldoInicial);
-    return idDe(postar("/api/contas", corpo).andExpect(status().isCreated()));
+            .formatted(email, SENHA_PADRAO);
+    String json =
+        mockMvc
+            .perform(
+                post("/api/auth/cadastro").contentType(MediaType.APPLICATION_JSON).content(corpo))
+            .andExpect(status().isCreated())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    return sessaoDe(json);
   }
 
-  protected UUID criarCategoria(UUID usuarioId, String nome, String tipo, UUID categoriaPaiId)
+  protected static Sessao sessaoDe(String json) {
+    return new Sessao(
+        UUID.fromString(JsonPath.read(json, "$.usuario.id")),
+        JsonPath.read(json, "$.usuario.email"),
+        JsonPath.read(json, "$.accessToken"),
+        JsonPath.read(json, "$.refreshToken"));
+  }
+
+  protected UUID criarConta(Sessao usuario, String nome, String saldoInicial) throws Exception {
+    String corpo =
+        """
+        {"nome":"%s","tipo":"CONTA_CORRENTE","saldoInicial":%s}
+        """
+            .formatted(nome, saldoInicial);
+    return idDe(postar(usuario, "/api/contas", corpo).andExpect(status().isCreated()));
+  }
+
+  protected UUID criarCategoria(Sessao usuario, String nome, String tipo, UUID categoriaPaiId)
       throws Exception {
     String pai = categoriaPaiId == null ? "null" : "\"" + categoriaPaiId + "\"";
     String corpo =
         """
-        {"usuarioId":"%s","nome":"%s","tipo":"%s","categoriaPaiId":%s}
+        {"nome":"%s","tipo":"%s","categoriaPaiId":%s}
         """
-            .formatted(usuarioId, nome, tipo, pai);
-    return idDe(postar("/api/categorias", corpo).andExpect(status().isCreated()));
+            .formatted(nome, tipo, pai);
+    return idDe(postar(usuario, "/api/categorias", corpo).andExpect(status().isCreated()));
   }
 
   protected ResultActions criarLancamento(
-      UUID usuarioId,
+      Sessao usuario,
       UUID contaId,
       UUID categoriaId,
       String tipo,
@@ -95,13 +127,12 @@ abstract class IntegracaoTest {
       LocalDate dataPagamento)
       throws Exception {
     return postar(
+        usuario,
         "/api/lancamentos-financeiros",
-        corpoLancamento(
-            usuarioId, contaId, categoriaId, tipo, valor, dataVencimento, dataPagamento));
+        corpoLancamento(contaId, categoriaId, tipo, valor, dataVencimento, dataPagamento));
   }
 
   protected String corpoLancamento(
-      UUID usuarioId,
       UUID contaId,
       UUID categoriaId,
       String tipo,
@@ -109,11 +140,10 @@ abstract class IntegracaoTest {
       LocalDate dataVencimento,
       LocalDate dataPagamento) {
     return """
-        {"usuarioId":"%s","contaId":"%s","categoriaId":"%s","descricao":"Lançamento de teste",
+        {"contaId":"%s","categoriaId":"%s","descricao":"Lançamento de teste",
          "tipo":"%s","valor":%s,"dataCompetencia":"%s","dataVencimento":%s,"dataPagamento":%s}
         """
         .formatted(
-            usuarioId,
             contaId,
             categoriaId,
             tipo,
@@ -123,10 +153,9 @@ abstract class IntegracaoTest {
             textoOuNull(dataPagamento));
   }
 
-  protected BigDecimal saldoAtual(UUID contaId, UUID usuarioId) throws Exception {
+  protected BigDecimal saldoAtual(UUID contaId, Sessao usuario) throws Exception {
     String json =
-        mockMvc
-            .perform(get("/api/contas/{id}", contaId).param("usuarioId", usuarioId.toString()))
+        consultar("/api/contas/" + contaId, usuario)
             .andExpect(status().isOk())
             .andReturn()
             .getResponse()
@@ -134,33 +163,43 @@ abstract class IntegracaoTest {
     return new BigDecimal(JsonPath.read(json, "$.saldoAtual").toString());
   }
 
-  protected ResultActions postar(String url, String corpo) throws Exception {
-    return mockMvc.perform(post(url).contentType(MediaType.APPLICATION_JSON).content(corpo));
+  protected ResultActions postar(Sessao usuario, String url, String corpo) throws Exception {
+    return mockMvc.perform(comCorpo(post(url), usuario, corpo));
   }
 
-  protected ResultActions atualizar(String url, String corpo) throws Exception {
-    return mockMvc.perform(put(url).contentType(MediaType.APPLICATION_JSON).content(corpo));
+  protected ResultActions atualizar(Sessao usuario, String url, String corpo) throws Exception {
+    return mockMvc.perform(comCorpo(put(url), usuario, corpo));
   }
 
-  protected ResultActions alterar(String url, String corpo) throws Exception {
-    return mockMvc.perform(patch(url).contentType(MediaType.APPLICATION_JSON).content(corpo));
+  protected ResultActions alterar(Sessao usuario, String url, String corpo) throws Exception {
+    return mockMvc.perform(comCorpo(patch(url), usuario, corpo));
   }
 
-  protected ResultActions consultar(String url, UUID usuarioId) throws Exception {
-    return mockMvc.perform(get(url).param("usuarioId", usuarioId.toString()));
+  protected ResultActions consultar(String url, Sessao usuario) throws Exception {
+    return mockMvc.perform(autenticado(get(url), usuario));
   }
 
-  protected ResultActions remover(String url, UUID usuarioId) throws Exception {
-    return mockMvc.perform(delete(url).param("usuarioId", usuarioId.toString()));
+  protected ResultActions remover(String url, Sessao usuario) throws Exception {
+    return mockMvc.perform(autenticado(delete(url), usuario));
   }
 
-  protected ResultActions ativar(String url, UUID usuarioId) throws Exception {
-    return mockMvc.perform(patch(url).param("usuarioId", usuarioId.toString()));
+  protected ResultActions ativar(String url, Sessao usuario) throws Exception {
+    return mockMvc.perform(autenticado(patch(url), usuario));
+  }
+
+  protected static MockHttpServletRequestBuilder autenticado(
+      MockHttpServletRequestBuilder requisicao, Sessao usuario) {
+    return requisicao.header(HttpHeaders.AUTHORIZATION, usuario.bearer());
   }
 
   protected static UUID idDe(ResultActions resultado) throws Exception {
     String json = resultado.andReturn().getResponse().getContentAsString();
     return UUID.fromString(JsonPath.read(json, "$.id"));
+  }
+
+  private static MockHttpServletRequestBuilder comCorpo(
+      MockHttpServletRequestBuilder requisicao, Sessao usuario, String corpo) {
+    return autenticado(requisicao, usuario).contentType(MediaType.APPLICATION_JSON).content(corpo);
   }
 
   private static String textoOuNull(LocalDate data) {

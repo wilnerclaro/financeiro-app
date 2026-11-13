@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 
 /**
  * Garante que um usuário nunca enxerga nem altera dados de outro. Hoje o usuário vem no request;
@@ -16,8 +17,8 @@ import org.junit.jupiter.api.Test;
 @DisplayName("Isolamento entre usuários")
 class IsolamentoEntreUsuariosIntegracaoTest extends IntegracaoTest {
 
-  private UUID usuarioA;
-  private UUID usuarioB;
+  private Sessao usuarioA;
+  private Sessao usuarioB;
   private UUID contaA;
   private UUID categoriaA;
   private UUID lancamentoA;
@@ -49,7 +50,7 @@ class IsolamentoEntreUsuariosIntegracaoTest extends IntegracaoTest {
     for (String url :
         new String[] {"/api/contas", "/api/categorias", "/api/lancamentos-financeiros"}) {
       mockMvc
-          .perform(get(url).param("usuarioId", usuarioB.toString()))
+          .perform(get(url).header(HttpHeaders.AUTHORIZATION, usuarioB.bearer()))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.page.totalElements").value(0));
     }
@@ -75,11 +76,11 @@ class IsolamentoEntreUsuariosIntegracaoTest extends IntegracaoTest {
     remover("/api/lancamentos-financeiros/" + lancamentoA, usuarioB)
         .andExpect(status().isNotFound());
     atualizar(
+            usuarioB,
             "/api/contas/" + contaA,
             """
-            {"usuarioId":"%s","nome":"Invasão","tipo":"POUPANCA"}
-            """
-                .formatted(usuarioB))
+            {"nome":"Invasão","tipo":"POUPANCA"}
+            """)
         .andExpect(status().isNotFound());
 
     consultar("/api/contas/" + contaA, usuarioA)
@@ -94,11 +95,29 @@ class IsolamentoEntreUsuariosIntegracaoTest extends IntegracaoTest {
     mockMvc
         .perform(
             get("/api/dashboard-financeiro/resumo-mensal")
-                .param("usuarioId", usuarioB.toString())
+                .header(HttpHeaders.AUTHORIZATION, usuarioB.bearer())
                 .param("ano", String.valueOf(HOJE.getYear()))
                 .param("mes", String.valueOf(HOJE.getMonthValue())))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.totalDespesas").value(0))
         .andExpect(jsonPath("$.quantidadeLancamentos").value(0));
+  }
+
+  @Test
+  @DisplayName("um usuarioId enviado no corpo é ignorado: vale sempre o dono do token")
+  void usuarioIdNoCorpoEhIgnorado() throws Exception {
+    UUID conta =
+        idDe(
+            postar(
+                    usuarioB,
+                    "/api/contas",
+                    """
+                    {"usuarioId":"%s","nome":"Tentativa","tipo":"POUPANCA","saldoInicial":0}
+                    """
+                        .formatted(usuarioA.id()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.usuarioId").value(usuarioB.id().toString())));
+
+    consultar("/api/contas/" + conta, usuarioA).andExpect(status().isNotFound());
   }
 }

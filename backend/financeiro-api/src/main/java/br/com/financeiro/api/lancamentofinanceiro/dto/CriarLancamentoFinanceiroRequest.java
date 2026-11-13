@@ -11,7 +11,6 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 public record CriarLancamentoFinanceiroRequest(
-    @NotNull(message = "O usuário é obrigatório.") UUID usuarioId,
     @NotNull(message = "A conta é obrigatória.") UUID contaId,
     @NotNull(message = "A categoria é obrigatória.") UUID categoriaId,
     @NotBlank(message = "A descrição é obrigatória.")

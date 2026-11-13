@@ -32,6 +32,16 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: false
 
+app:
+  jwt:
+    # Segredo HMAC dos tokens: defina JWT_SECRET no .env (mínimo 32 caracteres).
+    segredo: ${JWT_SECRET:}
+    emissor: financeiro-api
+    duracao-acesso: 15m
+    duracao-refresh: 7d
+  cors:
+    origens-permitidas: ${CORS_ORIGENS:http://localhost:4200}
+
 server:
   port: 8080
 

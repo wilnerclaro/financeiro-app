@@ -41,10 +41,11 @@ public class LancamentoFinanceiroService {
   private final Clock clock;
 
   @Transactional
-  public LancamentoFinanceiroResponse criar(CriarLancamentoFinanceiroRequest request) {
-    Usuario usuario = buscarUsuario(request.usuarioId());
-    Conta conta = buscarContaAtivaDoUsuario(request.contaId(), request.usuarioId());
-    Categoria categoria = buscarCategoriaAtivaDoUsuario(request.categoriaId(), request.usuarioId());
+  public LancamentoFinanceiroResponse criar(
+      UUID usuarioId, CriarLancamentoFinanceiroRequest request) {
+    Usuario usuario = buscarUsuario(usuarioId);
+    Conta conta = buscarContaAtivaDoUsuario(request.contaId(), usuarioId);
+    Categoria categoria = buscarCategoriaAtivaDoUsuario(request.categoriaId(), usuarioId);
 
     validarCategoriaCompativelComTipo(categoria, request.tipo());
     validarDataPagamento(request.dataPagamento());
@@ -96,15 +97,15 @@ public class LancamentoFinanceiroService {
 
   @Transactional
   public LancamentoFinanceiroResponse atualizar(
-      UUID id, AtualizarLancamentoFinanceiroRequest request) {
-    LancamentoFinanceiro lancamentoFinanceiro = buscarLancamentoDoUsuario(id, request.usuarioId());
+      UUID id, UUID usuarioId, AtualizarLancamentoFinanceiroRequest request) {
+    LancamentoFinanceiro lancamentoFinanceiro = buscarLancamentoDoUsuario(id, usuarioId);
 
     if (StatusLancamentoFinanceiro.CANCELADO.equals(lancamentoFinanceiro.getStatus())) {
       throw new BusinessException("Não é possível editar um lançamento cancelado.");
     }
 
-    Conta conta = buscarContaAtivaDoUsuario(request.contaId(), request.usuarioId());
-    Categoria categoria = buscarCategoriaAtivaDoUsuario(request.categoriaId(), request.usuarioId());
+    Conta conta = buscarContaAtivaDoUsuario(request.contaId(), usuarioId);
+    Categoria categoria = buscarCategoriaAtivaDoUsuario(request.categoriaId(), usuarioId);
 
     validarCategoriaCompativelComTipo(categoria, request.tipo());
     validarDataPagamento(request.dataPagamento());
@@ -132,8 +133,9 @@ public class LancamentoFinanceiroService {
   }
 
   @Transactional
-  public LancamentoFinanceiroResponse pagar(UUID id, PagarLancamentoFinanceiroRequest request) {
-    LancamentoFinanceiro lancamentoFinanceiro = buscarLancamentoDoUsuario(id, request.usuarioId());
+  public LancamentoFinanceiroResponse pagar(
+      UUID id, UUID usuarioId, PagarLancamentoFinanceiroRequest request) {
+    LancamentoFinanceiro lancamentoFinanceiro = buscarLancamentoDoUsuario(id, usuarioId);
 
     if (StatusLancamentoFinanceiro.CANCELADO.equals(lancamentoFinanceiro.getStatus())) {
       throw new BusinessException("Não é possível pagar um lançamento cancelado.");
