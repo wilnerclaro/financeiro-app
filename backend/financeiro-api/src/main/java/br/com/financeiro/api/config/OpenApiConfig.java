@@ -8,12 +8,13 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenApiConfig {
 
-    @Bean
-    public OpenAPI financeiroOpenAPI() {
-        return new OpenAPI()
-                .info(new Info()
-                        .title("Financeiro API")
-                        .description("API REST para sistema financeiro pessoal e profissional")
-                        .version("v1"));
-    }
+  @Bean
+  public OpenAPI financeiroOpenAPI() {
+    return new OpenAPI()
+        .info(
+            new Info()
+                .title("Financeiro API")
+                .description("API REST para sistema financeiro pessoal e profissional")
+                .version("v1"));
+  }
 }

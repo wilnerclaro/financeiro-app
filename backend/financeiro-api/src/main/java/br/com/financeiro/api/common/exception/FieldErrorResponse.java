@@ -1,4 +1,3 @@
 package br.com.financeiro.api.common.exception;
 
-public class FieldErrorResponse {
-}
+public record FieldErrorResponse(String field, String message) {}
