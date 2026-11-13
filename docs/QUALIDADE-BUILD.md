@@ -11,21 +11,27 @@ roda Spotless, Checkstyle, JaCoCo e ArchUnit.
 
 ---
 
-## Por que o projeto usa Java 21 e não Java 25
+## Java 25 e versões das ferramentas
 
-O projeto começou em Java 25, mas o Spotless (via google-java-format) não roda
-sob JVM 25 — `NoSuchMethodError` em `Log$DeferredDiagnosticHandler.getDiagnostics()`,
-porque a assinatura interna do `javac` mudou entre 21 e 25. É um
-[bug aberto no Spotless](https://github.com/diffplug/spotless/issues/2468),
-sem correção lançada em `google-java-format` até a criação deste documento.
-O JaCoCo 0.8.12 tinha o mesmo tipo de problema com bytecode de Java 25/24
-(resolvido subindo para 0.8.13, que já está no `pom.xml`).
+O projeto roda em Java 25 (LTS). Ele chegou a recuar para Java 21 porque o
+Spotless, via google-java-format, não rodava sob JVM 25
+([issue do Spotless](https://github.com/diffplug/spotless/issues/2468)). Isso
+foi resolvido nas versões novas, e a migração para o 25 foi feita em 13/11/2026.
 
-A alternativa seria compilar em 25 via toolchain enquanto o Maven roda sob 21
-só para as ferramentas — mas isso significa manter dois JDKs sincronizados em
-toda máquina de dev e no CI, para contornar um bug temporário de terceiros.
-Não valeu a pena: o projeto recuou para Java 21 (LTS, sem essas
-incompatibilidades). Se o google-java-format lançar suporte a JDK 25, revisitar.
+Versões que importam para o JDK 25:
+
+| Ferramenta | Versão | Observação |
+| --- | --- | --- |
+| google-java-format | 1.34.1 | Mínimo 1.30.0 no JDK 25. A 1.37.0 falha dentro do Spotless 3.11 (`InvocationTargetException`); a 2.0.0 funciona, mas reformata os blocos de texto dos repositories. Subir só com commit isolado de formatação. |
+| Spotless | 3.11.0 | |
+| JaCoCo | 0.8.16 | Suporte oficial a bytecode do Java 25. |
+| ArchUnit | 1.5.1 | A 1.3.0 não lê classes do Java 25. |
+| Checkstyle | 14.4.0 | O `checkstyle.xml` atual roda sem ajuste. |
+
+O `main` da aplicação precisa ser `public static void main`. A forma curta do
+Java 25 (`static void main`, sem `public`) compila, mas o
+`spring-boot-maven-plugin` não encontra a classe principal no `repackage` e o
+build falha.
 
 ---
 
@@ -45,7 +51,7 @@ Em `<dependencies>`:
 <dependency>
   <groupId>com.tngtech.archunit</groupId>
   <artifactId>archunit-junit5</artifactId>
-  <version>1.3.0</version>
+  <version>1.5.1</version>
   <scope>test</scope>
 </dependency>
 ```
@@ -75,11 +81,11 @@ Em `<build><plugins>`:
 <plugin>
   <groupId>com.diffplug.spotless</groupId>
   <artifactId>spotless-maven-plugin</artifactId>
-  <version>2.44.0</version>
+  <version>3.11.0</version>
   <configuration>
     <java>
       <googleJavaFormat>
-        <version>1.24.0</version>
+        <version>1.34.1</version>
         <style>GOOGLE</style>
       </googleJavaFormat>
       <removeUnusedImports/>
@@ -105,7 +111,7 @@ Em `<build><plugins>`:
     <dependency>
       <groupId>com.puppycrawl.tools</groupId>
       <artifactId>checkstyle</artifactId>
-      <version>10.20.1</version>
+      <version>14.4.0</version>
     </dependency>
   </dependencies>
   <configuration>
@@ -129,7 +135,7 @@ Em `<build><plugins>`:
 <plugin>
   <groupId>org.jacoco</groupId>
   <artifactId>jacoco-maven-plugin</artifactId>
-  <version>0.8.12</version>
+  <version>0.8.16</version>
   <configuration>
     <excludes>
       <!-- Sem logica: nada a cobrir -->

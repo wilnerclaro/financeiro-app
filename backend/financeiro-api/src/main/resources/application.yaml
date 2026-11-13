@@ -2,6 +2,15 @@ spring:
   application:
     name: financeiro-api
 
+  # Le o .env da raiz do repositorio (o mesmo do docker compose), assim a API usa a
+  # mesma senha do banco sem exportar variavel no terminal. Variavel de ambiente
+  # definida tem precedencia. Os dois caminhos cobrem rodar a partir da raiz ou de
+  # backend/financeiro-api.
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../../.env[.properties]
+
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:financeiro_db}
     username: ${POSTGRES_USER:financeiro_user}

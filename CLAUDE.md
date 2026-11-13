@@ -11,8 +11,9 @@ o glossário e as regras de cálculo derivados dela estão na skill
 
 ## Stack
 
-- Java 21, Spring Boot 4.0.6, Maven
+- Java 25, Spring Boot 4.1.2, Maven
 - PostgreSQL 16 (Docker Compose), Flyway (`ddl-auto: validate`)
+- Testes de integração com Testcontainers (exigem Docker rodando)
 - JPA/Hibernate, `open-in-view: false`
 - Lombok + MapStruct, springdoc-openapi
 - Frontend: Angular (ainda não iniciado)
