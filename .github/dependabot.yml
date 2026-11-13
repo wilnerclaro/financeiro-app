@@ -1,0 +1,22 @@
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /backend/financeiro-api
+    schedule:
+      interval: weekly
+    target-branch: develop
+    open-pull-requests-limit: 5
+    groups:
+      spring:
+        patterns:
+          - "org.springframework*"
+      testes:
+        patterns:
+          - "org.testcontainers*"
+          - "com.tngtech.archunit*"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    target-branch: develop
