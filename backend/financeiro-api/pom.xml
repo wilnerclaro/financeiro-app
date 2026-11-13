@@ -275,23 +275,6 @@
 						<exclude>**/config/**</exclude>
 						<exclude>**/*Application.class</exclude>
 						<exclude>**/*MapperImpl.class</exclude>
-
-						<!--
-							================== DIVIDA TECNICA ==================
-							Modulos anteriores ao gate de cobertura. Cada um sai desta lista
-							conforme o qa-e-revisao cobrir.
-
-							NENHUM MODULO NOVO ENTRA AQUI. Codigo novo nasce coberto.
-						-->
-						<exclude>**/categoria/service/**</exclude>
-						<exclude>**/conta/service/**</exclude>
-						<exclude>**/lancamentofinanceiro/service/**</exclude>
-						<exclude>**/dashboardfinanceiro/service/**</exclude>
-						<exclude>**/categoria/controller/**</exclude>
-						<exclude>**/conta/controller/**</exclude>
-						<exclude>**/lancamentofinanceiro/controller/**</exclude>
-						<exclude>**/dashboardfinanceiro/controller/**</exclude>
-						<!-- ==================================================== -->
 					</excludes>
 				</configuration>
 				<executions>

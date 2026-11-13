@@ -4,11 +4,11 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noFields;
+import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
-import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -129,13 +129,6 @@ class ArquiteturaTest {
   }
 
   @Test
-  @DisplayName("BigDecimal e a escolha para valor monetario")
-  void bigDecimalEstaDisponivel() {
-    // Guarda simbolica: mantem o import e documenta a intencao da regra acima.
-    org.assertj.core.api.Assertions.assertThat(BigDecimal.ZERO).isNotNull();
-  }
-
-  @Test
   @DisplayName("classes de controller terminam em Controller")
   void nomenclaturaDeController() {
     classes()
@@ -169,6 +162,19 @@ class ArquiteturaTest {
         .resideInAPackage("..repository..")
         .should()
         .haveSimpleNameEndingWith("Repository")
+        .check(classes);
+  }
+
+  @Test
+  @DisplayName("módulos de negócio não têm dependência circular")
+  void modulosSemCiclos() {
+    slices()
+        .matching(PACOTE_RAIZ + ".(*)..")
+        .should()
+        .beFreeOfCycles()
+        .because(
+            "um módulo que depende de outro que depende dele não pode ser extraído nem "
+                + "testado isoladamente")
         .check(classes);
   }
 }

@@ -20,55 +20,53 @@ import org.springframework.web.bind.annotation.RequestParam;
 @Tag(name = "Contas", description = "Gerenciamento de contas financeiras")
 public interface ContaApiDoc {
 
-  @Operation(summary = "Criar conta", description = "Cria uma conta financeira para um usuario.")
+  @Operation(summary = "Criar conta", description = "Cria uma conta financeira para um usuário.")
   @ApiResponse(responseCode = "201", description = "Conta criada com sucesso")
-  @ApiResponse(responseCode = "400", description = "Requisicao invalida ou conta duplicada")
-  @ApiResponse(responseCode = "404", description = "Usuario nao encontrado")
+  @ApiResponse(responseCode = "400", description = "Requisição inválida ou conta duplicada")
+  @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
   ResponseEntity<ContaResponse> criar(@Valid @RequestBody CriarContaRequest request);
 
   @Operation(
       summary = "Listar contas",
-      description = "Lista contas por usuario com filtros opcionais.")
+      description = "Lista contas por usuário com filtros opcionais.")
   @ApiResponse(responseCode = "200", description = "Contas listadas com sucesso")
-  @ApiResponse(responseCode = "404", description = "Usuario nao encontrado")
+  @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
   ResponseEntity<Page<ContaResponse>> listar(
       @RequestParam UUID usuarioId,
       @RequestParam(required = false) TipoConta tipoConta,
       @RequestParam(required = false) Boolean ativa,
       Pageable pageable);
 
-  @Operation(summary = "Buscar conta", description = "Busca uma conta pelo id e usuario.")
+  @Operation(summary = "Buscar conta", description = "Busca uma conta pelo id e usuário.")
   @ApiResponse(responseCode = "200", description = "Conta encontrada")
-  @ApiResponse(responseCode = "404", description = "Conta nao encontrada")
+  @ApiResponse(responseCode = "404", description = "Conta não encontrada")
   ResponseEntity<ContaResponse> buscarPorId(@PathVariable UUID id, @RequestParam UUID usuarioId);
 
   @Operation(
       summary = "Atualizar conta",
-      description = "Atualiza nome, tipo e status ativo da conta.")
+      description = "Atualiza nome e tipo. Para inativar ou reativar, use DELETE e PATCH /ativar.")
   @ApiResponse(responseCode = "200", description = "Conta atualizada com sucesso")
-  @ApiResponse(responseCode = "400", description = "Requisicao invalida ou conta duplicada")
-  @ApiResponse(responseCode = "404", description = "Conta nao encontrada")
+  @ApiResponse(responseCode = "400", description = "Requisição inválida ou conta duplicada")
+  @ApiResponse(responseCode = "404", description = "Conta não encontrada")
   ResponseEntity<ContaResponse> atualizar(
       @PathVariable UUID id, @Valid @RequestBody AtualizarContaRequest request);
 
   @Operation(
       summary = "Corrigir saldo inicial",
       description =
-          "Altera o saldo inicial e recalcula o saldo atual com base nos lancamentos pagos.")
+          "Altera o saldo inicial e recalcula o saldo atual com base nos lançamentos pagos.")
   @ApiResponse(responseCode = "200", description = "Saldo inicial corrigido com sucesso")
-  @ApiResponse(responseCode = "404", description = "Conta nao encontrada")
+  @ApiResponse(responseCode = "404", description = "Conta não encontrada")
   ResponseEntity<ContaResponse> corrigirSaldoInicial(
       @PathVariable UUID id, @Valid @RequestBody CorrigirSaldoInicialContaRequest request);
 
   @Operation(summary = "Inativar conta", description = "Inativa uma conta financeira.")
   @ApiResponse(responseCode = "204", description = "Conta inativada com sucesso")
-  @ApiResponse(responseCode = "400", description = "Conta ja esta inativa")
-  @ApiResponse(responseCode = "404", description = "Conta nao encontrada")
+  @ApiResponse(responseCode = "404", description = "Conta não encontrada")
   ResponseEntity<Void> inativar(@PathVariable UUID id, @RequestParam UUID usuarioId);
 
   @Operation(summary = "Ativar conta", description = "Reativa uma conta financeira.")
   @ApiResponse(responseCode = "200", description = "Conta ativada com sucesso")
-  @ApiResponse(responseCode = "400", description = "Conta ja esta ativa")
-  @ApiResponse(responseCode = "404", description = "Conta nao encontrada")
+  @ApiResponse(responseCode = "404", description = "Conta não encontrada")
   ResponseEntity<ContaResponse> ativar(@PathVariable UUID id, @RequestParam UUID usuarioId);
 }

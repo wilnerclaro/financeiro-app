@@ -12,5 +12,4 @@ public record AtualizarCategoriaRequest(
     @NotBlank(message = "O nome da categoria é obrigatório.")
         @Size(max = 100, message = "O nome da categoria deve ter no máximo 100 caracteres.")
         String nome,
-    @NotNull(message = "O tipo da categoria é obrigatório.") TipoCategoria tipo,
-    @NotNull(message = "O status ativo da categoria é obrigatório.") Boolean ativa) {}
+    @NotNull(message = "O tipo da categoria é obrigatório.") TipoCategoria tipo) {}

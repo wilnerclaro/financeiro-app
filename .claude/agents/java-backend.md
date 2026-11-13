@@ -38,7 +38,8 @@ Estão no `CLAUDE.md` e valem integralmente. Os que mais erram:
 - Soft delete. `DELETE` inativa, `PATCH /{id}/ativar` reativa. Nunca remoção
   física.
 - Entidade nunca sai do controller. Sempre DTO record.
-- Mensagem de erro em português **sem acento**.
+- Mensagem de erro em português **com acento**.
+- Data de "hoje" sempre via `LocalDate.now(clock)` (bean `Clock`).
 - `BusinessException` → 400, `ResourceNotFoundException` → 404.
 - Migration nova nunca edita migration aplicada.
 - `BigDecimal` com `precision`/`scale` explícitos. Nunca `double`.

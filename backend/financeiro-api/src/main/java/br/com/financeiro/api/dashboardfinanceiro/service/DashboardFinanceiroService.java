@@ -23,7 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class DashboardFinanceiroService {
 
-  private static final int ESCALA_PERCENTUAL = 2;
+  /** Percentual como fração de 0 a 1 com 4 casas (0.1234 = 12,34%). */
+  private static final int ESCALA_PERCENTUAL = 4;
 
   private final DashboardFinanceiroRepository dashboardFinanceiroRepository;
   private final UsuarioRepository usuarioRepository;
@@ -94,9 +95,7 @@ public class DashboardFinanceiroService {
       return BigDecimal.ZERO;
     }
 
-    return valor
-        .multiply(BigDecimal.valueOf(100))
-        .divide(total, ESCALA_PERCENTUAL, RoundingMode.HALF_UP);
+    return valor.divide(total, ESCALA_PERCENTUAL, RoundingMode.HALF_UP);
   }
 
   private BigDecimal valorOuZero(BigDecimal valor) {
@@ -105,13 +104,13 @@ public class DashboardFinanceiroService {
 
   private void validarUsuario(UUID usuarioId) {
     if (!usuarioRepository.existsById(usuarioId)) {
-      throw new ResourceNotFoundException("Usuario nao encontrado.");
+      throw new ResourceNotFoundException("Usuário não encontrado.");
     }
   }
 
   private YearMonth validarCompetencia(Integer ano, Integer mes) {
     if (ano == null || mes == null) {
-      throw new BusinessException("Ano e mes sao obrigatorios.");
+      throw new BusinessException("Ano e mês são obrigatórios.");
     }
 
     if (ano < 2000) {
@@ -119,7 +118,7 @@ public class DashboardFinanceiroService {
     }
 
     if (mes < 1 || mes > 12) {
-      throw new BusinessException("Mes deve estar entre 1 e 12.");
+      throw new BusinessException("Mês deve estar entre 1 e 12.");
     }
 
     return YearMonth.of(ano, mes);

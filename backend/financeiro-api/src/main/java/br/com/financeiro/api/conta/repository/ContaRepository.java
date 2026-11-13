@@ -2,6 +2,7 @@ package br.com.financeiro.api.conta.repository;
 
 import br.com.financeiro.api.conta.entity.Conta;
 import br.com.financeiro.api.conta.enums.TipoConta;
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -47,4 +48,24 @@ public interface ContaRepository extends JpaRepository<Conta, UUID> {
       @Param("usuarioId") UUID usuarioId,
       @Param("nome") String nome,
       @Param("contaIdIgnorada") UUID contaIdIgnorada);
+
+  /** Soma dos lançamentos pagos da conta: receitas somam e despesas subtraem. */
+  @Query(
+      value =
+          """
+            SELECT COALESCE(SUM(
+                CASE
+                    WHEN tipo = 'RECEITA' THEN valor
+                    WHEN tipo = 'DESPESA' THEN -valor
+                    ELSE 0
+                END
+            ), 0)
+            FROM lancamentos_financeiros
+            WHERE conta_id = :contaId
+              AND usuario_id = :usuarioId
+              AND status = 'PAGO'
+            """,
+      nativeQuery = true)
+  BigDecimal calcularSaldoMovimentado(
+      @Param("contaId") UUID contaId, @Param("usuarioId") UUID usuarioId);
 }
