@@ -5,6 +5,7 @@ import br.com.financeiro.api.conta.dto.ContaResponse;
 import br.com.financeiro.api.conta.dto.CorrigirSaldoInicialContaRequest;
 import br.com.financeiro.api.conta.dto.CriarContaRequest;
 import br.com.financeiro.api.conta.enums.TipoConta;
+import br.com.financeiro.api.security.UsuarioLogado;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,7 +25,8 @@ public interface ContaApiDoc {
   @ApiResponse(responseCode = "201", description = "Conta criada com sucesso")
   @ApiResponse(responseCode = "400", description = "Requisição inválida ou conta duplicada")
   @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
-  ResponseEntity<ContaResponse> criar(@Valid @RequestBody CriarContaRequest request);
+  ResponseEntity<ContaResponse> criar(
+      @UsuarioLogado UUID usuarioId, @Valid @RequestBody CriarContaRequest request);
 
   @Operation(
       summary = "Listar contas",
@@ -32,7 +34,7 @@ public interface ContaApiDoc {
   @ApiResponse(responseCode = "200", description = "Contas listadas com sucesso")
   @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
   ResponseEntity<Page<ContaResponse>> listar(
-      @RequestParam UUID usuarioId,
+      @UsuarioLogado UUID usuarioId,
       @RequestParam(required = false) TipoConta tipoConta,
       @RequestParam(required = false) Boolean ativa,
       Pageable pageable);
@@ -40,7 +42,7 @@ public interface ContaApiDoc {
   @Operation(summary = "Buscar conta", description = "Busca uma conta pelo id e usuário.")
   @ApiResponse(responseCode = "200", description = "Conta encontrada")
   @ApiResponse(responseCode = "404", description = "Conta não encontrada")
-  ResponseEntity<ContaResponse> buscarPorId(@PathVariable UUID id, @RequestParam UUID usuarioId);
+  ResponseEntity<ContaResponse> buscarPorId(@PathVariable UUID id, @UsuarioLogado UUID usuarioId);
 
   @Operation(
       summary = "Atualizar conta",
@@ -49,7 +51,9 @@ public interface ContaApiDoc {
   @ApiResponse(responseCode = "400", description = "Requisição inválida ou conta duplicada")
   @ApiResponse(responseCode = "404", description = "Conta não encontrada")
   ResponseEntity<ContaResponse> atualizar(
-      @PathVariable UUID id, @Valid @RequestBody AtualizarContaRequest request);
+      @PathVariable UUID id,
+      @UsuarioLogado UUID usuarioId,
+      @Valid @RequestBody AtualizarContaRequest request);
 
   @Operation(
       summary = "Corrigir saldo inicial",
@@ -58,15 +62,17 @@ public interface ContaApiDoc {
   @ApiResponse(responseCode = "200", description = "Saldo inicial corrigido com sucesso")
   @ApiResponse(responseCode = "404", description = "Conta não encontrada")
   ResponseEntity<ContaResponse> corrigirSaldoInicial(
-      @PathVariable UUID id, @Valid @RequestBody CorrigirSaldoInicialContaRequest request);
+      @PathVariable UUID id,
+      @UsuarioLogado UUID usuarioId,
+      @Valid @RequestBody CorrigirSaldoInicialContaRequest request);
 
   @Operation(summary = "Inativar conta", description = "Inativa uma conta financeira.")
   @ApiResponse(responseCode = "204", description = "Conta inativada com sucesso")
   @ApiResponse(responseCode = "404", description = "Conta não encontrada")
-  ResponseEntity<Void> inativar(@PathVariable UUID id, @RequestParam UUID usuarioId);
+  ResponseEntity<Void> inativar(@PathVariable UUID id, @UsuarioLogado UUID usuarioId);
 
   @Operation(summary = "Ativar conta", description = "Reativa uma conta financeira.")
   @ApiResponse(responseCode = "200", description = "Conta ativada com sucesso")
   @ApiResponse(responseCode = "404", description = "Conta não encontrada")
-  ResponseEntity<ContaResponse> ativar(@PathVariable UUID id, @RequestParam UUID usuarioId);
+  ResponseEntity<ContaResponse> ativar(@PathVariable UUID id, @UsuarioLogado UUID usuarioId);
 }

@@ -8,6 +8,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -31,6 +33,31 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ApiErrorResponse> tratarRotaNaoEncontrada(
       NoResourceFoundException exception, HttpServletRequest request) {
     return responder(HttpStatus.NOT_FOUND, "Recurso não encontrado.", request);
+  }
+
+  @ExceptionHandler(NaoAutenticadoException.class)
+  public ResponseEntity<ApiErrorResponse> tratarCredenciaisInvalidas(
+      NaoAutenticadoException exception, HttpServletRequest request) {
+    return responder(HttpStatus.UNAUTHORIZED, exception.getMessage(), request);
+  }
+
+  @ExceptionHandler(AuthenticationException.class)
+  public ResponseEntity<ApiErrorResponse> tratarNaoAutenticado(
+      AuthenticationException exception, HttpServletRequest request) {
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+        .header("WWW-Authenticate", "Bearer")
+        .body(
+            criarRespostaDeErro(
+                HttpStatus.UNAUTHORIZED,
+                "Token de acesso ausente, inválido ou expirado.",
+                request,
+                List.of()));
+  }
+
+  @ExceptionHandler(AccessDeniedException.class)
+  public ResponseEntity<ApiErrorResponse> tratarAcessoNegado(
+      AccessDeniedException exception, HttpServletRequest request) {
+    return responder(HttpStatus.FORBIDDEN, "Acesso negado.", request);
   }
 
   @ExceptionHandler(BusinessException.class)

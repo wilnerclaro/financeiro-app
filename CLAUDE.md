@@ -74,6 +74,8 @@ tela do usuário.
 - Listagens devolvem `{ "content": [...], "page": { size, number,
   totalElements, totalPages } }` (`WebConfig`, `VIA_DTO`).
 - Percentual é fração de 0 a 1 com 4 casas (`0.2500` = 25%); o front formata.
+- Todo endpoint (fora de `/api/auth`) exige o header
+  `Authorization: Bearer <accessToken>`.
 - "Hoje" vem do bean `Clock` (fuso `America/Sao_Paulo`); nunca use
   `LocalDate.now()` sem o `clock`.
 
@@ -111,10 +113,15 @@ métrica.
 
 O produto é **multiusuário**. Todo dado é privado do seu usuário.
 
-Hoje o `usuarioId` chega por parâmetro ou corpo da requisição, o que é uma
-falha de segurança em aberto (ver auditoria). Após o refactor de
-autenticação, ele vem **exclusivamente do principal do token** — nunca do
-cliente.
+O usuário vem **exclusivamente do token JWT**, nunca do cliente. No controller,
+receba-o com `@UsuarioLogado UUID usuarioId` (pacote `security`) e repasse ao
+service; DTO de request nunca tem `usuarioId`. Só `/api/auth/cadastro`,
+`/login`, `/refresh`, Swagger e health são públicos; o resto exige
+`Authorization: Bearer <accessToken>` e responde 401 sem ele.
+
+Tokens: acesso de 15 min e refresh de 7 dias (claim `tipo` separa os dois),
+HMAC-SHA256 com `JWT_SECRET` do `.env`. Senha em BCrypt. E-mail é gravado em
+minúsculas e é único sem diferenciar maiúsculas.
 
 Toda query filtra por usuário. Todo módulo novo tem teste que prova que o
 usuário A não alcança dado do usuário B.

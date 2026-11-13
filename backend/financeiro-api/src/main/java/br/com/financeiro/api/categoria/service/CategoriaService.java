@@ -28,15 +28,14 @@ public class CategoriaService {
   private final CategoriaMapper categoriaMapper;
 
   @Transactional
-  public CategoriaResponse criar(CriarCategoriaRequest request) {
-    Usuario usuario = buscarUsuario(request.usuarioId());
+  public CategoriaResponse criar(UUID usuarioId, CriarCategoriaRequest request) {
+    Usuario usuario = buscarUsuario(usuarioId);
     String nomeNormalizado = NormalizadorTexto.normalizarNome(request.nome());
 
     Categoria categoriaPai =
-        buscarCategoriaPai(request.usuarioId(), request.categoriaPaiId(), request.tipo());
+        buscarCategoriaPai(usuarioId, request.categoriaPaiId(), request.tipo());
 
-    validarDuplicidade(
-        request.usuarioId(), nomeNormalizado, request.tipo(), request.categoriaPaiId(), null);
+    validarDuplicidade(usuarioId, nomeNormalizado, request.tipo(), request.categoriaPaiId(), null);
 
     Categoria categoria = categoriaMapper.paraEntity(request);
     categoria.setUsuario(usuario);
@@ -65,8 +64,8 @@ public class CategoriaService {
   }
 
   @Transactional
-  public CategoriaResponse atualizar(UUID id, AtualizarCategoriaRequest request) {
-    Categoria categoria = buscarCategoriaDoUsuario(id, request.usuarioId());
+  public CategoriaResponse atualizar(UUID id, UUID usuarioId, AtualizarCategoriaRequest request) {
+    Categoria categoria = buscarCategoriaDoUsuario(id, usuarioId);
     String nomeNormalizado = NormalizadorTexto.normalizarNome(request.nome());
 
     if (request.categoriaPaiId() != null && request.categoriaPaiId().equals(id)) {
@@ -87,10 +86,9 @@ public class CategoriaService {
     }
 
     Categoria categoriaPai =
-        buscarCategoriaPai(request.usuarioId(), request.categoriaPaiId(), request.tipo());
+        buscarCategoriaPai(usuarioId, request.categoriaPaiId(), request.tipo());
 
-    validarDuplicidade(
-        request.usuarioId(), nomeNormalizado, request.tipo(), request.categoriaPaiId(), id);
+    validarDuplicidade(usuarioId, nomeNormalizado, request.tipo(), request.categoriaPaiId(), id);
 
     categoria.setCategoriaPai(categoriaPai);
     categoria.setNome(nomeNormalizado);

@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.ResultActions;
 
 @DisplayName("Dashboard financeiro")
@@ -15,22 +16,22 @@ class DashboardFinanceiroIntegracaoTest extends IntegracaoTest {
   @Test
   @DisplayName("resumo soma só os pagos e devolve o percentual como fração de 0 a 1")
   void resumoMensal() throws Exception {
-    UUID usuarioId = criarUsuario();
-    UUID contaId = criarConta(usuarioId, "Banco", "0");
-    UUID mercado = criarCategoria(usuarioId, "Mercado", "DESPESA", null);
-    UUID lazer = criarCategoria(usuarioId, "Lazer", "DESPESA", null);
-    UUID salario = criarCategoria(usuarioId, "Salário", "RECEITA", null);
+    Sessao usuario = criarUsuario();
+    UUID contaId = criarConta(usuario, "Banco", "0");
+    UUID mercado = criarCategoria(usuario, "Mercado", "DESPESA", null);
+    UUID lazer = criarCategoria(usuario, "Lazer", "DESPESA", null);
+    UUID salario = criarCategoria(usuario, "Salário", "RECEITA", null);
 
-    criarLancamento(usuarioId, contaId, mercado, "DESPESA", "75.00", null, HOJE)
+    criarLancamento(usuario, contaId, mercado, "DESPESA", "75.00", null, HOJE)
         .andExpect(status().isCreated());
-    criarLancamento(usuarioId, contaId, lazer, "DESPESA", "25.00", null, HOJE)
+    criarLancamento(usuario, contaId, lazer, "DESPESA", "25.00", null, HOJE)
         .andExpect(status().isCreated());
-    criarLancamento(usuarioId, contaId, salario, "RECEITA", "1000.00", null, HOJE)
+    criarLancamento(usuario, contaId, salario, "RECEITA", "1000.00", null, HOJE)
         .andExpect(status().isCreated());
-    criarLancamento(usuarioId, contaId, lazer, "DESPESA", "500.00", HOJE.plusDays(3), null)
+    criarLancamento(usuario, contaId, lazer, "DESPESA", "500.00", HOJE.plusDays(3), null)
         .andExpect(status().isCreated());
 
-    resumo(usuarioId, HOJE.getYear(), HOJE.getMonthValue())
+    resumo(usuario, HOJE.getYear(), HOJE.getMonthValue())
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.totalReceitas").value(1000.00))
         .andExpect(jsonPath("$.totalDespesas").value(100.00))
@@ -48,28 +49,27 @@ class DashboardFinanceiroIntegracaoTest extends IntegracaoTest {
   @Test
   @DisplayName("mês sem lançamentos devolve zeros")
   void mesVazio() throws Exception {
-    UUID usuarioId = criarUsuario();
+    Sessao usuario = criarUsuario();
 
-    resumo(usuarioId, 2025, 1)
+    resumo(usuario, 2025, 1)
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.totalReceitas").value(0))
         .andExpect(jsonPath("$.receitasPorCategoria").isEmpty());
   }
 
   @Test
-  @DisplayName("competência inválida é rejeitada e usuário inexistente devolve 404")
+  @DisplayName("competência inválida é rejeitada")
   void validacoes() throws Exception {
-    UUID usuarioId = criarUsuario();
+    Sessao usuario = criarUsuario();
 
-    resumo(usuarioId, 2026, 13).andExpect(status().isBadRequest());
-    resumo(usuarioId, 1999, 1).andExpect(status().isBadRequest());
-    resumo(UUID.randomUUID(), 2026, 1).andExpect(status().isNotFound());
+    resumo(usuario, 2026, 13).andExpect(status().isBadRequest());
+    resumo(usuario, 1999, 1).andExpect(status().isBadRequest());
   }
 
-  private ResultActions resumo(UUID usuarioId, int ano, int mes) throws Exception {
+  private ResultActions resumo(Sessao usuario, int ano, int mes) throws Exception {
     return mockMvc.perform(
         get("/api/dashboard-financeiro/resumo-mensal")
-            .param("usuarioId", usuarioId.toString())
+            .header(HttpHeaders.AUTHORIZATION, usuario.bearer())
             .param("ano", String.valueOf(ano))
             .param("mes", String.valueOf(mes)));
   }
