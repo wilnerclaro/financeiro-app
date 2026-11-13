@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (mvn verify)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/financeiro-api
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      # verify roda Spotless, Checkstyle, testes (com Testcontainers, usando o Docker
+      # que já vem no runner) e o gate de cobertura do JaCoCo.
+      - name: Build e testes
+        run: ./mvnw -B -ntp verify
+
+      - name: Publicar relatório de cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco
+          path: backend/financeiro-api/target/site/jacoco
+          if-no-files-found: ignore
