@@ -75,6 +75,9 @@ public class LancamentoFinanceiro {
   @Column(name = "data_pagamento")
   private LocalDate dataPagamento;
 
+  @Column(name = "data_compra")
+  private LocalDate dataCompra;
+
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 20)
   private StatusLancamentoFinanceiro status;
@@ -89,4 +92,13 @@ public class LancamentoFinanceiro {
   @UpdateTimestamp
   @Column(name = "atualizado_em", nullable = false)
   private OffsetDateTime atualizadoEm;
+
+  public StatusLancamentoFinanceiro statusEm(LocalDate hoje) {
+    if (StatusLancamentoFinanceiro.PENDENTE.equals(status)
+        && dataVencimento != null
+        && dataVencimento.isBefore(hoje)) {
+      return StatusLancamentoFinanceiro.ATRASADO;
+    }
+    return status;
+  }
 }

@@ -2,6 +2,7 @@ package br.com.financeiro.api.dashboardfinanceiro.repository;
 
 import br.com.financeiro.api.dashboardfinanceiro.projection.ResumoCategoriaFinanceiraProjection;
 import br.com.financeiro.api.dashboardfinanceiro.projection.ResumoMensalFinanceiroProjection;
+import br.com.financeiro.api.dashboardfinanceiro.projection.TotaisDoMesProjection;
 import br.com.financeiro.api.lancamentofinanceiro.entity.LancamentoFinanceiro;
 import br.com.financeiro.api.lancamentofinanceiro.enums.TipoLancamentoFinanceiro;
 import java.time.LocalDate;
@@ -52,6 +53,30 @@ public interface DashboardFinanceiroRepository extends Repository<LancamentoFina
   List<ResumoCategoriaFinanceiraProjection> buscarResumoPorCategoria(
       @Param("usuarioId") UUID usuarioId,
       @Param("tipo") TipoLancamentoFinanceiro tipo,
+      @Param("dataInicio") LocalDate dataInicio,
+      @Param("dataFim") LocalDate dataFim);
+
+  @Query(
+      value =
+          """
+            SELECT
+                CAST(EXTRACT(YEAR FROM l.data_competencia) AS INTEGER) AS ano,
+                CAST(EXTRACT(MONTH FROM l.data_competencia) AS INTEGER) AS mes,
+                COALESCE(SUM(CASE WHEN l.tipo = 'RECEITA' THEN l.valor ELSE 0 END), 0) AS receitas,
+                COALESCE(SUM(CASE WHEN l.tipo = 'DESPESA' THEN l.valor ELSE 0 END), 0) AS despesas,
+                COALESCE(SUM(CASE WHEN l.tipo = 'RECEITA' AND c.fonte_receita = 'PASSIVA'
+                                  THEN l.valor ELSE 0 END), 0) AS receitaPassiva
+            FROM lancamentos_financeiros l
+            JOIN categorias c ON c.id = l.categoria_id
+            WHERE l.usuario_id = :usuarioId
+              AND l.status = 'PAGO'
+              AND l.data_competencia >= :dataInicio
+              AND l.data_competencia <= :dataFim
+            GROUP BY EXTRACT(YEAR FROM l.data_competencia), EXTRACT(MONTH FROM l.data_competencia)
+            """,
+      nativeQuery = true)
+  List<TotaisDoMesProjection> buscarTotaisPorMes(
+      @Param("usuarioId") UUID usuarioId,
       @Param("dataInicio") LocalDate dataInicio,
       @Param("dataFim") LocalDate dataFim);
 }

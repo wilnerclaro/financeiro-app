@@ -139,10 +139,25 @@ financeiro-app/
 └── .claude/                agentes e skill do glossário financeiro
 ```
 
-A API é organizada por módulo de negócio (`categoria`, `conta`,
-`lancamentofinanceiro`, `dashboardfinanceiro`), cada um com `controller`,
-`service`, `repository`, `entity`, `dto` e `mapper`. Convenções em
-[CLAUDE.md](CLAUDE.md).
+A API é organizada por módulo de negócio (`autenticacao`, `categoria`, `conta`,
+`lancamentofinanceiro`, `transferencia`, `orcamento`, `meta`,
+`dashboardfinanceiro`), cada um com `controller`, `service`, `repository`,
+`entity`, `dto` e `mapper`. Convenções em [CLAUDE.md](CLAUDE.md).
+
+### Endpoints principais
+
+Todos exigem `Authorization: Bearer <token>`, menos `/api/auth/**`. A
+documentação completa fica no Swagger (`/swagger-ui.html`).
+
+| Tela | Endpoint |
+|---|---|
+| Início | `GET /api/dashboard-financeiro/inicio?ano&mes` (sem parâmetros: mês atual) |
+| Lançamentos | `/api/lancamentos-financeiros` (filtros por tipo, status, conta, categoria e período) |
+| Fatura do cartão | `GET /api/lancamentos-financeiros/faturas?contaId&ano&mes` |
+| Transferências | `/api/transferencias` |
+| Orçamento | `GET/PUT /api/orcamentos/{ano}/{mes}`, `POST /api/orcamentos/repetir` (uma categoria em vários meses), `POST /api/orcamentos/{ano}/{mes}/copiar` (o mês inteiro para outros meses), `GET /api/orcamentos/{ano}` |
+| Metas | `/api/metas` (painel do ano) e `PUT /api/metas/{id}/movimentos/{ano}/{mes}` |
+| Contas e categorias | `/api/contas`, `GET /api/contas/resumo`, `/api/categorias` |
 
 ## Problemas comuns
 

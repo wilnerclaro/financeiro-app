@@ -3,6 +3,7 @@ package br.com.financeiro.api.lancamentofinanceiro.controller;
 import br.com.financeiro.api.lancamentofinanceiro.docs.LancamentoFinanceiroApiDoc;
 import br.com.financeiro.api.lancamentofinanceiro.dto.AtualizarLancamentoFinanceiroRequest;
 import br.com.financeiro.api.lancamentofinanceiro.dto.CriarLancamentoFinanceiroRequest;
+import br.com.financeiro.api.lancamentofinanceiro.dto.FaturaCartaoResponse;
 import br.com.financeiro.api.lancamentofinanceiro.dto.LancamentoFinanceiroResponse;
 import br.com.financeiro.api.lancamentofinanceiro.dto.PagarLancamentoFinanceiroRequest;
 import br.com.financeiro.api.lancamentofinanceiro.enums.StatusLancamentoFinanceiro;
@@ -65,6 +66,16 @@ public class LancamentoFinanceiroController implements LancamentoFinanceiroApiDo
             usuarioId, tipo, status, contaId, categoriaId, dataInicio, dataFim, pageable);
 
     return ResponseEntity.ok(response);
+  }
+
+  @GetMapping("/faturas")
+  public ResponseEntity<FaturaCartaoResponse> buscarFatura(
+      @UsuarioLogado UUID usuarioId,
+      @RequestParam UUID contaId,
+      @RequestParam Integer ano,
+      @RequestParam Integer mes) {
+    return ResponseEntity.ok(
+        lancamentoFinanceiroService.buscarFatura(usuarioId, contaId, ano, mes));
   }
 
   @GetMapping("/{id}")

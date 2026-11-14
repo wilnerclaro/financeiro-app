@@ -19,7 +19,7 @@ class DashboardFinanceiroIntegracaoTest extends IntegracaoTest {
     Sessao usuario = criarUsuario();
     UUID contaId = criarConta(usuario, "Banco", "0");
     UUID mercado = criarCategoria(usuario, "Mercado", "DESPESA", null);
-    UUID lazer = criarCategoria(usuario, "Lazer", "DESPESA", null);
+    UUID lazer = criarCategoria(usuario, "Diversão", "DESPESA", null);
     UUID salario = criarCategoria(usuario, "Salário", "RECEITA", null);
 
     criarLancamento(usuario, contaId, mercado, "DESPESA", "75.00", null, HOJE)
@@ -41,7 +41,7 @@ class DashboardFinanceiroIntegracaoTest extends IntegracaoTest {
             jsonPath("$.despesasPorCategoria[?(@.categoriaNome == 'Mercado')].percentual")
                 .value(0.75))
         .andExpect(
-            jsonPath("$.despesasPorCategoria[?(@.categoriaNome == 'Lazer')].percentual")
+            jsonPath("$.despesasPorCategoria[?(@.categoriaNome == 'Diversão')].percentual")
                 .value(0.25))
         .andExpect(jsonPath("$.receitasPorCategoria[0].percentual").value(1.0));
   }

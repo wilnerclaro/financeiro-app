@@ -2,6 +2,7 @@ package br.com.financeiro.api.lancamentofinanceiro.docs;
 
 import br.com.financeiro.api.lancamentofinanceiro.dto.AtualizarLancamentoFinanceiroRequest;
 import br.com.financeiro.api.lancamentofinanceiro.dto.CriarLancamentoFinanceiroRequest;
+import br.com.financeiro.api.lancamentofinanceiro.dto.FaturaCartaoResponse;
 import br.com.financeiro.api.lancamentofinanceiro.dto.LancamentoFinanceiroResponse;
 import br.com.financeiro.api.lancamentofinanceiro.dto.PagarLancamentoFinanceiroRequest;
 import br.com.financeiro.api.lancamentofinanceiro.enums.StatusLancamentoFinanceiro;
@@ -26,7 +27,10 @@ public interface LancamentoFinanceiroApiDoc {
 
   @Operation(
       summary = "Criar lançamento",
-      description = "Cria uma receita ou despesa. Lançamentos pagos movimentam o saldo da conta.")
+      description =
+          "Cria uma receita ou despesa. Lançamentos pagos movimentam o saldo da conta. Em "
+              + "cartão de crédito, dataCompetencia é a data da compra: a API calcula o "
+              + "vencimento da fatura e usa esse mês como competência.")
   @ApiResponse(responseCode = "201", description = "Lançamento criado com sucesso")
   @ApiResponse(
       responseCode = "400",
@@ -92,4 +96,20 @@ public interface LancamentoFinanceiroApiDoc {
   @ApiResponse(responseCode = "400", description = "Lançamento já cancelado")
   @ApiResponse(responseCode = "404", description = "Lançamento não encontrado")
   ResponseEntity<Void> cancelar(@PathVariable UUID id, @UsuarioLogado UUID usuarioId);
+
+  @Operation(
+      summary = "Fatura do cartão",
+      description =
+          "Lançamentos e total da fatura de um cartão de crédito que vence no mês informado. "
+              + "Para pagar a fatura, faça uma transferência da conta bancária para o cartão.")
+  @ApiResponse(responseCode = "200", description = "Fatura encontrada")
+  @ApiResponse(
+      responseCode = "400",
+      description = "A conta não é cartão ou a competência é inválida")
+  @ApiResponse(responseCode = "404", description = "Conta não encontrada")
+  ResponseEntity<FaturaCartaoResponse> buscarFatura(
+      @UsuarioLogado UUID usuarioId,
+      @RequestParam UUID contaId,
+      @RequestParam Integer ano,
+      @RequestParam Integer mes);
 }

@@ -4,6 +4,7 @@ import br.com.financeiro.api.conta.dto.AtualizarContaRequest;
 import br.com.financeiro.api.conta.dto.ContaResponse;
 import br.com.financeiro.api.conta.dto.CorrigirSaldoInicialContaRequest;
 import br.com.financeiro.api.conta.dto.CriarContaRequest;
+import br.com.financeiro.api.conta.dto.ResumoContasResponse;
 import br.com.financeiro.api.conta.enums.TipoConta;
 import br.com.financeiro.api.security.UsuarioLogado;
 import io.swagger.v3.oas.annotations.Operation;
@@ -75,4 +76,10 @@ public interface ContaApiDoc {
   @ApiResponse(responseCode = "200", description = "Conta ativada com sucesso")
   @ApiResponse(responseCode = "404", description = "Conta não encontrada")
   ResponseEntity<ContaResponse> ativar(@PathVariable UUID id, @UsuarioLogado UUID usuarioId);
+
+  @Operation(
+      summary = "Resumo das contas",
+      description = "Patrimônio nas contas ativas e o total por tipo de conta.")
+  @ApiResponse(responseCode = "200", description = "Resumo das contas")
+  ResponseEntity<ResumoContasResponse> resumir(@UsuarioLogado UUID usuarioId);
 }

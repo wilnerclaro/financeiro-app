@@ -27,14 +27,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-/**
- * Base dos testes de integração: sobe a aplicação inteira contra um PostgreSQL real
- * (Testcontainers) e conversa com ela por HTTP via MockMvc, autenticada com JWT.
- *
- * <p>Cada teste cadastra o próprio usuário pela API, então os testes não dependem de ordem nem de
- * limpeza do banco. O relógio é fixo em {@link #HOJE} para que regras de data sejam
- * determinísticas.
- */
 @SpringBootTest(properties = IntegracaoTest.SEGREDO_JWT_DE_TESTE)
 @AutoConfigureMockMvc
 @Import({TestcontainersConfiguration.class, IntegracaoTest.RelogioFixo.class})
@@ -49,7 +41,6 @@ abstract class IntegracaoTest {
 
   @Autowired protected MockMvc mockMvc;
 
-  /** Usuário cadastrado e logado: o id e o token de acesso dele. */
   record Sessao(UUID id, String email, String accessToken, String refreshToken) {
 
     String bearer() {
@@ -139,6 +130,34 @@ abstract class IntegracaoTest {
       String valor,
       LocalDate dataVencimento,
       LocalDate dataPagamento) {
+    return corpoLancamento(contaId, categoriaId, tipo, valor, HOJE, dataVencimento, dataPagamento);
+  }
+
+  protected ResultActions criarLancamentoEm(
+      Sessao usuario,
+      UUID contaId,
+      UUID categoriaId,
+      String tipo,
+      String valor,
+      LocalDate dataCompetencia,
+      LocalDate dataVencimento,
+      LocalDate dataPagamento)
+      throws Exception {
+    return postar(
+        usuario,
+        "/api/lancamentos-financeiros",
+        corpoLancamento(
+            contaId, categoriaId, tipo, valor, dataCompetencia, dataVencimento, dataPagamento));
+  }
+
+  protected String corpoLancamento(
+      UUID contaId,
+      UUID categoriaId,
+      String tipo,
+      String valor,
+      LocalDate dataCompetencia,
+      LocalDate dataVencimento,
+      LocalDate dataPagamento) {
     return """
         {"contaId":"%s","categoriaId":"%s","descricao":"Lançamento de teste",
          "tipo":"%s","valor":%s,"dataCompetencia":"%s","dataVencimento":%s,"dataPagamento":%s}
@@ -148,9 +167,35 @@ abstract class IntegracaoTest {
             categoriaId,
             tipo,
             valor,
-            HOJE,
+            dataCompetencia,
             textoOuNull(dataVencimento),
             textoOuNull(dataPagamento));
+  }
+
+  protected UUID categoriaPadrao(Sessao usuario, String nome) throws Exception {
+    String json =
+        mockMvc
+            .perform(autenticado(get("/api/categorias"), usuario).param("size", "200"))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    java.util.List<String> ids = JsonPath.read(json, "$.content[?(@.nome == '" + nome + "')].id");
+    if (ids.size() != 1) {
+      throw new IllegalStateException("Categoria padrão ambígua ou ausente: " + nome);
+    }
+    return UUID.fromString(ids.getFirst());
+  }
+
+  protected UUID criarCartao(Sessao usuario, String nome, int diaFechamento, int diaVencimento)
+      throws Exception {
+    String corpo =
+        """
+        {"nome":"%s","tipo":"CARTAO_CREDITO","saldoInicial":0,
+         "diaFechamento":%d,"diaVencimento":%d}
+        """
+            .formatted(nome, diaFechamento, diaVencimento);
+    return idDe(postar(usuario, "/api/contas", corpo).andExpect(status().isCreated()));
   }
 
   protected BigDecimal saldoAtual(UUID contaId, Sessao usuario) throws Exception {

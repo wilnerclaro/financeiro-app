@@ -11,7 +11,6 @@ import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
-/** Resolve {@link UsuarioLogado} a partir do {@code sub} do JWT autenticado. */
 public class UsuarioLogadoArgumentResolver implements HandlerMethodArgumentResolver {
 
   @Override

@@ -49,8 +49,15 @@ isso vira 12 blocos de colunas; **no banco isso é sempre uma linha por
 
 As receitas se dividem em dois blocos, e a distinção é central:
 
-**FONTE ATIVA** (linhas 5-15): Salários, Bolsa de estudos, 13º Salário, Férias.
-Renda que exige trabalho.
+**FONTE ATIVA** (linhas 5-15): Salários, Bolsa de estudos, 13º Salário, Férias,
+Participação de Lucros e Resultados (PLR), Prestação de Serviços, Doações,
+Bonificações, Resgate de Investimentos, Recebimento de Dívidas, Outros (Pensão,
+restituição de IR e etc). Renda que exige trabalho.
+
+> **Resgate de Investimentos (linha 13) não vira categoria no app.** Tirar
+> dinheiro de um investimento é transferência entre contas (`/api/transferencias`),
+> não receita: lançado como receita, contaria duas vezes e inflaria o "entrou",
+> o SALDO [C177] e as metas de 30%/50%. Decisão registrada em 13/11/2026.
 
 **FONTE PASSIVA** (linhas 18-22): Aluguéis, Dividendos, Aposentadoria/Pensão
 Vitalícia, Juro Sobre Capital Próprio, Outros. Renda que não exige trabalho.
@@ -61,8 +68,10 @@ TOTAL FONTE PASSIVA = SUM(linhas 18:22)         [C23]
 TOTAL GERAL         = ativa + passiva           [C24 = C23 + C16]
 ```
 
-> **Lacuna no código atual**: `TipoCategoria` só tem `RECEITA`/`DESPESA`. Falta
-> a dimensão ativa/passiva, sem a qual o Independenciômetro não é calculável.
+> **No código**: `categorias.fonte_receita` (`ATIVA`/`PASSIVA`, V10). Receita
+> sem fonte vira `ATIVA`; subcategoria herda a fonte do grupo; despesa não tem
+> fonte. No cadastro o usuário recebe os grupos "Receitas ativas" e "Receitas
+> passivas" com os itens acima, copiados da tabela `categorias_padrao` (V14).
 
 ### Despesas — hierarquia de dois níveis
 
@@ -112,6 +121,14 @@ trate-o como requisito de primeira classe, não como métrica secundária.
 **Casos de borda**: despesa zero no mês → aplicar guarda, retornar 0 (a
 planilha não protege esta divisão; ver defeitos).
 
+**Exibição (tela Início, `InicioService`)** — regras de UX, não da planilha:
+faixas 0 / 0,10 / 0,20 / 0,30 / 0,50 (a faixa é a maior ≤ índice); próximo
+marco é o primeiro de 0,10 / 0,20 / 0,30 / 0,50 / 1,00 acima do índice (nulo
+se ≥ 1); "falta" = `despesa × marco − passiva`, mínimo 0, em reais por mês.
+
+Valores de teste: passiva 1000, despesa 3000 → índice 0,3333, faixa 0,30,
+próximo marco 0,50, falta 500,00.
+
 ### Economizado
 
 ```
@@ -121,6 +138,9 @@ SALDO           = receita_total_REALIZADA − despesa_total_REALIZADA   [C177 = 
 ```
 
 As duas últimas são linhas de referência para comparação visual com o saldo.
+No app: meta atingida quando `SALDO ≥ valor da meta` e houve receita; "falta"
+= `meta − SALDO`, mínimo 0. Valores de teste: entrou 5000, saiu 3000 → sobrou
+2000, meta 30% = 1500 (atingiu), meta 50% = 2500 (falta 500).
 
 ### Evolução mês a mês
 
@@ -293,6 +313,36 @@ CORRETAGEM, CUSTO TOTAL.
 
 ---
 
+## Módulo: Planejamento e Metas
+
+Aba **PLANEJAMENTO e METAS**, linhas 4 a 19 (até 12 metas por ano).
+
+| Coluna | Campo | No app |
+|---|---|---|
+| B | META / SONHO | `metas.nome` |
+| C | NECESSIDADE | `metas.valor_necessario` (> 0) |
+| D | INVESTIMENTO | `metas.investimento_inicial` (≥ 0) |
+| F, H, J… AB | JUROS/VARIAÇÃO do mês | `movimentos_metas.juros` (pode ser negativo) |
+| G, I, K… AC | APORTE do mês | `movimentos_metas.aporte` (negativo = resgate) |
+| E | ACUMULADO | calculado |
+
+```
+ACUMULADO   = INVESTIMENTO + Σ(juros + aportes)          [E7 = D7 + SUM(F7:AC7)]
+TOTAL       = soma por coluna das metas                  [linha 19: C19, E19, F19…AC19]
+```
+
+A planilha soma só os 12 meses de um ano; no app o acumulado soma **todos** os
+meses já registrados (a meta atravessa anos) e o painel mostra os 12 meses do
+ano pedido. Percentual atingido = acumulado / necessidade (guarda → 0) e
+"falta" = necessidade − acumulado, mínimo 0 — os dois são do app, não da
+planilha.
+
+Valores de teste: necessidade 10000, investimento 2000, aportes 500 (dez/25),
+1000 + juros 50 (jan/26), 1000 − juros 20 (fev/26) → acumulado 4530,00,
+percentual 0,453.
+
+---
+
 ## Defeitos conhecidos da planilha
 
 Replicar a **intenção**, não o defeito. Cada item abaixo deve ser corrigido na
@@ -324,9 +374,10 @@ Estas regiões **não foram extraídas**. Silêncio aqui significa "não verific
 não "não existe". Ao implementar qualquer uma delas, leia a planilha primeiro e
 atualize este documento.
 
-- Aba **PLANEJAMENTO e METAS** abaixo da linha 19 (parcialmente mapeada:
-  `acumulado = investimento_inicial + Σ(juros + aportes dos 12 meses)`, `E7`)
-- Seção **META 1..10** dentro do CONTROLE FINANCEIRO PESSOAL (linhas 203-214)
+- Seção **META 1..10** dentro do CONTROLE FINANCEIRO PESSOAL (linhas 203-214):
+  só valores digitados por mês e `TOTAL = SUM`. **Presumido** que sejam os
+  aportes destinados a cada meta (o mesmo dado da coluna APORTE da aba
+  PLANEJAMENTO e METAS); confirmar com o usuário antes de criar algo separado.
 - Aba **CAPA**
 - Detalhamento das abas RENDA FIXA / FII / CRIPTOMOEDAS / IMOBILIZADO abaixo
   das linhas de total (padrão presumido idêntico ao de AÇÕES, **não

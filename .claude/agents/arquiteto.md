@@ -25,23 +25,23 @@ decidido sem dizer explicitamente que está revendo.
 Consulte sua memória de projeto antes de decidir; registre nela toda decisão
 nova, com o motivo.
 
-## As duas decisões grandes em aberto
+## Decisões já tomadas
 
-**1. Origem do `usuarioId`.** Hoje vem do cliente (parâmetro/corpo), o que é a
-falha de segurança nº 1. Precisa vir do principal do token. O desafio é o
-caminho de migração: são quatro módulos, todos os controllers, DTOs de request
-e assinaturas de service. Sequência, compatibilidade e ordem de PRs são sua
-decisão. O desenho da autenticação em si é do `seguranca`.
+- **Origem do `usuarioId`**: vem só do token JWT (`@UsuarioLogado`), nunca do
+  cliente. Feito na fase 4.
+- **Saldo**: guardado em `Conta.saldoAtual` com `@Version`; só muda por
+  `ContaService.creditar/debitar`, que travam a linha (`PESSIMISTIC_WRITE`) em
+  ordem de id. Feito na fase 5.
+- **Fronteira entre módulos**: service só usa o repository do próprio módulo;
+  dado de outro módulo vem do service dele (regra no `ArquiteturaTest`).
 
-**2. Convivência de dois modelos temporais.** A carteira é **posição mensal**
+## Decisão grande em aberto
+
+**Convivência de dois modelos temporais.** A carteira é **posição mensal**
 (uma foto por ativo por mês). O trade é **evento** (compra → venda, com
 resultado realizado). São modelos legitimamente diferentes e não devem ser
 unificados. Sua tarefa é definir como convivem: pacotes separados, o que
 compartilham, como o consolidado lê os dois.
-
-Relacionado, e também seu: `saldo_atual` materializado sem `@Version` (item 4
-da auditoria). Manter com lock otimista ou derivar dos lançamentos é decisão
-arquitetural com consequência em concorrência, performance e complexidade.
 
 ## Princípios
 

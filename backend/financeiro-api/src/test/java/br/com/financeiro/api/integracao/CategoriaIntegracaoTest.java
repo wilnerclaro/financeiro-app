@@ -37,7 +37,7 @@ class CategoriaIntegracaoTest extends IntegracaoTest {
   @Test
   @DisplayName("nome duplicado é rejeitado sem diferenciar maiúsculas")
   void nomeDuplicado() throws Exception {
-    criarCategoria(usuario, "Transporte", "DESPESA", null);
+    criarCategoria(usuario, "Mobilidade", "DESPESA", null);
 
     postar(usuario, URL, corpo("TRANSPORTE", "DESPESA", null))
         .andExpect(status().isBadRequest())
@@ -60,7 +60,7 @@ class CategoriaIntegracaoTest extends IntegracaoTest {
   void categoriaComFilhasNaoViraSubcategoria() throws Exception {
     UUID casa = criarCategoria(usuario, "Casa", "DESPESA", null);
     criarCategoria(usuario, "Aluguel", "DESPESA", casa);
-    UUID moradia = criarCategoria(usuario, "Moradia", "DESPESA", null);
+    UUID moradia = criarCategoria(usuario, "Residência", "DESPESA", null);
 
     atualizar(usuario, URL + "/" + casa, corpo("Casa", "DESPESA", moradia))
         .andExpect(status().isBadRequest())
@@ -80,6 +80,27 @@ class CategoriaIntegracaoTest extends IntegracaoTest {
 
     atualizar(usuario, URL + "/" + casa, corpo("Casa", "RECEITA", null))
         .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  @DisplayName("categoria com lançamento ou previsto não troca de tipo")
+  void trocaDeTipoEmUso() throws Exception {
+    UUID viagens = criarCategoria(usuario, "Viagens", "DESPESA", null);
+    UUID conta = criarConta(usuario, "Banco", "100.00");
+    criarLancamento(usuario, conta, viagens, "DESPESA", "10.00", null, HOJE)
+        .andExpect(status().isCreated());
+
+    atualizar(usuario, URL + "/" + viagens, corpo("Viagens", "RECEITA", null))
+        .andExpect(status().isBadRequest())
+        .andExpect(
+            jsonPath("$.message")
+                .value(
+                    "Não é possível alterar o tipo de uma categoria que já tem lançamentos ou"
+                        + " previsto."));
+
+    UUID livre = criarCategoria(usuario, "Brindes", "DESPESA", null);
+    atualizar(usuario, URL + "/" + livre, corpo("Brindes", "RECEITA", null))
+        .andExpect(status().isOk());
   }
 
   @Test
@@ -131,9 +152,9 @@ class CategoriaIntegracaoTest extends IntegracaoTest {
   @Test
   @DisplayName("a categoria não pode ser pai dela mesma")
   void paiDelaMesma() throws Exception {
-    UUID id = criarCategoria(usuario, "Educação", "DESPESA", null);
+    UUID id = criarCategoria(usuario, "Cursos", "DESPESA", null);
 
-    atualizar(usuario, URL + "/" + id, corpo("Educação", "DESPESA", id))
+    atualizar(usuario, URL + "/" + id, corpo("Cursos", "DESPESA", id))
         .andExpect(status().isBadRequest());
   }
 
@@ -150,10 +171,78 @@ class CategoriaIntegracaoTest extends IntegracaoTest {
             get(URL)
                 .header(HttpHeaders.AUTHORIZATION, usuario.bearer())
                 .param("tipo", "DESPESA")
-                .param("ativa", "true"))
+                .param("ativa", "false"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.page.totalElements").value(1))
-        .andExpect(jsonPath("$.content[0].nome").value("Mercado"));
+        .andExpect(jsonPath("$.content[0].nome").value("Antiga"));
+  }
+
+  @Test
+  @DisplayName("cadastro já cria as categorias da planilha, com receita ativa e passiva")
+  void categoriasPadrao() throws Exception {
+    Sessao novo = criarUsuario();
+    mockMvc
+        .perform(get(URL).header(HttpHeaders.AUTHORIZATION, novo.bearer()).param("size", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.page.totalElements").value(100));
+
+    consultar(URL + "/" + categoriaPadrao(novo, "Dividendos"), novo)
+        .andExpect(jsonPath("$.tipo").value("RECEITA"))
+        .andExpect(jsonPath("$.fonteReceita").value("PASSIVA"));
+    consultar(URL + "/" + categoriaPadrao(novo, "Salários"), novo)
+        .andExpect(jsonPath("$.fonteReceita").value("ATIVA"));
+    consultar(URL + "/" + categoriaPadrao(novo, "Supermercado"), novo)
+        .andExpect(jsonPath("$.fonteReceita").value(org.hamcrest.Matchers.nullValue()));
+  }
+
+  @Test
+  @DisplayName("receita sem fonte vira ATIVA, subcategoria herda a fonte e despesa não tem fonte")
+  void fonteDaReceita() throws Exception {
+    UUID pai =
+        idDe(
+            postar(
+                    usuario,
+                    URL,
+                    """
+                    {"nome":"Investimentos","tipo":"RECEITA","fonteReceita":"PASSIVA"}
+                    """)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.fonteReceita").value("PASSIVA")));
+
+    postar(
+            usuario,
+            URL,
+            """
+            {"nome":"Cupons","tipo":"RECEITA","fonteReceita":"ATIVA","categoriaPaiId":"%s"}
+            """
+                .formatted(pai))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.fonteReceita").value("PASSIVA"));
+
+    postar(usuario, URL, corpo("Bicos", "RECEITA", null))
+        .andExpect(jsonPath("$.fonteReceita").value("ATIVA"));
+
+    postar(
+            usuario,
+            URL,
+            """
+            {"nome":"Assinaturas","tipo":"DESPESA","fonteReceita":"PASSIVA"}
+            """)
+        .andExpect(jsonPath("$.fonteReceita").value(org.hamcrest.Matchers.nullValue()));
+
+    atualizar(
+            usuario,
+            URL + "/" + pai,
+            """
+            {"nome":"Investimentos","tipo":"RECEITA","fonteReceita":"ATIVA"}
+            """)
+        .andExpect(status().isOk());
+    consultar(URL + "/" + categoriaPadraoDe(usuario, "Cupons"), usuario)
+        .andExpect(jsonPath("$.fonteReceita").value("ATIVA"));
+  }
+
+  private UUID categoriaPadraoDe(Sessao sessao, String nome) throws Exception {
+    return categoriaPadrao(sessao, nome);
   }
 
   private String corpo(String nome, String tipo, UUID categoriaPaiId) {

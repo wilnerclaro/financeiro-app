@@ -20,12 +20,36 @@ o glossário e as regras de cálculo derivados dela estão na skill
 
 ## Estado atual
 
-Implementados: `usuario`, `categoria`, `conta`, `lancamentofinanceiro`,
-`dashboardfinanceiro`.
+Implementados: `autenticacao` (JWT), `usuario`, `categoria` (com receita
+ativa/passiva e categorias padrão da planilha no cadastro), `conta` (saldo
+guardado na conta com `@Version`; cartão de crédito com fechamento e
+vencimento), `lancamentofinanceiro` (ATRASADO calculado na leitura, fatura do
+cartão), `transferencia`, `orcamento` (Previsto x Realizado e resumo anual),
+`meta` (metas e sonhos) e `dashboardfinanceiro` (resumo mensal e tela Início
+com o Independenciômetro).
 
-Não implementados: orçamento (a tabela `orcamentos_mensais` existe na migration
-V6 **sem código Java**), e todo o lado de investimentos (carteira, trade,
-opções, metas, custo de operações).
+Não implementados: todo o lado de investimentos (carteira, trade, opções,
+custo de operações).
+
+Regras que valem para o código novo:
+- `ATRASADO` não é gravado: no banco só há `PENDENTE`, `PAGO` e `CANCELADO`;
+  a resposta e o filtro derivam o atraso de `dataVencimento < hoje` (Clock).
+- Compra no cartão: `dataCompetencia` do pedido é a data da compra
+  (`dataCompra`); vencimento e competência passam a ser o vencimento da fatura.
+- Transferência não é receita nem despesa e não entra no Previsto x Realizado.
+- Percentual é fração com 4 casas via `common.util.Fracao` (guarda → 0).
+- Dinheiro calculado arredonda com `common.util.Dinheiro` (2 casas, HALF_UP);
+  ano e mês da API passam por `common.util.Competencia` (2000 a 2100).
+- Enum vai no DTO como enum, nunca como `String` com `name()`.
+- Dado de referência (como as categorias padrão do cadastro) mora no banco,
+  semeado por migration (`categorias_padrao`, V14), nunca em constante Java.
+- Categoria com lançamento ou previsto não muda de tipo; conta com lançamento
+  não vira cartão nem deixa de ser cartão.
+- Saldo só muda por `ContaService.creditar/debitar`, que travam a linha da conta
+  (`SELECT ... FOR UPDATE`) antes de mexer; transferência trava as duas contas
+  em ordem de id. Gravações simultâneas entram em fila, sem deadlock nem 500.
+- Service só usa o repository do próprio módulo; dado de outro módulo vem do
+  service dele (regra no `ArquiteturaTest`).
 
 Achados críticos da auditoria inicial estão em `docs/AUDITORIA-INICIAL.md`.
 **Leia antes de propor mudança estrutural.**
@@ -40,6 +64,13 @@ Estas convenções já existem no código. Imite-as; não invente alternativas.
 - Interface de documentação: `categoria/docs/CategoriaApiDoc.java`
 - Service: `conta/service/ContaService.java`
 - Migration: `db/migration/V5__criar_tabela_lancamentos_financeiros.sql`
+
+**Comentários (pedido do Wilner)**: siga o Clean Code. Não escreva Javadoc
+nem comentário que repete o nome da classe, do método ou do campo, nem
+separador, nem comentário de célula da planilha ou de fase. O nome deve
+explicar o código. A regra de negócio e a origem na planilha ficam no
+glossário; a descrição para o front-end fica no `@Schema`/`@Operation`.
+Migrations também vão sem comentário.
 
 **Estrutura de módulo**: pacote por feature, com
 `controller/ docs/ dto/ entity/ enums/ mapper/ repository/ service/`.
@@ -102,9 +133,9 @@ mvn verify
 Isso roda Spotless (formatação), Checkstyle (estilo), JaCoCo (cobertura) e
 ArchUnit (regras de arquitetura como teste). Ver `docs/QUALIDADE-BUILD.md`.
 
-**Regra inegociável**: os quatro módulos legados estão na lista de exclusão do
-JaCoCo por serem anteriores ao gate. **Nenhum módulo novo entra nessa lista.**
-Código novo nasce coberto. Módulo legado sai da lista conforme for coberto.
+**Regra inegociável**: a exclusão do JaCoCo só tem o que não tem lógica (DTO,
+entidade, enum, docs, config, mappers gerados). **Nenhum service ou controller
+entra nela.** Código novo nasce coberto.
 
 Não fatie método coeso só para reduzir contagem de linhas. Legibilidade vence
 métrica.

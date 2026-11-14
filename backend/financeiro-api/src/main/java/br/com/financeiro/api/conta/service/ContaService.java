@@ -2,19 +2,26 @@ package br.com.financeiro.api.conta.service;
 
 import br.com.financeiro.api.common.exception.BusinessException;
 import br.com.financeiro.api.common.exception.ResourceNotFoundException;
+import br.com.financeiro.api.common.util.Dinheiro;
 import br.com.financeiro.api.common.util.NormalizadorTexto;
 import br.com.financeiro.api.conta.dto.AtualizarContaRequest;
 import br.com.financeiro.api.conta.dto.ContaResponse;
 import br.com.financeiro.api.conta.dto.CorrigirSaldoInicialContaRequest;
 import br.com.financeiro.api.conta.dto.CriarContaRequest;
+import br.com.financeiro.api.conta.dto.ResumoContasResponse;
 import br.com.financeiro.api.conta.entity.Conta;
 import br.com.financeiro.api.conta.enums.TipoConta;
 import br.com.financeiro.api.conta.mapper.ContaMapper;
 import br.com.financeiro.api.conta.repository.ContaRepository;
 import br.com.financeiro.api.usuario.entity.Usuario;
-import br.com.financeiro.api.usuario.repository.UsuarioRepository;
+import br.com.financeiro.api.usuario.service.UsuarioService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import java.math.BigDecimal;
+import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,8 +33,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class ContaService {
 
   private final ContaRepository contaRepository;
-  private final UsuarioRepository usuarioRepository;
+  private final UsuarioService usuarioService;
   private final ContaMapper contaMapper;
+  private final EntityManager entityManager;
 
   @Transactional
   public ContaResponse criar(UUID usuarioId, CriarContaRequest request) {
@@ -35,12 +43,14 @@ public class ContaService {
     String nomeNormalizado = NormalizadorTexto.normalizarNome(request.nome());
 
     validarDuplicidade(usuarioId, nomeNormalizado, null);
+    validarDiasDaFatura(request.tipo(), request.diaFechamento(), request.diaVencimento());
 
     Conta conta = contaMapper.paraEntity(request);
     conta.setUsuario(usuario);
     conta.setNome(nomeNormalizado);
     conta.setSaldoAtual(request.saldoInicial());
     conta.setAtiva(true);
+    definirDiasDaFatura(conta, request.tipo(), request.diaFechamento(), request.diaVencimento());
 
     Conta contaSalva = contaRepository.saveAndFlush(conta);
     return contaMapper.paraResponse(contaSalva);
@@ -67,9 +77,12 @@ public class ContaService {
     String nomeNormalizado = NormalizadorTexto.normalizarNome(request.nome());
 
     validarDuplicidade(usuarioId, nomeNormalizado, id);
+    validarDiasDaFatura(request.tipo(), request.diaFechamento(), request.diaVencimento());
+    validarMudancaDeTipo(conta, request.tipo());
 
     conta.setNome(nomeNormalizado);
     conta.setTipo(request.tipo());
+    definirDiasDaFatura(conta, request.tipo(), request.diaFechamento(), request.diaVencimento());
     contaRepository.flush();
 
     return contaMapper.paraResponse(conta);
@@ -79,6 +92,7 @@ public class ContaService {
   public ContaResponse corrigirSaldoInicial(
       UUID id, UUID usuarioId, CorrigirSaldoInicialContaRequest request) {
     Conta conta = buscarContaDoUsuario(id, usuarioId);
+    travar(conta);
     BigDecimal saldoMovimentado = contaRepository.calcularSaldoMovimentado(id, usuarioId);
 
     conta.setSaldoInicial(request.saldoInicial());
@@ -103,10 +117,96 @@ public class ContaService {
     return contaMapper.paraResponse(conta);
   }
 
+  @Transactional(readOnly = true)
+  public Conta buscarConta(UUID contaId, UUID usuarioId) {
+    return buscarContaDoUsuario(contaId, usuarioId);
+  }
+
+  @Transactional(readOnly = true)
+  public Conta buscarContaAtiva(UUID contaId, UUID usuarioId) {
+    Conta conta = buscarContaDoUsuario(contaId, usuarioId);
+
+    if (!Boolean.TRUE.equals(conta.getAtiva())) {
+      throw new BusinessException("A conta informada está inativa.");
+    }
+
+    return conta;
+  }
+
+  @Transactional(readOnly = true)
+  public void validarContaDoUsuario(UUID contaId, UUID usuarioId) {
+    if (contaId != null) {
+      buscarContaDoUsuario(contaId, usuarioId);
+    }
+  }
+
+  @Transactional(readOnly = true)
+  public ResumoContasResponse resumir(UUID usuarioId) {
+    List<ResumoContasResponse.TotalPorTipo> porTipo =
+        contaRepository.somarPorTipo(usuarioId).stream()
+            .map(
+                t ->
+                    new ResumoContasResponse.TotalPorTipo(
+                        t.getTipo(), Dinheiro.arredondar(t.getTotal()), t.getQuantidade()))
+            .toList();
+    BigDecimal patrimonio =
+        porTipo.stream()
+            .map(ResumoContasResponse.TotalPorTipo::total)
+            .reduce(Dinheiro.ZERO, BigDecimal::add);
+    return new ResumoContasResponse(patrimonio, porTipo);
+  }
+
+  @Transactional
+  public void creditar(Conta conta, BigDecimal valor) {
+    travar(conta);
+    conta.creditar(valor);
+  }
+
+  @Transactional
+  public void debitar(Conta conta, BigDecimal valor) {
+    travar(conta);
+    conta.debitar(valor);
+  }
+
+  @Transactional
+  public void travar(Conta... contas) {
+    Stream.of(contas)
+        .distinct()
+        .sorted(Comparator.comparing(Conta::getId))
+        .filter(conta -> entityManager.getLockMode(conta) != LockModeType.PESSIMISTIC_WRITE)
+        .forEach(conta -> entityManager.refresh(conta, LockModeType.PESSIMISTIC_WRITE));
+  }
+
+  @Transactional(readOnly = true)
+  public BigDecimal somarSaldoEmContas(UUID usuarioId) {
+    return contaRepository.somarSaldoEmContas(usuarioId);
+  }
+
+  private void validarDiasDaFatura(TipoConta tipo, Integer diaFechamento, Integer diaVencimento) {
+    if (TipoConta.CARTAO_CREDITO.equals(tipo) && (diaFechamento == null || diaVencimento == null)) {
+      throw new BusinessException(
+          "Cartão de crédito exige o dia de fechamento e o dia de vencimento da fatura.");
+    }
+  }
+
+  private void definirDiasDaFatura(
+      Conta conta, TipoConta tipo, Integer diaFechamento, Integer diaVencimento) {
+    boolean cartao = TipoConta.CARTAO_CREDITO.equals(tipo);
+    conta.setDiaFechamento(cartao ? diaFechamento : null);
+    conta.setDiaVencimento(cartao ? diaVencimento : null);
+  }
+
   private Usuario buscarUsuario(UUID usuarioId) {
-    return usuarioRepository
-        .findById(usuarioId)
-        .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
+    return usuarioService.buscar(usuarioId);
+  }
+
+  private void validarMudancaDeTipo(Conta conta, TipoConta novoTipo) {
+    boolean mudaCartao = conta.ehCartaoDeCredito() != TipoConta.CARTAO_CREDITO.equals(novoTipo);
+    if (mudaCartao && contaRepository.possuiLancamentos(conta.getId())) {
+      throw new BusinessException(
+          "Não é possível transformar em cartão de crédito, ou deixar de ser cartão, "
+              + "uma conta que já tem lançamentos.");
+    }
   }
 
   private Conta buscarContaDoUsuario(UUID contaId, UUID usuarioId) {
