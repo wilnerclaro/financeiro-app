@@ -155,7 +155,7 @@ documentação completa fica no Swagger (`/swagger-ui.html`).
 | Lançamentos | `/api/lancamentos-financeiros` (filtros por tipo, status, conta, categoria e período) |
 | Fatura do cartão | `GET /api/lancamentos-financeiros/faturas?contaId&ano&mes` |
 | Transferências | `/api/transferencias` |
-| Orçamento | `GET/PUT /api/orcamentos/{ano}/{mes}`, `POST /api/orcamentos/{ano}/{mes}/copiar-mes-anterior`, `GET /api/orcamentos/{ano}` |
+| Orçamento | `GET/PUT /api/orcamentos/{ano}/{mes}`, `POST /api/orcamentos/repetir` (uma categoria em vários meses), `POST /api/orcamentos/{ano}/{mes}/copiar` (o mês inteiro para outros meses), `GET /api/orcamentos/{ano}` |
 | Metas | `/api/metas` (painel do ano) e `PUT /api/metas/{id}/movimentos/{ano}/{mes}` |
 | Contas e categorias | `/api/contas`, `GET /api/contas/resumo`, `/api/categorias` |
 

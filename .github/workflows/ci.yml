@@ -29,8 +29,6 @@ jobs:
           java-version: "25"
           cache: maven
 
-      # verify roda Spotless, Checkstyle, testes (com Testcontainers, usando o Docker
-      # que já vem no runner) e o gate de cobertura do JaCoCo.
       - name: Build e testes
         run: ./mvnw -B -ntp verify
 

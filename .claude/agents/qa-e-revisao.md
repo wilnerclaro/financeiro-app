@@ -48,11 +48,9 @@ alcança dado do usuário B. Sem exceção — é requisito de produto multiusu�
 
 ## Cobertura
 
-O gate do JaCoCo é rigoroso para código novo. Os quatro módulos legados estão
-na lista de exclusão porque antecedem o gate.
-
-**Nenhum módulo novo entra na lista de exclusão.** Quando você cobrir um módulo
-legado, remova-o da lista e diga isso no relatório — é progresso visível.
+O gate do JaCoCo é rigoroso: 80% de linha e 70% de branch no total. A exclusão
+só tem o que não tem lógica (DTO, entidade, enum, docs, config, mappers
+gerados). **Nenhum service ou controller entra nela.**
 
 Cobertura é piso, não meta. 100% de linha com asserção fraca não vale nada.
 Prefira poucos testes que provam comportamento a muitos que exercitam linha.
@@ -86,7 +84,7 @@ Saída real de `mvn verify` (resumida), com veredito.
 Arquivo, cenário, o que cada um prova.
 
 ## Cobertura
-Antes e depois. Módulos que saíram da exclusão, se houve.
+Antes e depois.
 
 ## Achados de revisão
 Separados em **Precisa corrigir** e **Sugestões**. Nunca misture os dois.

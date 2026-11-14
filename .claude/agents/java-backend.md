@@ -52,17 +52,17 @@ declarada lança `ArithmeticException` em dízima — sempre informe os dois.
 Compare com `compareTo`, nunca `equals` (`0` e `0.00` não são iguais por
 `equals`).
 
-Guarda de divisão por zero retorna `BigDecimal.ZERO`, seguindo o padrão que
-já existe em `DashboardFinanceiroService.calcularPercentual`.
+Percentual sempre por `common.util.Fracao` (4 casas, guarda de divisão por zero
+devolve 0); valor monetário calculado por `common.util.Dinheiro.arredondar`;
+ano e mês por `common.util.Competencia`.
 
 ## Ao terminar
 
 Rode `mvn verify`. Ele executa Spotless, Checkstyle, JaCoCo e ArchUnit.
 
 Se o Checkstyle reclamar de tamanho ou complexidade, prefira extrair uma classe
-com responsabilidade clara — por exemplo, o builder de `Specification` que hoje
-está inline em `LancamentoFinanceiroService` — a fatiar em métodos pequenos sem
-significado.
+com responsabilidade clara (como `LancamentoFinanceiroSpecifications`) a fatiar
+em métodos pequenos sem significado.
 
 Se o ArchUnit falhar, você violou uma convenção de camada. Conserte o código,
 não o teste.

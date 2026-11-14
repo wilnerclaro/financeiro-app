@@ -71,7 +71,7 @@ TOTAL GERAL         = ativa + passiva           [C24 = C23 + C16]
 > **No código**: `categorias.fonte_receita` (`ATIVA`/`PASSIVA`, V10). Receita
 > sem fonte vira `ATIVA`; subcategoria herda a fonte do grupo; despesa não tem
 > fonte. No cadastro o usuário recebe os grupos "Receitas ativas" e "Receitas
-> passivas" com os itens acima (`CategoriasPadraoService`).
+> passivas" com os itens acima, copiados da tabela `categorias_padrao` (V14).
 
 ### Despesas — hierarquia de dois níveis
 
