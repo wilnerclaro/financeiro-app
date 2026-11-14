@@ -2,6 +2,7 @@ package br.com.financeiro.api.conta.service;
 
 import br.com.financeiro.api.common.exception.BusinessException;
 import br.com.financeiro.api.common.exception.ResourceNotFoundException;
+import br.com.financeiro.api.common.util.Dinheiro;
 import br.com.financeiro.api.common.util.NormalizadorTexto;
 import br.com.financeiro.api.conta.dto.AtualizarContaRequest;
 import br.com.financeiro.api.conta.dto.ContaResponse;
@@ -77,6 +78,7 @@ public class ContaService {
 
     validarDuplicidade(usuarioId, nomeNormalizado, id);
     validarDiasDaFatura(request.tipo(), request.diaFechamento(), request.diaVencimento());
+    validarMudancaDeTipo(conta, request.tipo());
 
     conta.setNome(nomeNormalizado);
     conta.setTipo(request.tipo());
@@ -90,6 +92,7 @@ public class ContaService {
   public ContaResponse corrigirSaldoInicial(
       UUID id, UUID usuarioId, CorrigirSaldoInicialContaRequest request) {
     Conta conta = buscarContaDoUsuario(id, usuarioId);
+    travar(conta);
     BigDecimal saldoMovimentado = contaRepository.calcularSaldoMovimentado(id, usuarioId);
 
     conta.setSaldoInicial(request.saldoInicial());
@@ -112,24 +115,6 @@ public class ContaService {
     contaRepository.flush();
 
     return contaMapper.paraResponse(conta);
-  }
-
-  private void validarDiasDaFatura(TipoConta tipo, Integer diaFechamento, Integer diaVencimento) {
-    if (TipoConta.CARTAO_CREDITO.equals(tipo) && (diaFechamento == null || diaVencimento == null)) {
-      throw new BusinessException(
-          "Cartão de crédito exige o dia de fechamento e o dia de vencimento da fatura.");
-    }
-  }
-
-  private void definirDiasDaFatura(
-      Conta conta, TipoConta tipo, Integer diaFechamento, Integer diaVencimento) {
-    boolean cartao = TipoConta.CARTAO_CREDITO.equals(tipo);
-    conta.setDiaFechamento(cartao ? diaFechamento : null);
-    conta.setDiaVencimento(cartao ? diaVencimento : null);
-  }
-
-  private Usuario buscarUsuario(UUID usuarioId) {
-    return usuarioService.buscar(usuarioId);
   }
 
   @Transactional(readOnly = true)
@@ -162,12 +147,12 @@ public class ContaService {
             .map(
                 t ->
                     new ResumoContasResponse.TotalPorTipo(
-                        t.getTipo(), t.getTotal().setScale(2), t.getQuantidade()))
+                        t.getTipo(), Dinheiro.arredondar(t.getTotal()), t.getQuantidade()))
             .toList();
     BigDecimal patrimonio =
         porTipo.stream()
             .map(ResumoContasResponse.TotalPorTipo::total)
-            .reduce(BigDecimal.ZERO.setScale(2), BigDecimal::add);
+            .reduce(Dinheiro.ZERO, BigDecimal::add);
     return new ResumoContasResponse(patrimonio, porTipo);
   }
 
@@ -195,6 +180,33 @@ public class ContaService {
   @Transactional(readOnly = true)
   public BigDecimal somarSaldoEmContas(UUID usuarioId) {
     return contaRepository.somarSaldoEmContas(usuarioId);
+  }
+
+  private void validarDiasDaFatura(TipoConta tipo, Integer diaFechamento, Integer diaVencimento) {
+    if (TipoConta.CARTAO_CREDITO.equals(tipo) && (diaFechamento == null || diaVencimento == null)) {
+      throw new BusinessException(
+          "Cartão de crédito exige o dia de fechamento e o dia de vencimento da fatura.");
+    }
+  }
+
+  private void definirDiasDaFatura(
+      Conta conta, TipoConta tipo, Integer diaFechamento, Integer diaVencimento) {
+    boolean cartao = TipoConta.CARTAO_CREDITO.equals(tipo);
+    conta.setDiaFechamento(cartao ? diaFechamento : null);
+    conta.setDiaVencimento(cartao ? diaVencimento : null);
+  }
+
+  private Usuario buscarUsuario(UUID usuarioId) {
+    return usuarioService.buscar(usuarioId);
+  }
+
+  private void validarMudancaDeTipo(Conta conta, TipoConta novoTipo) {
+    boolean mudaCartao = conta.ehCartaoDeCredito() != TipoConta.CARTAO_CREDITO.equals(novoTipo);
+    if (mudaCartao && contaRepository.possuiLancamentos(conta.getId())) {
+      throw new BusinessException(
+          "Não é possível transformar em cartão de crédito, ou deixar de ser cartão, "
+              + "uma conta que já tem lançamentos.");
+    }
   }
 
   private Conta buscarContaDoUsuario(UUID contaId, UUID usuarioId) {

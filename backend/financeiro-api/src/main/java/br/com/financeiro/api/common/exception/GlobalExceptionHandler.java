@@ -1,8 +1,10 @@
 package br.com.financeiro.api.common.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -22,7 +24,10 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @Slf4j
 @RestControllerAdvice
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
+
+  private final Clock clock;
 
   @ExceptionHandler(ResourceNotFoundException.class)
   public ResponseEntity<ApiErrorResponse> tratarRecursoNaoEncontrado(
@@ -159,7 +164,7 @@ public class GlobalExceptionHandler {
       HttpServletRequest request,
       List<FieldErrorResponse> fieldErrors) {
     return new ApiErrorResponse(
-        OffsetDateTime.now(),
+        OffsetDateTime.now(clock),
         status.value(),
         status.getReasonPhrase(),
         message,

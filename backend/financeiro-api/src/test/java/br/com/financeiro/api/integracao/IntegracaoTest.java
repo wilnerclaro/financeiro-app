@@ -27,14 +27,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-/**
- * Base dos testes de integração: sobe a aplicação inteira contra um PostgreSQL real
- * (Testcontainers) e conversa com ela por HTTP via MockMvc, autenticada com JWT.
- *
- * <p>Cada teste cadastra o próprio usuário pela API, então os testes não dependem de ordem nem de
- * limpeza do banco. O relógio é fixo em {@link #HOJE} para que regras de data sejam
- * determinísticas.
- */
 @SpringBootTest(properties = IntegracaoTest.SEGREDO_JWT_DE_TESTE)
 @AutoConfigureMockMvc
 @Import({TestcontainersConfiguration.class, IntegracaoTest.RelogioFixo.class})
@@ -49,7 +41,6 @@ abstract class IntegracaoTest {
 
   @Autowired protected MockMvc mockMvc;
 
-  /** Usuário cadastrado e logado: o id e o token de acesso dele. */
   record Sessao(UUID id, String email, String accessToken, String refreshToken) {
 
     String bearer() {

@@ -6,10 +6,10 @@ import java.util.List;
 
 public record PainelMetasResponse(
     Integer ano,
-    @Schema(description = "Soma das necessidades (C19).") BigDecimal totalNecessario,
-    @Schema(description = "Soma dos acumulados (E19).") BigDecimal totalAcumulado,
+    @Schema(description = "Soma das necessidades.") BigDecimal totalNecessario,
+    @Schema(description = "Soma dos acumulados.") BigDecimal totalAcumulado,
     @Schema(description = "Total acumulado / total necessário, fração.")
         BigDecimal percentualAtingido,
     List<MetaResponse> metas,
-    @Schema(description = "Soma de aportes e juros de todas as metas, mês a mês (linha 19).")
+    @Schema(description = "Soma de aportes e juros de todas as metas, mês a mês.")
         List<MetaResponse.MesDaMeta> totaisPorMes) {}

@@ -8,7 +8,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 
-public record SalvarMetaRequest(
+public record AtualizarMetaRequest(
     @Schema(example = "Reserva de emergência")
         @NotBlank(message = "O nome da meta é obrigatório.")
         @Size(max = 120, message = "O nome da meta deve ter no máximo 120 caracteres.")

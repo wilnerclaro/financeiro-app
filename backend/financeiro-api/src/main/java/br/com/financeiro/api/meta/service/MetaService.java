@@ -1,21 +1,26 @@
 package br.com.financeiro.api.meta.service;
 
+import static br.com.financeiro.api.common.util.Competencia.MESES_NO_ANO;
+import static br.com.financeiro.api.common.util.Dinheiro.ZERO;
+
 import br.com.financeiro.api.common.exception.BusinessException;
 import br.com.financeiro.api.common.exception.ResourceNotFoundException;
+import br.com.financeiro.api.common.util.Competencia;
+import br.com.financeiro.api.common.util.Dinheiro;
 import br.com.financeiro.api.common.util.Fracao;
 import br.com.financeiro.api.common.util.NormalizadorTexto;
+import br.com.financeiro.api.meta.dto.AtualizarMetaRequest;
+import br.com.financeiro.api.meta.dto.CriarMetaRequest;
 import br.com.financeiro.api.meta.dto.MetaResponse;
 import br.com.financeiro.api.meta.dto.MetaResponse.MesDaMeta;
 import br.com.financeiro.api.meta.dto.MovimentoMetaRequest;
 import br.com.financeiro.api.meta.dto.PainelMetasResponse;
-import br.com.financeiro.api.meta.dto.SalvarMetaRequest;
 import br.com.financeiro.api.meta.entity.Meta;
 import br.com.financeiro.api.meta.entity.MovimentoMeta;
 import br.com.financeiro.api.meta.repository.MetaRepository;
 import br.com.financeiro.api.meta.repository.MovimentoMetaRepository;
 import br.com.financeiro.api.usuario.service.UsuarioService;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -31,15 +36,13 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MetaService {
 
-  private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2);
-
   private final MetaRepository metaRepository;
   private final MovimentoMetaRepository movimentoMetaRepository;
   private final UsuarioService usuarioService;
   private final Clock clock;
 
   @Transactional
-  public MetaResponse criar(UUID usuarioId, SalvarMetaRequest request) {
+  public MetaResponse criar(UUID usuarioId, CriarMetaRequest request) {
     String nome = NormalizadorTexto.normalizarNome(request.nome());
     validarNomeUnico(usuarioId, nome, null);
 
@@ -47,8 +50,8 @@ public class MetaService {
         Meta.builder()
             .usuario(usuarioService.referencia(usuarioId))
             .nome(nome)
-            .valorNecessario(escala2(request.valorNecessario()))
-            .investimentoInicial(escala2(request.investimentoInicial()))
+            .valorNecessario(Dinheiro.arredondar(request.valorNecessario()))
+            .investimentoInicial(Dinheiro.arredondar(request.investimentoInicial()))
             .ativa(true)
             .build();
     meta = metaRepository.saveAndFlush(meta);
@@ -56,14 +59,14 @@ public class MetaService {
   }
 
   @Transactional
-  public MetaResponse atualizar(UUID id, UUID usuarioId, SalvarMetaRequest request) {
+  public MetaResponse atualizar(UUID id, UUID usuarioId, AtualizarMetaRequest request) {
     Meta meta = buscarDoUsuario(id, usuarioId);
     String nome = NormalizadorTexto.normalizarNome(request.nome());
     validarNomeUnico(usuarioId, nome, id);
 
     meta.setNome(nome);
-    meta.setValorNecessario(escala2(request.valorNecessario()));
-    meta.setInvestimentoInicial(escala2(request.investimentoInicial()));
+    meta.setValorNecessario(Dinheiro.arredondar(request.valorNecessario()));
+    meta.setInvestimentoInicial(Dinheiro.arredondar(request.investimentoInicial()));
     metaRepository.flush();
     return buscar(id, usuarioId, anoAtual());
   }
@@ -71,9 +74,6 @@ public class MetaService {
   @Transactional
   public void inativar(UUID id, UUID usuarioId) {
     Meta meta = buscarDoUsuario(id, usuarioId);
-    if (!Boolean.TRUE.equals(meta.getAtiva())) {
-      throw new BusinessException("A meta já está inativa.");
-    }
     meta.setAtiva(false);
   }
 
@@ -88,43 +88,35 @@ public class MetaService {
   @Transactional
   public MetaResponse registrarMovimento(
       UUID id, UUID usuarioId, int ano, int mes, MovimentoMetaRequest request) {
-    validarCompetencia(ano, mes);
+    Competencia.de(ano, mes);
     Meta meta = buscarDoUsuario(id, usuarioId);
     if (!Boolean.TRUE.equals(meta.getAtiva())) {
       throw new BusinessException("Ative a meta antes de registrar aportes.");
     }
 
-    BigDecimal aporte = escala2(request.aporte());
-    BigDecimal juros = escala2(request.juros());
-    MovimentoMeta movimento = movimentoMetaRepository.buscarDoMes(id, ano, mes).orElse(null);
-
-    if (aporte.signum() == 0 && juros.signum() == 0) {
-      if (movimento != null) {
-        movimentoMetaRepository.delete(movimento);
-      }
-    } else {
-      if (movimento == null) {
-        movimento = MovimentoMeta.builder().meta(meta).ano(ano).mes(mes).build();
-      }
-      movimento.setAporte(aporte);
-      movimento.setJuros(juros);
-      movimentoMetaRepository.save(movimento);
-    }
-    movimentoMetaRepository.flush();
+    BigDecimal aporte = Dinheiro.arredondar(request.aporte());
+    BigDecimal juros = Dinheiro.arredondar(request.juros());
+    MovimentoMeta movimento =
+        movimentoMetaRepository
+            .buscarDoMes(id, ano, mes)
+            .orElseGet(() -> MovimentoMeta.builder().meta(meta).ano(ano).mes(mes).build());
+    movimento.setAporte(aporte);
+    movimento.setJuros(juros);
+    movimentoMetaRepository.saveAndFlush(movimento);
     return buscar(id, usuarioId, ano);
   }
 
   @Transactional(readOnly = true)
   public MetaResponse buscar(UUID id, UUID usuarioId, Integer ano) {
     Meta meta = buscarDoUsuario(id, usuarioId);
-    int anoDoPainel = ano == null ? anoAtual() : validarAno(ano);
+    int anoDoPainel = ano == null ? anoAtual() : Competencia.validarAno(ano);
     return paraResponse(
         meta, movimentoMetaRepository.buscarDasMetas(List.of(meta.getId())), anoDoPainel);
   }
 
   @Transactional(readOnly = true)
   public PainelMetasResponse painel(UUID usuarioId, Integer ano, boolean incluirInativas) {
-    int anoDoPainel = ano == null ? anoAtual() : validarAno(ano);
+    int anoDoPainel = ano == null ? anoAtual() : Competencia.validarAno(ano);
     List<Meta> metas = metaRepository.buscarDoUsuario(usuarioId, incluirInativas);
 
     Map<UUID, List<MovimentoMeta>> movimentosPorMeta =
@@ -145,9 +137,9 @@ public class MetaService {
 
     BigDecimal totalNecessario = ZERO;
     BigDecimal totalAcumulado = ZERO;
-    BigDecimal[] aportes = new BigDecimal[12];
-    BigDecimal[] juros = new BigDecimal[12];
-    for (int i = 0; i < 12; i++) {
+    BigDecimal[] aportes = new BigDecimal[MESES_NO_ANO];
+    BigDecimal[] juros = new BigDecimal[MESES_NO_ANO];
+    for (int i = 0; i < MESES_NO_ANO; i++) {
       aportes[i] = ZERO;
       juros[i] = ZERO;
     }
@@ -160,7 +152,7 @@ public class MetaService {
       }
     }
     List<MesDaMeta> totaisPorMes = new ArrayList<>();
-    for (int i = 0; i < 12; i++) {
+    for (int i = 0; i < MESES_NO_ANO; i++) {
       totaisPorMes.add(new MesDaMeta(i + 1, aportes[i], juros[i]));
     }
 
@@ -175,8 +167,8 @@ public class MetaService {
 
   static MetaResponse paraResponse(Meta meta, List<MovimentoMeta> movimentos, int ano) {
     BigDecimal acumulado = meta.getInvestimentoInicial();
-    BigDecimal[] aportes = new BigDecimal[12];
-    BigDecimal[] juros = new BigDecimal[12];
+    BigDecimal[] aportes = new BigDecimal[MESES_NO_ANO];
+    BigDecimal[] juros = new BigDecimal[MESES_NO_ANO];
     for (MovimentoMeta movimento : movimentos) {
       acumulado = acumulado.add(movimento.getAporte()).add(movimento.getJuros());
       if (movimento.getAno() == ano) {
@@ -186,11 +178,12 @@ public class MetaService {
     }
 
     List<MesDaMeta> meses = new ArrayList<>();
-    for (int i = 0; i < 12; i++) {
-      meses.add(new MesDaMeta(i + 1, escala2(aportes[i]), escala2(juros[i])));
+    for (int i = 0; i < MESES_NO_ANO; i++) {
+      meses.add(
+          new MesDaMeta(i + 1, Dinheiro.arredondar(aportes[i]), Dinheiro.arredondar(juros[i])));
     }
 
-    acumulado = escala2(acumulado);
+    acumulado = Dinheiro.arredondar(acumulado);
     BigDecimal falta = meta.getValorNecessario().subtract(acumulado).max(ZERO);
     return new MetaResponse(
         meta.getId(),
@@ -219,23 +212,5 @@ public class MetaService {
 
   private int anoAtual() {
     return LocalDate.now(clock).getYear();
-  }
-
-  private static int validarAno(int ano) {
-    if (ano < 2000 || ano > 2100) {
-      throw new BusinessException("O ano deve estar entre 2000 e 2100.");
-    }
-    return ano;
-  }
-
-  private static void validarCompetencia(int ano, int mes) {
-    validarAno(ano);
-    if (mes < 1 || mes > 12) {
-      throw new BusinessException("O mês deve estar entre 1 e 12.");
-    }
-  }
-
-  private static BigDecimal escala2(BigDecimal valor) {
-    return valor == null ? ZERO : valor.setScale(2, RoundingMode.HALF_UP);
   }
 }

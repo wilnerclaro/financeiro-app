@@ -1,5 +1,6 @@
 package br.com.financeiro.api.orcamento.dto;
 
+import br.com.financeiro.api.categoria.enums.FonteReceita;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.util.List;
@@ -26,11 +27,11 @@ public record PrevistoRealizadoResponse(
   public record Grupo(
       UUID categoriaId,
       String nome,
-      String fonteReceita,
+      FonteReceita fonteReceita,
       boolean ativa,
       Valores valores,
       List<Item> subitens) {}
 
   public record Item(
-      UUID categoriaId, String nome, String fonteReceita, boolean ativa, Valores valores) {}
+      UUID categoriaId, String nome, FonteReceita fonteReceita, boolean ativa, Valores valores) {}
 }

@@ -1,7 +1,9 @@
 package br.com.financeiro.api.lancamentofinanceiro.repository;
 
 import br.com.financeiro.api.lancamentofinanceiro.entity.LancamentoFinanceiro;
+import br.com.financeiro.api.lancamentofinanceiro.enums.TipoLancamentoFinanceiro;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -107,7 +109,7 @@ public interface LancamentoFinanceiroRepository
             """)
   List<CategoriaMaisUsada> buscarCategoriasMaisUsadas(
       @Param("usuarioId") UUID usuarioId,
-      @Param("tipo") br.com.financeiro.api.lancamentofinanceiro.enums.TipoLancamentoFinanceiro tipo,
-      @Param("desde") java.time.OffsetDateTime desde,
+      @Param("tipo") TipoLancamentoFinanceiro tipo,
+      @Param("desde") OffsetDateTime desde,
       Pageable pageable);
 }

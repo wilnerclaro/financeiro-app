@@ -11,6 +11,7 @@ import br.com.financeiro.api.categoria.entity.Categoria;
 import br.com.financeiro.api.categoria.service.CategoriaService;
 import br.com.financeiro.api.common.exception.BusinessException;
 import br.com.financeiro.api.common.exception.ResourceNotFoundException;
+import br.com.financeiro.api.common.util.Competencia;
 import br.com.financeiro.api.common.util.NormalizadorTexto;
 import br.com.financeiro.api.conta.entity.Conta;
 import br.com.financeiro.api.conta.service.ContaService;
@@ -63,19 +64,7 @@ public class LancamentoFinanceiroService {
 
     LancamentoFinanceiro lancamentoFinanceiro = new LancamentoFinanceiro();
     lancamentoFinanceiro.setUsuario(usuario);
-    preencher(
-        lancamentoFinanceiro,
-        new DadosDoLancamento(
-            request.contaId(),
-            request.categoriaId(),
-            request.descricao(),
-            request.tipo(),
-            request.valor(),
-            request.dataCompetencia(),
-            request.dataVencimento(),
-            request.dataPagamento(),
-            request.observacao()),
-        usuarioId);
+    preencher(lancamentoFinanceiro, DadosDoLancamento.de(request), usuarioId);
 
     movimentarSaldoSePago(lancamentoFinanceiro);
 
@@ -124,19 +113,7 @@ public class LancamentoFinanceiroService {
     }
 
     estornarSaldoSePago(lancamentoFinanceiro);
-    preencher(
-        lancamentoFinanceiro,
-        new DadosDoLancamento(
-            request.contaId(),
-            request.categoriaId(),
-            request.descricao(),
-            request.tipo(),
-            request.valor(),
-            request.dataCompetencia(),
-            request.dataVencimento(),
-            request.dataPagamento(),
-            request.observacao()),
-        usuarioId);
+    preencher(lancamentoFinanceiro, DadosDoLancamento.de(request), usuarioId);
     movimentarSaldoSePago(lancamentoFinanceiro);
     lancamentoFinanceiroRepository.flush();
 
@@ -187,7 +164,7 @@ public class LancamentoFinanceiroService {
       throw new BusinessException("A conta informada não é um cartão de crédito.");
     }
 
-    YearMonth mesDoVencimento = competencia(ano, mes);
+    YearMonth mesDoVencimento = Competencia.de(ano, mes);
     LocalDate dataFechamento = conta.fechamentoDaFatura(mesDoVencimento);
     List<LancamentoFinanceiro> lancamentos =
         lancamentoFinanceiroRepository.buscarDaFatura(
@@ -267,7 +244,34 @@ public class LancamentoFinanceiroService {
       LocalDate dataCompetencia,
       LocalDate dataVencimento,
       LocalDate dataPagamento,
-      String observacao) {}
+      String observacao) {
+
+    static DadosDoLancamento de(CriarLancamentoFinanceiroRequest request) {
+      return new DadosDoLancamento(
+          request.contaId(),
+          request.categoriaId(),
+          request.descricao(),
+          request.tipo(),
+          request.valor(),
+          request.dataCompetencia(),
+          request.dataVencimento(),
+          request.dataPagamento(),
+          request.observacao());
+    }
+
+    static DadosDoLancamento de(AtualizarLancamentoFinanceiroRequest request) {
+      return new DadosDoLancamento(
+          request.contaId(),
+          request.categoriaId(),
+          request.descricao(),
+          request.tipo(),
+          request.valor(),
+          request.dataCompetencia(),
+          request.dataVencimento(),
+          request.dataPagamento(),
+          request.observacao());
+    }
+  }
 
   private void preencher(
       LancamentoFinanceiro lancamentoFinanceiro, DadosDoLancamento dados, UUID usuarioId) {
@@ -337,7 +341,7 @@ public class LancamentoFinanceiroService {
 
   private void validarPeriodo(LocalDate dataInicio, LocalDate dataFim) {
     if (dataInicio != null && dataFim != null && dataInicio.isAfter(dataFim)) {
-      throw new BusinessException("A data inicial não pode ser posterior a data final.");
+      throw new BusinessException("A data inicial não pode ser posterior à data final.");
     }
   }
 
@@ -345,13 +349,6 @@ public class LancamentoFinanceiroService {
     if (dataPagamento != null && dataPagamento.isAfter(hoje())) {
       throw new BusinessException("A data de pagamento não pode ser futura.");
     }
-  }
-
-  private YearMonth competencia(Integer ano, Integer mes) {
-    if (ano == null || mes == null || ano < 2000 || mes < 1 || mes > 12) {
-      throw new BusinessException("Informe um ano a partir de 2000 e um mês entre 1 e 12.");
-    }
-    return YearMonth.of(ano, mes);
   }
 
   private void validarCategoriaCompativelComTipo(

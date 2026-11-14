@@ -23,6 +23,39 @@ class CaixaIntegracaoTest extends IntegracaoTest {
   }
 
   @Test
+  @DisplayName("conta com lançamento não vira cartão nem deixa de ser cartão")
+  void tipoDeContaComLancamentos() throws Exception {
+    UUID conta = criarConta(usuario, "Corrente", "100.00");
+    UUID cartao = criarCartao(usuario, "Cartão", 5, 15);
+    criarLancamento(usuario, conta, mercado, "DESPESA", "10.00", null, HOJE)
+        .andExpect(status().isCreated());
+    criarLancamento(usuario, cartao, mercado, "DESPESA", "10.00", null, null)
+        .andExpect(status().isCreated());
+
+    atualizar(
+            usuario,
+            "/api/contas/" + conta,
+            """
+            {"nome":"Corrente","tipo":"CARTAO_CREDITO","diaFechamento":5,"diaVencimento":15}
+            """)
+        .andExpect(status().isBadRequest());
+    atualizar(
+            usuario,
+            "/api/contas/" + cartao,
+            """
+            {"nome":"Cartão","tipo":"CONTA_CORRENTE"}
+            """)
+        .andExpect(status().isBadRequest());
+    atualizar(
+            usuario,
+            "/api/contas/" + conta,
+            """
+            {"nome":"Corrente","tipo":"POUPANCA"}
+            """)
+        .andExpect(status().isOk());
+  }
+
+  @Test
   @DisplayName("cartão sem dia de fechamento e vencimento é recusado")
   void cartaoExigeDias() throws Exception {
     postar(

@@ -24,13 +24,6 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-/**
- * Autenticação stateless com JWT. Só cadastro, login, refresh, Swagger e health são públicos; todo
- * o resto exige {@code Authorization: Bearer <token de acesso>}.
- *
- * <p>Os erros 401 e 403 passam pelo {@code GlobalExceptionHandler}, então saem no mesmo envelope
- * {@code ApiErrorResponse} do resto da API.
- */
 @Configuration
 @EnableWebSecurity
 @EnableConfigurationProperties(JwtPropriedades.class)

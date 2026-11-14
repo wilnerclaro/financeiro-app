@@ -17,20 +17,12 @@ import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
-import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
 import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.stereotype.Component;
 
-/**
- * Emite e valida os tokens da API (HMAC-SHA256 com o segredo do {@code .env}).
- *
- * <p>São dois tipos, diferenciados pela claim {@code tipo}: o de <b>acesso</b> (curto, vai no
- * header {@code Authorization} de toda requisição) e o de <b>refresh</b> (longo, só serve para
- * pedir um novo par em {@code /api/auth/refresh}). Um não é aceito no lugar do outro.
- */
 @Component
 public class TokenJwt {
 
@@ -64,12 +56,10 @@ public class TokenJwt {
     return gerar(usuarioId, email, TIPO_REFRESH, propriedades.duracaoRefresh().getSeconds());
   }
 
-  /** Valida um refresh token e devolve o id do usuário; lança {@link JwtException} se inválido. */
   public UUID validarTokenDeRefresh(String token) {
     return UUID.fromString(decodificadorDeRefresh.decode(token).getSubject());
   }
 
-  /** Decodificador usado pelo Spring Security em toda requisição autenticada. */
   public JwtDecoder decodificadorDeAcesso() {
     return decodificadorDeAcesso;
   }

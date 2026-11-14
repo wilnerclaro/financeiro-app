@@ -10,10 +10,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 
-/**
- * Garante que um usuário nunca enxerga nem altera dados de outro. Hoje o usuário vem no request;
- * quando o JWT chegar, estes testes continuam valendo com o usuário vindo do token.
- */
 @DisplayName("Isolamento entre usuários")
 class IsolamentoEntreUsuariosIntegracaoTest extends IntegracaoTest {
 
@@ -130,5 +126,95 @@ class IsolamentoEntreUsuariosIntegracaoTest extends IntegracaoTest {
                 .andExpect(jsonPath("$.usuarioId").value(usuarioB.id().toString())));
 
     consultar("/api/contas/" + conta, usuarioA).andExpect(status().isNotFound());
+  }
+
+  @Test
+  @DisplayName("B não vê nem cancela a transferência de A")
+  void transferenciaIsolada() throws Exception {
+    UUID poupancaA = criarConta(usuarioA, "Poupança do A", "0.00");
+    UUID transferencia =
+        idDe(
+            postar(
+                    usuarioA,
+                    "/api/transferencias",
+                    """
+                    {"contaOrigemId":"%s","contaDestinoId":"%s","valor":10.00,
+                     "dataTransferencia":"%s"}
+                    """
+                        .formatted(contaA, poupancaA, HOJE))
+                .andExpect(status().isCreated()));
+
+    consultar("/api/transferencias/" + transferencia, usuarioB).andExpect(status().isNotFound());
+    remover("/api/transferencias/" + transferencia, usuarioB).andExpect(status().isNotFound());
+    consultar("/api/transferencias/" + transferencia, usuarioA)
+        .andExpect(jsonPath("$.cancelada").value(false));
+  }
+
+  @Test
+  @DisplayName("B não vê, edita, inativa nem lança aporte na meta de A")
+  void metaIsolada() throws Exception {
+    String corpo =
+        """
+        {"nome":"Reserva","valorNecessario":1000.00,"investimentoInicial":0}
+        """;
+    UUID meta = idDe(postar(usuarioA, "/api/metas", corpo).andExpect(status().isCreated()));
+    String url = "/api/metas/" + meta;
+
+    consultar(url, usuarioB).andExpect(status().isNotFound());
+    atualizar(usuarioB, url, corpo).andExpect(status().isNotFound());
+    remover(url, usuarioB).andExpect(status().isNotFound());
+    ativar(url + "/ativar", usuarioB).andExpect(status().isNotFound());
+    atualizar(usuarioB, url + "/movimentos/2026/6", "{\"aporte\":10.00}")
+        .andExpect(status().isNotFound());
+
+    consultar(url, usuarioA)
+        .andExpect(jsonPath("$.ativa").value(true))
+        .andExpect(jsonPath("$.acumulado").value(0.0));
+  }
+
+  @Test
+  @DisplayName("B não vê nem usa o previsto de A")
+  void orcamentoIsolado() throws Exception {
+    String previsto =
+        """
+        {"itens":[{"categoriaId":"%s","valorPrevisto":300.00}]}
+        """
+            .formatted(categoriaA);
+    atualizar(usuarioA, "/api/orcamentos/2026/6", previsto).andExpect(status().isOk());
+
+    atualizar(usuarioB, "/api/orcamentos/2026/6", previsto).andExpect(status().isNotFound());
+    postar(
+            usuarioB,
+            "/api/orcamentos/repetir",
+            """
+            {"categoriaId":"%s","valorPrevisto":10.00,"substituirExistentes":true,
+             "meses":["2026-07"]}
+            """
+                .formatted(categoriaA))
+        .andExpect(status().isNotFound());
+    consultar("/api/orcamentos/2026/6", usuarioB)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.despesas.total.previsto").value(0.0));
+    consultar("/api/orcamentos/2026", usuarioB)
+        .andExpect(jsonPath("$.linhas[?(@.categoriaId == '" + categoriaA + "')]").isEmpty());
+  }
+
+  @Test
+  @DisplayName("Início, resumo das contas e fatura de B não usam dados de A")
+  void paineisIsolados() throws Exception {
+    UUID cartaoA = criarCartao(usuarioA, "Cartão do A", 5, 15);
+
+    consultar("/api/dashboard-financeiro/inicio?ano=2026&mes=6", usuarioB)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.saiu").value(0.0))
+        .andExpect(jsonPath("$.ultimosLancamentos").isEmpty())
+        .andExpect(jsonPath("$.saldoEmContas").value(0.0));
+    consultar("/api/contas/resumo", usuarioB)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.patrimonio").value(0.0))
+        .andExpect(jsonPath("$.porTipo").isEmpty());
+    consultar(
+            "/api/lancamentos-financeiros/faturas?contaId=" + cartaoA + "&ano=2026&mes=6", usuarioB)
+        .andExpect(status().isNotFound());
   }
 }

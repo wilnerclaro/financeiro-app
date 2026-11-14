@@ -98,4 +98,45 @@ public interface CategoriaRepository extends JpaRepository<Categoria, UUID> {
   void atualizarFonteDasSubcategorias(
       @Param("categoriaPaiId") UUID categoriaPaiId,
       @Param("fonteReceita") FonteReceita fonteReceita);
+
+  @Query(
+      value =
+          """
+            SELECT EXISTS (SELECT 1 FROM lancamentos_financeiros WHERE categoria_id = :categoriaId)
+                OR EXISTS (SELECT 1 FROM orcamentos_mensais WHERE categoria_id = :categoriaId)
+            """,
+      nativeQuery = true)
+  boolean estaEmUso(@Param("categoriaId") UUID categoriaId);
+
+  @Modifying
+  @Query(
+      value =
+          """
+            INSERT INTO categorias (usuario_id, nome, tipo, fonte_receita)
+            SELECT :usuarioId, nome, tipo, fonte_receita
+            FROM categorias_padrao
+            WHERE categoria_pai_id IS NULL
+              AND ativa
+            """,
+      nativeQuery = true)
+  void copiarGruposPadrao(@Param("usuarioId") UUID usuarioId);
+
+  @Modifying
+  @Query(
+      value =
+          """
+            INSERT INTO categorias (usuario_id, categoria_pai_id, nome, tipo, fonte_receita)
+            SELECT :usuarioId, grupo.id, sub.nome, sub.tipo, sub.fonte_receita
+            FROM categorias_padrao sub
+            JOIN categorias_padrao pai ON pai.id = sub.categoria_pai_id
+            JOIN categorias grupo
+              ON grupo.usuario_id = :usuarioId
+             AND grupo.categoria_pai_id IS NULL
+             AND grupo.nome = pai.nome
+             AND grupo.tipo = pai.tipo
+            WHERE sub.ativa
+              AND pai.ativa
+            """,
+      nativeQuery = true)
+  void copiarSubcategoriasPadrao(@Param("usuarioId") UUID usuarioId);
 }

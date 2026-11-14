@@ -83,6 +83,27 @@ class CategoriaIntegracaoTest extends IntegracaoTest {
   }
 
   @Test
+  @DisplayName("categoria com lançamento ou previsto não troca de tipo")
+  void trocaDeTipoEmUso() throws Exception {
+    UUID viagens = criarCategoria(usuario, "Viagens", "DESPESA", null);
+    UUID conta = criarConta(usuario, "Banco", "100.00");
+    criarLancamento(usuario, conta, viagens, "DESPESA", "10.00", null, HOJE)
+        .andExpect(status().isCreated());
+
+    atualizar(usuario, URL + "/" + viagens, corpo("Viagens", "RECEITA", null))
+        .andExpect(status().isBadRequest())
+        .andExpect(
+            jsonPath("$.message")
+                .value(
+                    "Não é possível alterar o tipo de uma categoria que já tem lançamentos ou"
+                        + " previsto."));
+
+    UUID livre = criarCategoria(usuario, "Brindes", "DESPESA", null);
+    atualizar(usuario, URL + "/" + livre, corpo("Brindes", "RECEITA", null))
+        .andExpect(status().isOk());
+  }
+
+  @Test
   @DisplayName("PUT não mexe no status: categoria inativa continua inativa")
   void putNaoAlteraStatus() throws Exception {
     UUID id = criarCategoria(usuario, "Viagem", "DESPESA", null);

@@ -77,9 +77,8 @@ public class CategoriaService {
 
     boolean possuiSubcategorias = categoriaRepository.existeSubcategoria(id);
 
-    if (!categoria.getTipo().equals(request.tipo()) && possuiSubcategorias) {
-      throw new BusinessException(
-          "Não é possível alterar o tipo de uma categoria que possui subcategorias.");
+    if (!categoria.getTipo().equals(request.tipo())) {
+      validarMudancaDeTipo(categoria, possuiSubcategorias);
     }
 
     if (request.categoriaPaiId() != null && possuiSubcategorias) {
@@ -134,23 +133,6 @@ public class CategoriaService {
     return categoriaMapper.paraResponse(categoria);
   }
 
-  private FonteReceita definirFonte(
-      TipoCategoria tipo, Categoria categoriaPai, FonteReceita fonteInformada) {
-    if (!TipoCategoria.RECEITA.equals(tipo)) {
-      return null;
-    }
-
-    if (categoriaPai != null) {
-      return categoriaPai.getFonteReceita();
-    }
-
-    return fonteInformada == null ? FonteReceita.ATIVA : fonteInformada;
-  }
-
-  private Usuario buscarUsuario(UUID usuarioId) {
-    return usuarioService.buscar(usuarioId);
-  }
-
   @Transactional(readOnly = true)
   public Categoria buscarCategoriaAtiva(UUID categoriaId, UUID usuarioId) {
     Categoria categoria = buscarCategoriaDoUsuario(categoriaId, usuarioId);
@@ -172,6 +154,34 @@ public class CategoriaService {
   @Transactional(readOnly = true)
   public List<Categoria> listarTodasDoUsuario(UUID usuarioId) {
     return categoriaRepository.buscarTodasDoUsuario(usuarioId);
+  }
+
+  private FonteReceita definirFonte(
+      TipoCategoria tipo, Categoria categoriaPai, FonteReceita fonteInformada) {
+    if (!TipoCategoria.RECEITA.equals(tipo)) {
+      return null;
+    }
+
+    if (categoriaPai != null) {
+      return categoriaPai.getFonteReceita();
+    }
+
+    return fonteInformada == null ? FonteReceita.ATIVA : fonteInformada;
+  }
+
+  private Usuario buscarUsuario(UUID usuarioId) {
+    return usuarioService.buscar(usuarioId);
+  }
+
+  private void validarMudancaDeTipo(Categoria categoria, boolean possuiSubcategorias) {
+    if (possuiSubcategorias) {
+      throw new BusinessException(
+          "Não é possível alterar o tipo de uma categoria que possui subcategorias.");
+    }
+    if (categoriaRepository.estaEmUso(categoria.getId())) {
+      throw new BusinessException(
+          "Não é possível alterar o tipo de uma categoria que já tem lançamentos ou previsto.");
+    }
   }
 
   private Categoria buscarCategoriaDoUsuario(UUID categoriaId, UUID usuarioId) {
@@ -197,7 +207,7 @@ public class CategoriaService {
 
     if (categoriaPai.getCategoriaPai() != null) {
       throw new BusinessException(
-          "A categoria pai informada já é uma subcategoria. O MVP permite apenas dois níveis.");
+          "A categoria pai informada já é uma subcategoria. São permitidos apenas dois níveis.");
     }
 
     return categoriaPai;

@@ -46,7 +46,7 @@ public class AutenticacaoService {
     usuario.setAtivo(true);
 
     Usuario salvo = usuarioService.salvar(usuario);
-    categoriasPadraoService.criarPara(salvo);
+    categoriasPadraoService.criarPara(salvo.getId());
     return emitirTokens(salvo);
   }
 

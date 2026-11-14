@@ -1,5 +1,6 @@
 package br.com.financeiro.api.orcamento.dto;
 
+import br.com.financeiro.api.categoria.enums.TipoCategoria;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.util.List;
@@ -11,7 +12,7 @@ public record ResumoAnualOrcamentoResponse(Integer ano, List<Linha> linhas) {
       UUID categoriaId,
       String nome,
       UUID categoriaPaiId,
-      String tipo,
+      TipoCategoria tipo,
       BigDecimal totalPrevisto,
       BigDecimal totalRealizado,
       @Schema(description = "Média dos meses com previsto informado.") BigDecimal mediaPrevisto,

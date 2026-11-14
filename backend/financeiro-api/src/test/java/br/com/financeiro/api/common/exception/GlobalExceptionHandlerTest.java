@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import java.time.Clock;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -33,7 +34,7 @@ class GlobalExceptionHandlerTest {
   void configurar() {
     mockMvc =
         MockMvcBuilders.standaloneSetup(new ControllerDeTeste())
-            .setControllerAdvice(new GlobalExceptionHandler())
+            .setControllerAdvice(new GlobalExceptionHandler(Clock.systemUTC()))
             .build();
   }
 

@@ -2,10 +2,6 @@ spring:
   application:
     name: financeiro-api
 
-  # Le o .env da raiz do repositorio (o mesmo do docker compose), assim a API usa a
-  # mesma senha do banco sem exportar variavel no terminal. Variavel de ambiente
-  # definida tem precedencia. Os dois caminhos cobrem rodar a partir da raiz ou de
-  # backend/financeiro-api.
   config:
     import:
       - optional:file:.env[.properties]
@@ -34,7 +30,6 @@ spring:
 
 app:
   jwt:
-    # Segredo HMAC dos tokens: defina JWT_SECRET no .env (mínimo 32 caracteres).
     segredo: ${JWT_SECRET:}
     emissor: financeiro-api
     duracao-acesso: 15m

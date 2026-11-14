@@ -63,7 +63,7 @@ public class TransferenciaService {
   public Page<TransferenciaResponse> listar(
       UUID usuarioId, UUID contaId, LocalDate dataInicio, LocalDate dataFim, Pageable pageable) {
     if (dataInicio != null && dataFim != null && dataInicio.isAfter(dataFim)) {
-      throw new BusinessException("A data inicial não pode ser posterior a data final.");
+      throw new BusinessException("A data inicial não pode ser posterior à data final.");
     }
 
     return transferenciaRepository

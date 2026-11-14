@@ -1,7 +1,10 @@
 package br.com.financeiro.api.orcamento.docs;
 
+import br.com.financeiro.api.orcamento.dto.CopiaDePrevistoResponse;
+import br.com.financeiro.api.orcamento.dto.CopiarPrevistoRequest;
 import br.com.financeiro.api.orcamento.dto.DefinirOrcamentoRequest;
 import br.com.financeiro.api.orcamento.dto.PrevistoRealizadoResponse;
+import br.com.financeiro.api.orcamento.dto.RepetirPrevistoRequest;
 import br.com.financeiro.api.orcamento.dto.ResumoAnualOrcamentoResponse;
 import br.com.financeiro.api.security.UsuarioLogado;
 import io.swagger.v3.oas.annotations.Operation;
@@ -46,12 +49,34 @@ public interface OrcamentoApiDoc {
       @Valid @RequestBody DefinirOrcamentoRequest request);
 
   @Operation(
-      summary = "Copiar o previsto do mês anterior",
-      description = "Copia só para as categorias que ainda não têm previsto no mês.")
-  @ApiResponse(responseCode = "200", description = "Previsto copiado; devolve o relatório do mês")
-  @ApiResponse(responseCode = "400", description = "O mês anterior não tem previsto")
-  ResponseEntity<PrevistoRealizadoResponse> copiarMesAnterior(
-      @UsuarioLogado UUID usuarioId, @PathVariable int ano, @PathVariable int mes);
+      summary = "Copiar o previsto de um mês para outros",
+      description =
+          "Copia todas as categorias com previsto no mês da URL para os meses informados. Com "
+              + "substituirExistentes=false, a categoria que já tem previsto no destino é "
+              + "mantida. Cada mês continua editável sozinho depois da cópia.")
+  @ApiResponse(responseCode = "200", description = "Quantas categorias foram gravadas e mantidas")
+  @ApiResponse(
+      responseCode = "400",
+      description = "Mês de origem sem previsto, mês de origem entre os destinos ou mês inválido")
+  ResponseEntity<CopiaDePrevistoResponse> copiar(
+      @UsuarioLogado UUID usuarioId,
+      @PathVariable int ano,
+      @PathVariable int mes,
+      @Valid @RequestBody CopiarPrevistoRequest request);
+
+  @Operation(
+      summary = "Repetir o previsto de uma categoria em vários meses",
+      description =
+          "Grava o mesmo valor (aluguel, luz, água) nos meses informados. Com "
+              + "substituirExistentes=false, o mês que já tem previsto é mantido. Cada mês "
+              + "continua editável sozinho depois.")
+  @ApiResponse(responseCode = "200", description = "Quais meses foram gravados e quais mantidos")
+  @ApiResponse(
+      responseCode = "400",
+      description = "Valor negativo, categoria com subcategorias, nenhum mês ou mês inválido")
+  @ApiResponse(responseCode = "404", description = "Categoria não encontrada")
+  ResponseEntity<CopiaDePrevistoResponse> repetir(
+      @UsuarioLogado UUID usuarioId, @Valid @RequestBody RepetirPrevistoRequest request);
 
   @Operation(
       summary = "Resumo do ano",

@@ -1,6 +1,7 @@
 package br.com.financeiro.api.dashboardfinanceiro.service;
 
-import br.com.financeiro.api.common.exception.BusinessException;
+import br.com.financeiro.api.common.util.Competencia;
+import br.com.financeiro.api.common.util.Fracao;
 import br.com.financeiro.api.dashboardfinanceiro.dto.ResumoCategoriaFinanceiraResponse;
 import br.com.financeiro.api.dashboardfinanceiro.dto.ResumoMensalFinanceiroResponse;
 import br.com.financeiro.api.dashboardfinanceiro.projection.ResumoCategoriaFinanceiraProjection;
@@ -9,7 +10,6 @@ import br.com.financeiro.api.dashboardfinanceiro.repository.DashboardFinanceiroR
 import br.com.financeiro.api.lancamentofinanceiro.enums.TipoLancamentoFinanceiro;
 import br.com.financeiro.api.usuario.service.UsuarioService;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
@@ -22,9 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class DashboardFinanceiroService {
 
-  /** Percentual como fração de 0 a 1 com 4 casas (0.1234 = 12,34%). */
-  private static final int ESCALA_PERCENTUAL = 4;
-
   private final DashboardFinanceiroRepository dashboardFinanceiroRepository;
   private final UsuarioService usuarioService;
 
@@ -32,7 +29,7 @@ public class DashboardFinanceiroService {
   public ResumoMensalFinanceiroResponse buscarResumoMensal(
       UUID usuarioId, Integer ano, Integer mes) {
     validarUsuario(usuarioId);
-    YearMonth competencia = validarCompetencia(ano, mes);
+    YearMonth competencia = Competencia.de(ano, mes);
 
     LocalDate dataInicio = competencia.atDay(1);
     LocalDate dataFim = competencia.atEndOfMonth();
@@ -85,16 +82,8 @@ public class DashboardFinanceiroService {
         projection.getCategoriaId(),
         projection.getCategoriaNome(),
         total,
-        calcularPercentual(total, totalPeriodo),
+        Fracao.de(total, totalPeriodo),
         projection.getQuantidadeLancamentos());
-  }
-
-  private BigDecimal calcularPercentual(BigDecimal valor, BigDecimal total) {
-    if (total == null || BigDecimal.ZERO.compareTo(total) == 0) {
-      return BigDecimal.ZERO;
-    }
-
-    return valor.divide(total, ESCALA_PERCENTUAL, RoundingMode.HALF_UP);
   }
 
   private BigDecimal valorOuZero(BigDecimal valor) {
@@ -103,21 +92,5 @@ public class DashboardFinanceiroService {
 
   private void validarUsuario(UUID usuarioId) {
     usuarioService.validarExistencia(usuarioId);
-  }
-
-  private YearMonth validarCompetencia(Integer ano, Integer mes) {
-    if (ano == null || mes == null) {
-      throw new BusinessException("Ano e mês são obrigatórios.");
-    }
-
-    if (ano < 2000) {
-      throw new BusinessException("Ano deve ser maior ou igual a 2000.");
-    }
-
-    if (mes < 1 || mes > 12) {
-      throw new BusinessException("Mês deve estar entre 1 e 12.");
-    }
-
-    return YearMonth.of(ano, mes);
   }
 }

@@ -16,7 +16,6 @@ public class OpenApiConfig {
   private static final String ESQUEMA_JWT = "bearer-jwt";
 
   static {
-    // O id do usuário vem do token, então não aparece como parâmetro no Swagger.
     SpringDocUtils.getConfig().addAnnotationsToIgnore(UsuarioLogado.class);
   }
 

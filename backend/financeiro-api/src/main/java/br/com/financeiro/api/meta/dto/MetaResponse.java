@@ -11,10 +11,7 @@ public record MetaResponse(
     BigDecimal valorNecessario,
     BigDecimal investimentoInicial,
     boolean ativa,
-    @Schema(
-            description =
-                "Investimento inicial + todos os aportes e juros (E7 = D7 + SUM(F7:AC7)).")
-        BigDecimal acumulado,
+    @Schema(description = "Investimento inicial + todos os aportes e juros.") BigDecimal acumulado,
     @Schema(description = "Acumulado / necessário, fração (1.0 = 100%).")
         BigDecimal percentualAtingido,
     @Schema(description = "Quanto falta para a necessidade; 0 se atingiu.") BigDecimal falta,

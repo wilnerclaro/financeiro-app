@@ -1,18 +1,27 @@
 package br.com.financeiro.api.orcamento.service;
 
+import static br.com.financeiro.api.common.util.Competencia.MESES_NO_ANO;
+import static br.com.financeiro.api.common.util.Dinheiro.ZERO;
+
 import br.com.financeiro.api.categoria.entity.Categoria;
 import br.com.financeiro.api.categoria.enums.FonteReceita;
 import br.com.financeiro.api.categoria.enums.TipoCategoria;
 import br.com.financeiro.api.categoria.service.CategoriaService;
 import br.com.financeiro.api.common.exception.BusinessException;
 import br.com.financeiro.api.common.exception.ResourceNotFoundException;
+import br.com.financeiro.api.common.util.Competencia;
+import br.com.financeiro.api.common.util.Dinheiro;
 import br.com.financeiro.api.common.util.Fracao;
+import br.com.financeiro.api.orcamento.dto.CopiaDePrevistoResponse;
+import br.com.financeiro.api.orcamento.dto.CopiaDePrevistoResponse.ResultadoDoMes;
+import br.com.financeiro.api.orcamento.dto.CopiarPrevistoRequest;
 import br.com.financeiro.api.orcamento.dto.DefinirOrcamentoRequest;
 import br.com.financeiro.api.orcamento.dto.PrevistoRealizadoResponse;
 import br.com.financeiro.api.orcamento.dto.PrevistoRealizadoResponse.Bloco;
 import br.com.financeiro.api.orcamento.dto.PrevistoRealizadoResponse.Grupo;
 import br.com.financeiro.api.orcamento.dto.PrevistoRealizadoResponse.Item;
 import br.com.financeiro.api.orcamento.dto.PrevistoRealizadoResponse.Valores;
+import br.com.financeiro.api.orcamento.dto.RepetirPrevistoRequest;
 import br.com.financeiro.api.orcamento.dto.ResumoAnualOrcamentoResponse;
 import br.com.financeiro.api.orcamento.entity.OrcamentoMensal;
 import br.com.financeiro.api.orcamento.repository.OrcamentoMensalRepository;
@@ -20,6 +29,8 @@ import br.com.financeiro.api.orcamento.repository.OrcamentoMensalRepository.Valo
 import br.com.financeiro.api.usuario.service.UsuarioService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Month;
+import java.time.Year;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -29,6 +40,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -40,8 +53,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class OrcamentoService {
 
-  private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2);
-
   private final OrcamentoMensalRepository orcamentoMensalRepository;
   private final CategoriaService categoriaService;
   private final UsuarioService usuarioService;
@@ -49,11 +60,10 @@ public class OrcamentoService {
   @Transactional
   public PrevistoRealizadoResponse definir(
       UUID usuarioId, int ano, int mes, DefinirOrcamentoRequest request) {
-    validarCompetencia(ano, mes);
+    YearMonth competencia = Competencia.de(ano, mes);
 
     List<Categoria> categorias = categoriaService.listarTodasDoUsuario(usuarioId);
-    Map<UUID, Categoria> porId =
-        categorias.stream().collect(Collectors.toMap(Categoria::getId, Function.identity()));
+    Map<UUID, Categoria> porId = porId(categorias);
     Set<UUID> comSubcategorias = idsDosPais(categorias);
 
     Set<UUID> informadas = new HashSet<>();
@@ -61,26 +71,18 @@ public class OrcamentoService {
       if (!informadas.add(item.categoriaId())) {
         throw new BusinessException("A mesma categoria foi informada mais de uma vez.");
       }
-      Categoria categoria = porId.get(item.categoriaId());
-      if (categoria == null) {
-        throw new ResourceNotFoundException("Categoria não encontrada.");
-      }
-      if (comSubcategorias.contains(categoria.getId())) {
-        throw new BusinessException(
-            "Defina o previsto nas subcategorias de \""
-                + categoria.getNome()
-                + "\"; o grupo soma automaticamente.");
-      }
+      categoriaParaPrevisto(item.categoriaId(), porId, comSubcategorias);
     }
 
-    Map<UUID, OrcamentoMensal> existentes = orcamentosDoMesPorCategoria(usuarioId, ano, mes);
+    Map<UUID, OrcamentoMensal> existentes = orcamentosDoMesPorCategoria(usuarioId, competencia);
     for (DefinirOrcamentoRequest.Item item : request.itens()) {
-      OrcamentoMensal orcamento = existentes.get(item.categoriaId());
-      if (orcamento == null) {
-        orcamento = novoOrcamento(usuarioId, porId.get(item.categoriaId()), ano, mes);
-      }
-      orcamento.setValorPrevisto(item.valorPrevisto().setScale(2, RoundingMode.HALF_UP));
-      orcamentoMensalRepository.save(orcamento);
+      gravar(
+          usuarioId,
+          porId.get(item.categoriaId()),
+          competencia,
+          Dinheiro.arredondar(item.valorPrevisto()),
+          existentes,
+          true);
     }
     orcamentoMensalRepository.flush();
 
@@ -88,39 +90,71 @@ public class OrcamentoService {
   }
 
   @Transactional
-  public PrevistoRealizadoResponse copiarMesAnterior(UUID usuarioId, int ano, int mes) {
-    validarCompetencia(ano, mes);
-    YearMonth anterior = YearMonth.of(ano, mes).minusMonths(1);
+  public CopiaDePrevistoResponse repetir(UUID usuarioId, RepetirPrevistoRequest request) {
+    List<Categoria> categorias = categoriaService.listarTodasDoUsuario(usuarioId);
+    Categoria categoria =
+        categoriaParaPrevisto(request.categoriaId(), porId(categorias), idsDosPais(categorias));
+    BigDecimal valor = Dinheiro.arredondar(request.valorPrevisto());
 
-    List<OrcamentoMensal> doMesAnterior =
-        orcamentoMensalRepository.buscarDoMes(
-            usuarioId, anterior.getYear(), anterior.getMonthValue());
-    if (doMesAnterior.isEmpty()) {
-      throw new BusinessException("O mês anterior não tem previsto para copiar.");
-    }
-
-    Map<UUID, OrcamentoMensal> existentes = orcamentosDoMesPorCategoria(usuarioId, ano, mes);
-    for (OrcamentoMensal origem : doMesAnterior) {
-      if (!existentes.containsKey(origem.getCategoria().getId())) {
-        OrcamentoMensal copia = novoOrcamento(usuarioId, origem.getCategoria(), ano, mes);
-        copia.setValorPrevisto(origem.getValorPrevisto());
-        orcamentoMensalRepository.save(copia);
-      }
+    List<ResultadoDoMes> resultados = new ArrayList<>();
+    for (YearMonth destino : destinos(request.meses())) {
+      boolean gravou =
+          gravar(
+              usuarioId,
+              categoria,
+              destino,
+              valor,
+              orcamentosDoMesPorCategoria(usuarioId, destino),
+              request.substituirExistentes());
+      resultados.add(new ResultadoDoMes(destino, gravou ? 1 : 0, gravou ? 0 : 1));
     }
     orcamentoMensalRepository.flush();
+    return new CopiaDePrevistoResponse(resultados);
+  }
 
-    return montarRelatorio(usuarioId, ano, mes, categoriaService.listarTodasDoUsuario(usuarioId));
+  @Transactional
+  public CopiaDePrevistoResponse copiar(
+      UUID usuarioId, int ano, int mes, CopiarPrevistoRequest request) {
+    YearMonth origem = Competencia.de(ano, mes);
+    SortedSet<YearMonth> destinos = destinos(request.meses());
+    if (destinos.contains(origem)) {
+      throw new BusinessException("O mês de origem não pode estar entre os destinos.");
+    }
+    List<OrcamentoMensal> doMes = orcamentoMensalRepository.buscarDoMes(usuarioId, ano, mes);
+    if (doMes.isEmpty()) {
+      throw new BusinessException("O mês de origem não tem previsto para copiar.");
+    }
+
+    List<ResultadoDoMes> resultados = new ArrayList<>();
+    for (YearMonth destino : destinos) {
+      Map<UUID, OrcamentoMensal> existentes = orcamentosDoMesPorCategoria(usuarioId, destino);
+      int gravadas = 0;
+      for (OrcamentoMensal previsto : doMes) {
+        if (gravar(
+            usuarioId,
+            previsto.getCategoria(),
+            destino,
+            previsto.getValorPrevisto(),
+            existentes,
+            request.substituirExistentes())) {
+          gravadas++;
+        }
+      }
+      resultados.add(new ResultadoDoMes(destino, gravadas, doMes.size() - gravadas));
+    }
+    orcamentoMensalRepository.flush();
+    return new CopiaDePrevistoResponse(resultados);
   }
 
   @Transactional(readOnly = true)
   public PrevistoRealizadoResponse previstoRealizado(UUID usuarioId, int ano, int mes) {
-    validarCompetencia(ano, mes);
+    Competencia.de(ano, mes);
     return montarRelatorio(usuarioId, ano, mes, categoriaService.listarTodasDoUsuario(usuarioId));
   }
 
   @Transactional(readOnly = true)
   public ResumoAnualOrcamentoResponse resumoAnual(UUID usuarioId, int ano) {
-    validarCompetencia(ano, 1);
+    Competencia.validarAno(ano);
 
     List<Categoria> categorias = categoriaService.listarTodasDoUsuario(usuarioId);
     Map<UUID, BigDecimal[]> previstos =
@@ -128,12 +162,16 @@ public class OrcamentoService {
     Map<UUID, BigDecimal[]> realizados =
         porCategoriaEMes(
             orcamentoMensalRepository.buscarRealizados(
-                usuarioId, YearMonth.of(ano, 1).atDay(1), YearMonth.of(ano, 12).atEndOfMonth()));
+                usuarioId,
+                Year.of(ano).atDay(1),
+                Year.of(ano).atMonth(Month.DECEMBER).atEndOfMonth()));
 
     List<ResumoAnualOrcamentoResponse.Linha> linhas = new ArrayList<>();
     for (Categoria categoria : ordenarComoArvore(categorias)) {
-      BigDecimal[] previsto = previstos.getOrDefault(categoria.getId(), new BigDecimal[12]);
-      BigDecimal[] realizado = realizados.getOrDefault(categoria.getId(), new BigDecimal[12]);
+      BigDecimal[] previsto =
+          previstos.getOrDefault(categoria.getId(), new BigDecimal[MESES_NO_ANO]);
+      BigDecimal[] realizado =
+          realizados.getOrDefault(categoria.getId(), new BigDecimal[MESES_NO_ANO]);
       boolean temValor =
           previstos.containsKey(categoria.getId()) || realizados.containsKey(categoria.getId());
       if (!Boolean.TRUE.equals(categoria.getAtiva()) && !temValor) {
@@ -141,17 +179,17 @@ public class OrcamentoService {
       }
 
       List<ResumoAnualOrcamentoResponse.Mes> meses = new ArrayList<>();
-      for (int i = 0; i < 12; i++) {
+      for (int i = 0; i < MESES_NO_ANO; i++) {
         meses.add(
             new ResumoAnualOrcamentoResponse.Mes(
-                i + 1, valorOuZero(previsto[i]), valorOuZero(realizado[i])));
+                i + 1, Dinheiro.arredondar(previsto[i]), Dinheiro.arredondar(realizado[i])));
       }
       linhas.add(
           new ResumoAnualOrcamentoResponse.Linha(
               categoria.getId(),
               categoria.getNome(),
               categoria.getCategoriaPai() == null ? null : categoria.getCategoriaPai().getId(),
-              categoria.getTipo().name(),
+              categoria.getTipo(),
               somar(previsto),
               somar(realizado),
               mediaDosMesesComValor(previsto),
@@ -212,13 +250,13 @@ public class OrcamentoService {
         continue;
       }
 
-      BigDecimal previstoGrupo = valorOuZero(previstos.get(grupo.getId()));
-      BigDecimal realizadoGrupo = valorOuZero(realizados.get(grupo.getId()));
+      BigDecimal previstoGrupo = Dinheiro.arredondar(previstos.get(grupo.getId()));
+      BigDecimal realizadoGrupo = Dinheiro.arredondar(realizados.get(grupo.getId()));
       List<Item> subitens = new ArrayList<>();
 
       for (Categoria sub : filhosPorPai.getOrDefault(grupo.getId(), List.of())) {
-        BigDecimal previsto = valorOuZero(previstos.get(sub.getId()));
-        BigDecimal realizado = valorOuZero(realizados.get(sub.getId()));
+        BigDecimal previsto = Dinheiro.arredondar(previstos.get(sub.getId()));
+        BigDecimal realizado = Dinheiro.arredondar(realizados.get(sub.getId()));
         previstoGrupo = previstoGrupo.add(previsto);
         realizadoGrupo = realizadoGrupo.add(realizado);
         if (mostrar(sub, previsto, realizado)) {
@@ -226,7 +264,7 @@ public class OrcamentoService {
               new Item(
                   sub.getId(),
                   sub.getNome(),
-                  sub.getFonteReceita() == null ? null : sub.getFonteReceita().name(),
+                  sub.getFonteReceita(),
                   Boolean.TRUE.equals(sub.getAtiva()),
                   valores(previsto, realizado)));
         }
@@ -241,7 +279,7 @@ public class OrcamentoService {
           new Grupo(
               grupo.getId(),
               grupo.getNome(),
-              grupo.getFonteReceita() == null ? null : grupo.getFonteReceita().name(),
+              grupo.getFonteReceita(),
               Boolean.TRUE.equals(grupo.getAtiva()),
               valores(previstoGrupo, realizadoGrupo),
               subitens));
@@ -260,7 +298,7 @@ public class OrcamentoService {
     BigDecimal previsto = ZERO;
     BigDecimal realizado = ZERO;
     for (Grupo grupo : receitas.grupos()) {
-      if (fonte.name().equals(grupo.fonteReceita())) {
+      if (fonte == grupo.fonteReceita()) {
         previsto = previsto.add(grupo.valores().previsto());
         realizado = realizado.add(grupo.valores().realizado());
       }
@@ -273,19 +311,67 @@ public class OrcamentoService {
         previsto, realizado, realizado.subtract(previsto), Fracao.de(realizado, previsto));
   }
 
-  private Map<UUID, OrcamentoMensal> orcamentosDoMesPorCategoria(UUID usuarioId, int ano, int mes) {
-    return orcamentoMensalRepository.buscarDoMes(usuarioId, ano, mes).stream()
+  private boolean gravar(
+      UUID usuarioId,
+      Categoria categoria,
+      YearMonth competencia,
+      BigDecimal valor,
+      Map<UUID, OrcamentoMensal> existentes,
+      boolean substituirExistente) {
+    OrcamentoMensal orcamento = existentes.get(categoria.getId());
+    if (orcamento != null && !substituirExistente) {
+      return false;
+    }
+    if (orcamento == null) {
+      orcamento = novoOrcamento(usuarioId, categoria, competencia);
+    }
+    orcamento.setValorPrevisto(valor);
+    orcamentoMensalRepository.save(orcamento);
+    return true;
+  }
+
+  private Map<UUID, OrcamentoMensal> orcamentosDoMesPorCategoria(
+      UUID usuarioId, YearMonth competencia) {
+    return orcamentoMensalRepository
+        .buscarDoMes(usuarioId, competencia.getYear(), competencia.getMonthValue())
+        .stream()
         .collect(Collectors.toMap(o -> o.getCategoria().getId(), Function.identity()));
   }
 
-  private OrcamentoMensal novoOrcamento(UUID usuarioId, Categoria categoria, int ano, int mes) {
+  private OrcamentoMensal novoOrcamento(
+      UUID usuarioId, Categoria categoria, YearMonth competencia) {
     return OrcamentoMensal.builder()
         .usuario(usuarioService.referencia(usuarioId))
         .categoria(categoria)
-        .ano(ano)
-        .mes(mes)
+        .ano(competencia.getYear())
+        .mes(competencia.getMonthValue())
         .tipo(categoria.getTipo())
         .build();
+  }
+
+  private static Categoria categoriaParaPrevisto(
+      UUID categoriaId, Map<UUID, Categoria> porId, Set<UUID> comSubcategorias) {
+    Categoria categoria = porId.get(categoriaId);
+    if (categoria == null) {
+      throw new ResourceNotFoundException("Categoria não encontrada.");
+    }
+    if (comSubcategorias.contains(categoriaId)) {
+      throw new BusinessException(
+          "Defina o previsto nas subcategorias de \""
+              + categoria.getNome()
+              + "\"; o grupo soma automaticamente.");
+    }
+    return categoria;
+  }
+
+  private static SortedSet<YearMonth> destinos(List<YearMonth> meses) {
+    SortedSet<YearMonth> destinos = new TreeSet<>(meses);
+    destinos.forEach(destino -> Competencia.validarAno(destino.getYear()));
+    return destinos;
+  }
+
+  private static Map<UUID, Categoria> porId(List<Categoria> categorias) {
+    return categorias.stream().collect(Collectors.toMap(Categoria::getId, Function.identity()));
   }
 
   private static Set<UUID> idsDosPais(List<Categoria> categorias) {
@@ -317,7 +403,7 @@ public class OrcamentoService {
     Map<UUID, BigDecimal[]> resultado = new HashMap<>();
     for (ValorPorCategoriaEMes valor : valores) {
       BigDecimal[] meses =
-          resultado.computeIfAbsent(valor.getCategoriaId(), k -> new BigDecimal[12]);
+          resultado.computeIfAbsent(valor.getCategoriaId(), k -> new BigDecimal[MESES_NO_ANO]);
       int i = valor.getMes() - 1;
       meses[i] = meses[i] == null ? valor.getValor() : meses[i].add(valor.getValor());
     }
@@ -344,19 +430,7 @@ public class OrcamentoService {
     if (quantidade == 0) {
       return ZERO;
     }
-    return somar(meses).divide(BigDecimal.valueOf(quantidade), 2, RoundingMode.HALF_UP);
-  }
-
-  private static BigDecimal valorOuZero(BigDecimal valor) {
-    return valor == null ? ZERO : valor.setScale(2, RoundingMode.HALF_UP);
-  }
-
-  private static void validarCompetencia(int ano, int mes) {
-    if (ano < 2000 || ano > 2100) {
-      throw new BusinessException("O ano deve estar entre 2000 e 2100.");
-    }
-    if (mes < 1 || mes > 12) {
-      throw new BusinessException("O mês deve estar entre 1 e 12.");
-    }
+    return somar(meses)
+        .divide(BigDecimal.valueOf(quantidade), Dinheiro.ESCALA, RoundingMode.HALF_UP);
   }
 }

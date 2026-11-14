@@ -1,10 +1,11 @@
 package br.com.financeiro.api.meta.controller;
 
 import br.com.financeiro.api.meta.docs.MetaApiDoc;
+import br.com.financeiro.api.meta.dto.AtualizarMetaRequest;
+import br.com.financeiro.api.meta.dto.CriarMetaRequest;
 import br.com.financeiro.api.meta.dto.MetaResponse;
 import br.com.financeiro.api.meta.dto.MovimentoMetaRequest;
 import br.com.financeiro.api.meta.dto.PainelMetasResponse;
-import br.com.financeiro.api.meta.dto.SalvarMetaRequest;
 import br.com.financeiro.api.meta.service.MetaService;
 import br.com.financeiro.api.security.UsuarioLogado;
 import jakarta.validation.Valid;
@@ -40,7 +41,7 @@ public class MetaController implements MetaApiDoc {
 
   @PostMapping
   public ResponseEntity<MetaResponse> criar(
-      @UsuarioLogado UUID usuarioId, @Valid @RequestBody SalvarMetaRequest request) {
+      @UsuarioLogado UUID usuarioId, @Valid @RequestBody CriarMetaRequest request) {
     MetaResponse response = metaService.criar(usuarioId, request);
     return ResponseEntity.created(URI.create("/api/metas/" + response.id())).body(response);
   }
@@ -57,7 +58,7 @@ public class MetaController implements MetaApiDoc {
   public ResponseEntity<MetaResponse> atualizar(
       @PathVariable UUID id,
       @UsuarioLogado UUID usuarioId,
-      @Valid @RequestBody SalvarMetaRequest request) {
+      @Valid @RequestBody AtualizarMetaRequest request) {
     return ResponseEntity.ok(metaService.atualizar(id, usuarioId, request));
   }
 

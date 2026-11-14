@@ -3,6 +3,7 @@ package br.com.financeiro.api.conta.repository;
 import br.com.financeiro.api.conta.entity.Conta;
 import br.com.financeiro.api.conta.enums.TipoConta;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -12,6 +13,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ContaRepository extends JpaRepository<Conta, UUID> {
+
+  interface TotalPorTipo {
+    TipoConta getTipo();
+
+    BigDecimal getTotal();
+
+    Long getQuantidade();
+  }
 
   @Query(
       """
@@ -77,14 +86,6 @@ public interface ContaRepository extends JpaRepository<Conta, UUID> {
             """)
   BigDecimal somarSaldoEmContas(@Param("usuarioId") UUID usuarioId);
 
-  interface TotalPorTipo {
-    br.com.financeiro.api.conta.enums.TipoConta getTipo();
-
-    BigDecimal getTotal();
-
-    Long getQuantidade();
-  }
-
   @Query(
       """
             SELECT c.tipo AS tipo, COALESCE(SUM(c.saldoAtual), 0) AS total, COUNT(c) AS quantidade
@@ -94,5 +95,13 @@ public interface ContaRepository extends JpaRepository<Conta, UUID> {
             GROUP BY c.tipo
             ORDER BY COALESCE(SUM(c.saldoAtual), 0) DESC
             """)
-  java.util.List<TotalPorTipo> somarPorTipo(@Param("usuarioId") UUID usuarioId);
+  List<TotalPorTipo> somarPorTipo(@Param("usuarioId") UUID usuarioId);
+
+  @Query(
+      value =
+          """
+            SELECT EXISTS (SELECT 1 FROM lancamentos_financeiros WHERE conta_id = :contaId)
+            """,
+      nativeQuery = true)
+  boolean possuiLancamentos(@Param("contaId") UUID contaId);
 }

@@ -1,8 +1,11 @@
 package br.com.financeiro.api.orcamento.controller;
 
 import br.com.financeiro.api.orcamento.docs.OrcamentoApiDoc;
+import br.com.financeiro.api.orcamento.dto.CopiaDePrevistoResponse;
+import br.com.financeiro.api.orcamento.dto.CopiarPrevistoRequest;
 import br.com.financeiro.api.orcamento.dto.DefinirOrcamentoRequest;
 import br.com.financeiro.api.orcamento.dto.PrevistoRealizadoResponse;
+import br.com.financeiro.api.orcamento.dto.RepetirPrevistoRequest;
 import br.com.financeiro.api.orcamento.dto.ResumoAnualOrcamentoResponse;
 import br.com.financeiro.api.orcamento.service.OrcamentoService;
 import br.com.financeiro.api.security.UsuarioLogado;
@@ -40,10 +43,19 @@ public class OrcamentoController implements OrcamentoApiDoc {
     return ResponseEntity.ok(orcamentoService.definir(usuarioId, ano, mes, request));
   }
 
-  @PostMapping("/{ano}/{mes}/copiar-mes-anterior")
-  public ResponseEntity<PrevistoRealizadoResponse> copiarMesAnterior(
-      @UsuarioLogado UUID usuarioId, @PathVariable int ano, @PathVariable int mes) {
-    return ResponseEntity.ok(orcamentoService.copiarMesAnterior(usuarioId, ano, mes));
+  @PostMapping("/{ano}/{mes}/copiar")
+  public ResponseEntity<CopiaDePrevistoResponse> copiar(
+      @UsuarioLogado UUID usuarioId,
+      @PathVariable int ano,
+      @PathVariable int mes,
+      @Valid @RequestBody CopiarPrevistoRequest request) {
+    return ResponseEntity.ok(orcamentoService.copiar(usuarioId, ano, mes, request));
+  }
+
+  @PostMapping("/repetir")
+  public ResponseEntity<CopiaDePrevistoResponse> repetir(
+      @UsuarioLogado UUID usuarioId, @Valid @RequestBody RepetirPrevistoRequest request) {
+    return ResponseEntity.ok(orcamentoService.repetir(usuarioId, request));
   }
 
   @GetMapping("/{ano}")

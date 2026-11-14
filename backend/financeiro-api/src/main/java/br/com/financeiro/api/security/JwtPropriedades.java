@@ -4,10 +4,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/**
- * Configuração dos tokens ({@code app.jwt.*}). O segredo vem da variável {@code JWT_SECRET} do
- * {@code .env} e precisa ter pelo menos 32 bytes, que é o mínimo do HMAC-SHA256.
- */
 @ConfigurationProperties("app.jwt")
 public record JwtPropriedades(
     String segredo, String emissor, Duration duracaoAcesso, Duration duracaoRefresh) {

@@ -52,7 +52,7 @@ class MetaIntegracaoTest extends IntegracaoTest {
   }
 
   @Test
-  @DisplayName("aporte e juros zerados apagam o mês; meta atingida marca atingida")
+  @DisplayName("aporte e juros zerados zeram o mês; meta atingida marca atingida")
   void zerarEAtingir() throws Exception {
     UUID id = idDe(criar("Viagem", "1000.00", "0.00"));
     movimento(id, 2026, 3, "1200.00", "0.00")
@@ -76,7 +76,7 @@ class MetaIntegracaoTest extends IntegracaoTest {
   void inativar() throws Exception {
     UUID id = idDe(criar("Casa", "300000.00", "0.00"));
     remover(URL + "/" + id, usuario).andExpect(status().isNoContent());
-    remover(URL + "/" + id, usuario).andExpect(status().isBadRequest());
+    remover(URL + "/" + id, usuario).andExpect(status().isNoContent());
 
     consultar(URL, usuario).andExpect(jsonPath("$.metas.length()").value(0));
     consultar(URL + "?incluirInativas=true", usuario)

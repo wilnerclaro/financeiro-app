@@ -20,15 +20,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Codifica as convencoes de arquitetura do projeto como teste executavel.
- *
- * <p>Estas regras existiam apenas como disciplina humana. Com varios agentes escrevendo codigo,
- * disciplina nao escala — aqui elas viram build vermelho.
- *
- * <p>Se uma regra falhar, corrija o codigo. Alterar o teste para acomodar a violacao anula o
- * proposito dele.
- */
 @DisplayName("Regras de arquitetura")
 class ArquiteturaTest {
 
