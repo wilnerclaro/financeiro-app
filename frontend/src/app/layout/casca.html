@@ -1,0 +1,31 @@
+<header class="topo">
+  <a routerLink="/" class="marca" aria-label="financeiro, ir para o início">
+    <span class="logo"><app-icone [icone]="icones.ChartLine" /></span>
+    financeiro
+  </a>
+  <nav class="menu" aria-label="Principal">
+    <a routerLink="/" routerLinkActive="ativo" [routerLinkActiveOptions]="{ exact: true }">
+      <app-icone [icone]="icones.House" />Início
+    </a>
+  </nav>
+  <div class="acoes">
+    <p-button
+      [text]="true"
+      severity="secondary"
+      size="small"
+      [pTooltip]="tema.escuro() ? 'Tema claro' : 'Tema escuro'"
+      [ariaLabel]="tema.escuro() ? 'Usar tema claro' : 'Usar tema escuro'"
+      (onClick)="tema.alternar()"
+    >
+      <app-icone [icone]="tema.escuro() ? icones.Sun : icones.Moon" />
+    </p-button>
+    <span class="usuario">{{ nomeDoUsuario() }}</span>
+    <p-button [outlined]="true" severity="secondary" size="small" (onClick)="sair()">
+      <app-icone [icone]="icones.LogOut" />
+      <span>Sair</span>
+    </p-button>
+  </div>
+</header>
+<main class="conteudo">
+  <router-outlet />
+</main>

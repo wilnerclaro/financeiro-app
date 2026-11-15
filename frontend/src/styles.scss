@@ -1,0 +1,162 @@
+:root {
+  --rec: #1f5fbf;
+  --des: #c62828;
+  --ok: #0b7a5a;
+  --amb: #c48a00;
+  --lar: #d9620b;
+  --amb-texto: #8a6100;
+  --lar-texto: #a84b0a;
+  --fundo: #f4f5f1;
+  --acao: #10231c;
+  --acao-texto: #f4f5f1;
+
+  --e1: 4px;
+  --e2: 8px;
+  --e3: 12px;
+  --e4: 16px;
+  --e6: 24px;
+  --e8: 32px;
+  --e12: 48px;
+  --r-sup: 12px;
+  --r-ctl: 8px;
+}
+
+.app-dark {
+  --rec: #7cb4ff;
+  --des: #ff6b6b;
+  --ok: #5fd3a6;
+  --amb: #f5c84b;
+  --lar: #ff9248;
+  --amb-texto: #f5c84b;
+  --lar-texto: #ff9248;
+  --fundo: #0b0f0e;
+  --acao: #eef3f1;
+  --acao-texto: #0b0f0e;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--fundo);
+  color: var(--p-text-color);
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  font-feature-settings: 'cv11', 'ss01';
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+.titulo-pagina {
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.titulo-secao {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.rotulo {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--p-text-muted-color);
+}
+
+.aux {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--p-text-muted-color);
+}
+
+.indicador {
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+@media (max-width: 600px) {
+  .indicador {
+    font-size: 20px;
+    line-height: 28px;
+  }
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.rec {
+  color: var(--rec);
+}
+.des {
+  color: var(--des);
+}
+.ok {
+  color: var(--ok);
+}
+.amb {
+  color: var(--amb-texto);
+}
+.lar {
+  color: var(--lar-texto);
+}
+
+.superficie {
+  background: var(--p-content-background);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--r-sup);
+}
+
+.link {
+  color: var(--p-text-color);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--p-text-color);
+  outline-offset: 2px;
+}
+
+.surgir {
+  animation: surgir 0.2s ease-out both;
+}
+
+@keyframes surgir {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .surgir {
+    animation: none;
+  }
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.2s;
+}

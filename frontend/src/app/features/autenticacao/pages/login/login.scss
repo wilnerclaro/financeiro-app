@@ -1,0 +1,70 @@
+.pagina {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: var(--e4);
+}
+
+.trocar-tema {
+  position: absolute;
+  top: var(--e4);
+  right: var(--e4);
+}
+
+.cartao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e6);
+  width: 100%;
+  max-width: 400px;
+  padding: var(--e8);
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.logo {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-ctl);
+  background: var(--p-primary-color);
+  color: var(--p-primary-contrast-color);
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e4);
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rotulo-campo {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+}
+
+.mensagem-erro {
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+}
+
+@media (max-width: 600px) {
+  .cartao {
+    padding: var(--e6);
+  }
+}

@@ -1,0 +1,80 @@
+<main class="pagina">
+  <p-button
+    class="trocar-tema"
+    [text]="true"
+    severity="secondary"
+    size="small"
+    [ariaLabel]="tema.escuro() ? 'Usar tema claro' : 'Usar tema escuro'"
+    (onClick)="tema.alternar()"
+  >
+    <app-icone [icone]="tema.escuro() ? icones.Sun : icones.Moon" />
+  </p-button>
+
+  <section class="cartao superficie surgir" aria-labelledby="titulo-login">
+    <div class="marca">
+      <span class="logo"><app-icone [icone]="icones.ChartLine" /></span>
+      financeiro
+    </div>
+    <header>
+      <h1 id="titulo-login" class="titulo-pagina">Entrar</h1>
+      <p class="aux">Seu controle financeiro, mês a mês.</p>
+    </header>
+
+    <form [formGroup]="formulario" (ngSubmit)="entrar()" novalidate>
+      @if (erro(); as mensagem) {
+        <p-message severity="error" role="alert">
+          <span class="mensagem-erro">
+            <app-icone [icone]="icones.CircleAlert" />
+            {{ mensagem }}
+          </span>
+        </p-message>
+      }
+
+      <div class="campo">
+        <label for="email" class="rotulo-campo">E-mail</label>
+        <input
+          pInputText
+          id="email"
+          type="email"
+          formControlName="email"
+          autocomplete="email"
+          [invalid]="campoInvalido('email')"
+          [attr.aria-describedby]="campoInvalido('email') ? 'email-erro' : null"
+          fluid
+        />
+        @if (campoInvalido('email')) {
+          <p-message id="email-erro" severity="error" size="small" variant="simple">
+            {{
+              formulario.controls.email.hasError('required')
+                ? 'Informe seu e-mail.'
+                : 'Informe um e-mail válido.'
+            }}
+          </p-message>
+        }
+      </div>
+
+      <div class="campo">
+        <label for="senha" class="rotulo-campo">Senha</label>
+        <p-password
+          inputId="senha"
+          formControlName="senha"
+          autocomplete="current-password"
+          [feedback]="false"
+          [toggleMask]="true"
+          [invalid]="campoInvalido('senha')"
+          fluid
+        />
+        @if (campoInvalido('senha')) {
+          <p-message severity="error" size="small" variant="simple">Informe sua senha.</p-message>
+        }
+      </div>
+
+      <p-button type="submit" [loading]="enviando()" [disabled]="enviando()" [fluid]="true">
+        @if (!enviando()) {
+          <app-icone [icone]="icones.LogIn" />
+        }
+        <span>Entrar</span>
+      </p-button>
+    </form>
+  </section>
+</main>
