@@ -57,6 +57,13 @@ describe('rotas do app', () => {
 
     const harness = await RouterTestingHarness.create();
     await harness.navigateByUrl('/', Casca);
+    TestBed.inject(HttpTestingController).expectOne('/api/configuracao-inicial').flush({
+      rendaPassivaDesejada: 6000,
+      etapa: 'CONCLUIDO',
+      pausado: false,
+      ano: 2026,
+      mes: 11,
+    });
 
     expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toContain('Resumo de');
     expect(

@@ -4,7 +4,10 @@
       <h1 class="titulo-pagina">Lançamentos</h1>
       <p class="aux">Receitas e despesas de {{ nomeDoMes() }}, por competência.</p>
     </div>
-    <app-seletor-mes [(mes)]="mes" />
+    <div class="acoes-cabecalho">
+      <p-button label="Importar extrato" routerLink="/importar" severity="secondary" [outlined]="true" />
+      <app-seletor-mes [(mes)]="mes" />
+    </div>
   </header>
 
   <div class="filtros">

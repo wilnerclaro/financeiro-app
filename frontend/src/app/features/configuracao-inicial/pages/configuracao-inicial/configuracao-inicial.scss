@@ -1,0 +1,159 @@
+.assistente {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: var(--e8);
+}
+.etapas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e3);
+}
+.etapas button {
+  display: flex;
+  align-items: center;
+  gap: var(--e3);
+  padding: var(--e3);
+  text-align: left;
+  border: 0;
+  border-radius: var(--r-ctl);
+  background: transparent;
+  color: var(--p-text-muted-color);
+  font: inherit;
+  min-height: 44px;
+}
+.etapas button[aria-current] {
+  color: var(--p-text-color);
+  background: var(--p-content-hover-background);
+}
+.etapas button:disabled {
+  opacity: 0.55;
+}
+.numero {
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 50%;
+  min-width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+}
+.conteudo {
+  min-width: 0;
+}
+.introducao {
+  margin-top: var(--e2);
+  margin-bottom: var(--e6);
+}
+.progresso {
+  margin-bottom: var(--e2);
+}
+.painel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e4);
+  padding: var(--e6);
+}
+.boas-vindas {
+  padding: var(--e6) var(--e6) var(--e6) var(--e12);
+  margin: 0;
+}
+.boas-vindas li {
+  padding: var(--e4) 0;
+  border-bottom: 1px solid var(--p-content-border-color);
+}
+.boas-vindas li:last-child {
+  border-bottom: 0;
+}
+h2 {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+.explicacao {
+  border-left: 2px solid var(--ok);
+  padding-left: var(--e4);
+  margin-top: var(--e4);
+}
+.explicacao p {
+  margin-top: var(--e2);
+}
+.periodo {
+  margin-bottom: var(--e4);
+}
+.linha {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px 110px;
+  gap: var(--e3);
+  align-items: center;
+  padding: var(--e2) 0;
+  border-bottom: 1px solid var(--p-content-border-color);
+}
+.linha > :last-child,
+.linha > strong {
+  text-align: right;
+}
+.linha label {
+  overflow-wrap: anywhere;
+}
+.subitem label {
+  padding-left: var(--e4);
+}
+.resumo,
+.conta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e4);
+  padding: var(--e4) 0;
+  border-bottom: 1px solid var(--p-content-border-color);
+}
+.acoes-conta,
+.direita {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e2);
+}
+.valor {
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 600;
+}
+.acoes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--e3);
+  margin-top: var(--e6);
+}
+.erro {
+  color: var(--des);
+  margin-top: var(--e4);
+}
+@media (max-width: 850px) {
+  .assistente {
+    grid-template-columns: 1fr;
+  }
+  .etapas {
+    display: none;
+  }
+}
+@media (max-width: 500px) {
+  .painel {
+    padding: var(--e4);
+  }
+  .linha {
+    grid-template-columns: minmax(0, 1fr) 110px 85px;
+    gap: var(--e1);
+  }
+  .linha > :last-child {
+    font-size: 12px;
+  }
+  .subitem label {
+    padding-left: 0;
+  }
+  .direita {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}

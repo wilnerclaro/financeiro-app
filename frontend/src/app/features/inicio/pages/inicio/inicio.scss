@@ -1,3 +1,13 @@
+.primeiros-passos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e4);
+  padding: var(--e6);
+  margin-bottom: var(--e6);
+}
+
 .valor {
   font-size: 28px;
   line-height: 36px;

@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { INICIO_VAZIO, inicio, provedoresDeTeste } from '../../../../../testing/dados-de-teste';
 import { Inicio } from './inicio';
@@ -22,8 +22,16 @@ describe('Inicio', () => {
       ],
     });
     http = TestBed.inject(HttpTestingController);
+    vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     fixture = TestBed.createComponent(Inicio);
     TestBed.tick();
+    http.expectOne('/api/configuracao-inicial').flush({
+      rendaPassivaDesejada: 6000,
+      etapa: 'CONCLUIDO',
+      pausado: false,
+      ano: 2026,
+      mes: 11,
+    });
   });
 
   afterEach(() => http.verify());
@@ -50,6 +58,39 @@ describe('Inicio', () => {
     expect(texto()).toContain('Acima do previsto');
     expect(texto()).toContain('A renda passiva cobre 21,2% das despesas do mês');
     expect(texto()).toContain('1,2 pontos a mais que outubro');
+  });
+
+  it('retoma automaticamente apenas a configuração não pausada', async () => {
+    await responder(inicio());
+    fixture.componentInstance['configuracao'].reload();
+    TestBed.tick();
+    http.expectOne('/api/configuracao-inicial').flush({
+      rendaPassivaDesejada: null,
+      etapa: 'BOAS_VINDAS',
+      pausado: false,
+      ano: 2026,
+      mes: 11,
+    });
+    await fixture.whenStable();
+    expect(TestBed.inject(Router).navigateByUrl).toHaveBeenCalledWith('/configuracao-inicial', {
+      replaceUrl: true,
+    });
+  });
+
+  it('oferece retomar sem redirecionar quando o usuário pausou', async () => {
+    await responder(inicio());
+    fixture.componentInstance['configuracao'].reload();
+    TestBed.tick();
+    http.expectOne('/api/configuracao-inicial').flush({
+      rendaPassivaDesejada: 6000,
+      etapa: 'ORCAMENTO',
+      pausado: true,
+      ano: 2026,
+      mes: 11,
+    });
+    await fixture.whenStable();
+    expect(texto()).toContain('Retomar configuração');
+    expect(TestBed.inject(Router).navigateByUrl).not.toHaveBeenCalled();
   });
 
   it('lista o que precisa de atenção e manda compra do cartão para a fatura', async () => {

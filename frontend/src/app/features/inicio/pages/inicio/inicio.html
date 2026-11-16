@@ -7,6 +7,38 @@
     <app-seletor-mes [(mes)]="mes" />
   </header>
 
+  @if (configuracao.error()) {
+    <app-estado-erro
+      titulo="Não foi possível consultar seus primeiros passos."
+      mensagem="Tente novamente para continuar sua configuração."
+      (tentar)="configuracao.reload()"
+    />
+  } @else if (primeirosPassos(); as passos) {
+    <section class="superficie primeiros-passos" aria-label="Seu planejamento inicial">
+      <div>
+        <h2 class="titulo-secao">
+          {{ passos.etapa === 'CONCLUIDO' ? 'Seu objetivo' : 'Continue seus primeiros passos' }}
+        </h2>
+        <p class="aux">
+          @if (passos.rendaPassivaDesejada !== null) {
+            Renda passiva desejada: {{ brl(passos.rendaPassivaDesejada) }} por mês.
+          } @else {
+            Defina seu objetivo, planeje o orçamento e prepare suas contas.
+          }
+        </p>
+        @if (passos.etapa === 'CONCLUIDO') {
+          <p class="aux">Essa referência não altera o cálculo do Independenciômetro.</p>
+        }
+      </div>
+      <p-button
+        [label]="passos.etapa === 'CONCLUIDO' ? 'Revisar configuração' : 'Retomar configuração'"
+        routerLink="/configuracao-inicial"
+        severity="secondary"
+        [outlined]="true"
+      />
+    </section>
+  }
+
   @if (resumo.error()) {
     <app-estado-erro
       [titulo]="'Não foi possível carregar o resumo de ' + nomeDoMes() + '.'"

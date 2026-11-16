@@ -85,3 +85,10 @@ p {
     margin-left: auto;
   }
 }
+.acoes-cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e3);
+}
+

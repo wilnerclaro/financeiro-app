@@ -91,6 +91,12 @@ kbd {
   display: none;
 }
 
+@media (max-width: 1100px) {
+  .importar-topo {
+    display: none;
+  }
+}
+
 @media (max-width: 700px) {
   .topo {
     padding: var(--e2) var(--e4);

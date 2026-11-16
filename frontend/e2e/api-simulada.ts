@@ -62,6 +62,18 @@ export async function simularGoogle(page: Page): Promise<void> {
 export async function simularApiDeAutenticacao(page: Page): Promise<void> {
   let versao = 0;
 
+  await page.route('**/api/configuracao-inicial', (rota) =>
+    rota.fulfill({
+      json: {
+        rendaPassivaDesejada: 6000,
+        etapa: 'CONCLUIDO',
+        pausado: false,
+        ano: 2026,
+        mes: 11,
+      },
+    }),
+  );
+
   await page.route('**/api/auth/configuracao', (rota) =>
     rota.fulfill({ json: { googleClientId: null } }),
   );

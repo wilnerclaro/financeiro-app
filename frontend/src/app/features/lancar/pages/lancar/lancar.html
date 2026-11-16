@@ -8,7 +8,20 @@
     </div>
   </header>
 
-  @if (base.error()) {
+  @if (lancamentoRegistrado()) {
+    <section class="superficie corpo" aria-live="polite">
+      <h2 class="titulo-secao">Seu lançamento foi registrado.</h2>
+      @if (erroNaConclusao()) {
+        <p class="aux">
+          Falta concluir sua configuração inicial. Tentar novamente não repete o lançamento.
+        </p>
+        <p-button label="Tentar concluir novamente" (onClick)="concluirConfiguracao()" />
+      } @else {
+        <p class="aux">Concluindo seus primeiros passos…</p>
+        <p-skeleton height="2rem" />
+      }
+    </section>
+  } @else if (base.error()) {
     <app-estado-erro
       titulo="Não foi possível abrir o formulário."
       mensagem="Verifique a conexão e tente de novo."
@@ -271,6 +284,13 @@
             [outlined]="true"
             routerLink="/lancamentos"
           />
+        } @else if (primeirosPassos()) {
+          <p-button
+            label="Voltar à configuração"
+            routerLink="/configuracao-inicial"
+            severity="secondary"
+            [outlined]="true"
+          />
         } @else {
           <p-button
             label="Lançar e fazer outro"
@@ -280,7 +300,11 @@
             (onClick)="salvar(true)"
           />
         }
-        <p-button type="submit" [label]="editando() ? 'Salvar' : 'Lançar'" [loading]="salvando()" />
+        <p-button
+          type="submit"
+          [label]="editando() ? 'Salvar' : primeirosPassos() ? 'Registrar e concluir' : 'Lançar'"
+          [loading]="salvando()"
+        />
       </div>
     </form>
   }
