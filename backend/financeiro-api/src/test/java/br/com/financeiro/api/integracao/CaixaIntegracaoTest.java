@@ -1,6 +1,8 @@
 package br.com.financeiro.api.integracao;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.everyItem;
+import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -12,6 +14,8 @@ import org.junit.jupiter.api.Test;
 
 @DisplayName("Caixa: cartão, transferência e atraso")
 class CaixaIntegracaoTest extends IntegracaoTest {
+
+  private static final String URL_PAGAR_FATURA = "/api/lancamentos-financeiros/faturas/pagar";
 
   private Sessao usuario;
   private UUID mercado;
@@ -204,6 +208,91 @@ class CaixaIntegracaoTest extends IntegracaoTest {
             autenticado(get("/api/lancamentos-financeiros"), usuario).param("status", "PENDENTE"))
         .andExpect(jsonPath("$.page.totalElements").value(1))
         .andExpect(jsonPath("$.content[0].valor").value(70.00));
+  }
+
+  @Test
+  @DisplayName("pagar a fatura quita as compras pendentes e tira o valor da conta escolhida")
+  void pagarFatura() throws Exception {
+    UUID banco = criarConta(usuario, "Banco", "1000.00");
+    UUID cartao = criarCartao(usuario, "Cartão Azul", 10, 20);
+    UUID estorno = criarCategoria(usuario, "Estorno", "RECEITA", null);
+    criarLancamentoEm(usuario, cartao, mercado, "DESPESA", "300.00", HOJE, null, null)
+        .andExpect(status().isCreated());
+    criarLancamentoEm(usuario, cartao, mercado, "DESPESA", "50.00", HOJE, null, null)
+        .andExpect(status().isCreated());
+    criarLancamentoEm(usuario, cartao, estorno, "RECEITA", "20.00", HOJE, null, null)
+        .andExpect(status().isCreated());
+    criarLancamentoEm(
+            usuario, cartao, mercado, "DESPESA", "120.00", HOJE.withDayOfMonth(5), null, null)
+        .andExpect(status().isCreated());
+
+    alterar(usuario, URL_PAGAR_FATURA, corpoPagarFatura(cartao, banco))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.total").value(330.00))
+        .andExpect(jsonPath("$.lancamentos.length()").value(3))
+        .andExpect(jsonPath("$.lancamentos[*].status").value(everyItem(is("PAGO"))))
+        .andExpect(jsonPath("$.lancamentos[0].dataPagamento").value(HOJE.toString()));
+
+    assertThat(saldoAtual(banco, usuario)).isEqualByComparingTo("670.00");
+    assertThat(saldoAtual(cartao, usuario)).isEqualByComparingTo("0.00");
+    consultar("/api/transferencias?contaId=" + cartao, usuario)
+        .andExpect(jsonPath("$.page.totalElements").value(1))
+        .andExpect(jsonPath("$.content[0].valor").value(330.00))
+        .andExpect(
+            jsonPath("$.content[0].descricao").value("Pagamento da fatura Cartão Azul 07/2026"));
+    consultar("/api/lancamentos-financeiros/faturas?contaId=" + cartao + "&ano=2026&mes=6", usuario)
+        .andExpect(jsonPath("$.lancamentos[0].status").value("PENDENTE"));
+
+    alterar(usuario, URL_PAGAR_FATURA, corpoPagarFatura(cartao, banco))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.message").value("Não há compras pendentes nesta fatura."));
+    assertThat(saldoAtual(banco, usuario)).isEqualByComparingTo("670.00");
+  }
+
+  @Test
+  @DisplayName("pagar a fatura recusa conta comum, o próprio cartão, data futura e conta alheia")
+  void pagarFaturaInvalido() throws Exception {
+    UUID banco = criarConta(usuario, "Banco", "1000.00");
+    UUID cartao = criarCartao(usuario, "Cartão Azul", 10, 20);
+    criarLancamentoEm(usuario, cartao, mercado, "DESPESA", "300.00", HOJE, null, null)
+        .andExpect(status().isCreated());
+
+    alterar(usuario, URL_PAGAR_FATURA, corpoPagarFatura(banco, banco))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.message").value("A conta informada não é um cartão de crédito."));
+    alterar(usuario, URL_PAGAR_FATURA, corpoPagarFatura(cartao, cartao))
+        .andExpect(status().isBadRequest())
+        .andExpect(
+            jsonPath("$.message").value("A conta de origem e a de destino devem ser diferentes."));
+    alterar(
+            usuario,
+            URL_PAGAR_FATURA,
+            """
+            {"contaId":"%s","ano":2026,"mes":7,"contaPagamentoId":"%s","dataPagamento":"%s"}
+            """
+                .formatted(cartao, banco, HOJE.plusDays(1)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.message").value("A data de pagamento não pode ser futura."));
+    alterar(usuario, URL_PAGAR_FATURA, "{}").andExpect(status().isBadRequest());
+
+    Sessao intruso = criarUsuario();
+    UUID contaDoIntruso = criarConta(intruso, "Banco", "5000.00");
+    alterar(usuario, URL_PAGAR_FATURA, corpoPagarFatura(cartao, contaDoIntruso))
+        .andExpect(status().isNotFound());
+    alterar(intruso, URL_PAGAR_FATURA, corpoPagarFatura(cartao, contaDoIntruso))
+        .andExpect(status().isNotFound());
+
+    assertThat(saldoAtual(banco, usuario)).isEqualByComparingTo("1000.00");
+    assertThat(saldoAtual(contaDoIntruso, intruso)).isEqualByComparingTo("5000.00");
+    consultar("/api/lancamentos-financeiros/faturas?contaId=" + cartao + "&ano=2026&mes=7", usuario)
+        .andExpect(jsonPath("$.lancamentos[0].status").value("PENDENTE"));
+  }
+
+  private String corpoPagarFatura(UUID cartao, UUID contaPagamento) {
+    return """
+        {"contaId":"%s","ano":2026,"mes":7,"contaPagamentoId":"%s","dataPagamento":"%s"}
+        """
+        .formatted(cartao, contaPagamento, HOJE);
   }
 
   private String corpoTransferencia(UUID origem, UUID destino, String valor) {

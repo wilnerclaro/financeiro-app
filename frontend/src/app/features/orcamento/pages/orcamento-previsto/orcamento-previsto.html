@@ -1,0 +1,87 @@
+<div class="pagina surgir">
+  <header class="cab">
+    <div>
+      <h1 class="titulo-pagina">Editar previsto</h1>
+      <p class="aux">Quanto você pretende receber e gastar em {{ nomeDoMes() }}.</p>
+    </div>
+    <app-seletor-mes [mes]="mes()" (mesChange)="trocarMes($event)" />
+  </header>
+
+  <app-abas-orcamento />
+
+  @if (base.error()) {
+    <app-estado-erro
+      titulo="Não foi possível carregar as categorias e o previsto."
+      mensagem="Verifique a conexão e tente de novo."
+      (tentar)="base.reload()"
+    />
+  } @else if (base.isLoading()) {
+    <p-skeleton height="20rem" />
+  } @else {
+    @for (bloco of blocos(); track bloco.tipo) {
+      <section class="secao" [attr.aria-labelledby]="'prev-' + bloco.tipo">
+        <h2 [id]="'prev-' + bloco.tipo" class="titulo-secao">{{ bloco.titulo }}</h2>
+        <ul class="linhas superficie">
+          @for (l of bloco.linhas; track l.categoriaId) {
+            <li [class.grupo]="l.grupo" [class.sub]="l.sub">
+              <label [for]="'prev-' + l.categoriaId" class="nome" [class.forte]="l.grupo">{{
+                l.nome
+              }}</label>
+              @if (l.editavel) {
+                <p-inputnumber
+                  [inputId]="'prev-' + l.categoriaId"
+                  mode="currency"
+                  currency="BRL"
+                  locale="pt-BR"
+                  [min]="0"
+                  size="small"
+                  [ngModel]="valorDe(l.categoriaId)"
+                  (ngModelChange)="editar(l.categoriaId, $event)"
+                  inputStyleClass="num campo-valor"
+                />
+              } @else {
+                <span class="num forte soma">{{ brl(somaDe(l)) }}</span>
+              }
+            </li>
+          } @empty {
+            <li class="aux">Nenhuma categoria ativa.</li>
+          }
+        </ul>
+      </section>
+    }
+
+    <div class="rodape superficie">
+      @if (podeRepetir()) {
+        <div class="repetir">
+          <p-checkbox
+            inputId="repetir"
+            [binary]="true"
+            [ngModel]="repetirAteDezembro()"
+            (ngModelChange)="repetirAteDezembro.set($event)"
+          />
+          <label for="repetir">Repetir os valores alterados até dezembro</label>
+        </div>
+      }
+      <div class="acoes">
+        <span class="aux">{{
+          alterados().length
+            ? alterados().length + (alterados().length === 1 ? ' alteração' : ' alterações')
+            : 'Nada alterado'
+        }}</span>
+        <p-button
+          label="Descartar"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="!alterados().length || salvando()"
+          (onClick)="descartar()"
+        />
+        <p-button
+          label="Salvar previsto"
+          [disabled]="!alterados().length"
+          [loading]="salvando()"
+          (onClick)="salvar()"
+        />
+      </div>
+    </div>
+  }
+</div>

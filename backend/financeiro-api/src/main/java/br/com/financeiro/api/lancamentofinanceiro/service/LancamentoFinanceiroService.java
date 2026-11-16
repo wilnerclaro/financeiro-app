@@ -12,6 +12,7 @@ import br.com.financeiro.api.categoria.service.CategoriaService;
 import br.com.financeiro.api.common.exception.BusinessException;
 import br.com.financeiro.api.common.exception.ResourceNotFoundException;
 import br.com.financeiro.api.common.util.Competencia;
+import br.com.financeiro.api.common.util.Dinheiro;
 import br.com.financeiro.api.common.util.NormalizadorTexto;
 import br.com.financeiro.api.conta.entity.Conta;
 import br.com.financeiro.api.conta.service.ContaService;
@@ -20,12 +21,15 @@ import br.com.financeiro.api.lancamentofinanceiro.dto.CriarLancamentoFinanceiroR
 import br.com.financeiro.api.lancamentofinanceiro.dto.FaturaCartaoResponse;
 import br.com.financeiro.api.lancamentofinanceiro.dto.LancamentoFinanceiroResponse;
 import br.com.financeiro.api.lancamentofinanceiro.dto.LancamentoRapidoResponse;
+import br.com.financeiro.api.lancamentofinanceiro.dto.PagarFaturaRequest;
 import br.com.financeiro.api.lancamentofinanceiro.dto.PagarLancamentoFinanceiroRequest;
 import br.com.financeiro.api.lancamentofinanceiro.entity.LancamentoFinanceiro;
 import br.com.financeiro.api.lancamentofinanceiro.enums.StatusLancamentoFinanceiro;
 import br.com.financeiro.api.lancamentofinanceiro.enums.TipoLancamentoFinanceiro;
 import br.com.financeiro.api.lancamentofinanceiro.mapper.LancamentoFinanceiroMapper;
 import br.com.financeiro.api.lancamentofinanceiro.repository.LancamentoFinanceiroRepository;
+import br.com.financeiro.api.transferencia.dto.CriarTransferenciaRequest;
+import br.com.financeiro.api.transferencia.service.TransferenciaService;
 import br.com.financeiro.api.usuario.entity.Usuario;
 import br.com.financeiro.api.usuario.service.UsuarioService;
 import java.math.BigDecimal;
@@ -54,13 +58,14 @@ public class LancamentoFinanceiroService {
   private final UsuarioService usuarioService;
   private final ContaService contaService;
   private final CategoriaService categoriaService;
+  private final TransferenciaService transferenciaService;
   private final LancamentoFinanceiroMapper lancamentoFinanceiroMapper;
   private final Clock clock;
 
   @Transactional
   public LancamentoFinanceiroResponse criar(
       UUID usuarioId, CriarLancamentoFinanceiroRequest request) {
-    Usuario usuario = buscarUsuario(usuarioId);
+    Usuario usuario = usuarioService.buscar(usuarioId);
 
     LancamentoFinanceiro lancamentoFinanceiro = new LancamentoFinanceiro();
     lancamentoFinanceiro.setUsuario(usuario);
@@ -81,7 +86,7 @@ public class LancamentoFinanceiroService {
       LocalDate dataInicio,
       LocalDate dataFim,
       Pageable pageable) {
-    buscarUsuario(usuarioId);
+    usuarioService.buscar(usuarioId);
     validarPeriodo(dataInicio, dataFim);
     contaService.validarContaDoUsuario(contaId, usuarioId);
     categoriaService.validarCategoriaDoUsuario(categoriaId, usuarioId);
@@ -106,12 +111,15 @@ public class LancamentoFinanceiroService {
   @Transactional
   public LancamentoFinanceiroResponse atualizar(
       UUID id, UUID usuarioId, AtualizarLancamentoFinanceiroRequest request) {
-    LancamentoFinanceiro lancamentoFinanceiro = buscarLancamentoDoUsuario(id, usuarioId);
+    LancamentoFinanceiro lancamentoFinanceiro = travarLancamentoDoUsuario(id, usuarioId);
 
     if (StatusLancamentoFinanceiro.CANCELADO.equals(lancamentoFinanceiro.getStatus())) {
       throw new BusinessException("Não é possível editar um lançamento cancelado.");
     }
 
+    contaService.travar(
+        lancamentoFinanceiro.getConta(),
+        contaService.buscarContaAtiva(request.contaId(), usuarioId));
     estornarSaldoSePago(lancamentoFinanceiro);
     preencher(lancamentoFinanceiro, DadosDoLancamento.de(request), usuarioId);
     movimentarSaldoSePago(lancamentoFinanceiro);
@@ -123,7 +131,7 @@ public class LancamentoFinanceiroService {
   @Transactional
   public LancamentoFinanceiroResponse pagar(
       UUID id, UUID usuarioId, PagarLancamentoFinanceiroRequest request) {
-    LancamentoFinanceiro lancamentoFinanceiro = buscarLancamentoDoUsuario(id, usuarioId);
+    LancamentoFinanceiro lancamentoFinanceiro = travarLancamentoDoUsuario(id, usuarioId);
 
     if (StatusLancamentoFinanceiro.CANCELADO.equals(lancamentoFinanceiro.getStatus())) {
       throw new BusinessException("Não é possível pagar um lançamento cancelado.");
@@ -145,7 +153,7 @@ public class LancamentoFinanceiroService {
 
   @Transactional
   public void cancelar(UUID id, UUID usuarioId) {
-    LancamentoFinanceiro lancamentoFinanceiro = buscarLancamentoDoUsuario(id, usuarioId);
+    LancamentoFinanceiro lancamentoFinanceiro = travarLancamentoDoUsuario(id, usuarioId);
 
     if (StatusLancamentoFinanceiro.CANCELADO.equals(lancamentoFinanceiro.getStatus())) {
       throw new BusinessException("O lançamento informado já está cancelado.");
@@ -158,37 +166,44 @@ public class LancamentoFinanceiroService {
 
   @Transactional(readOnly = true)
   public FaturaCartaoResponse buscarFatura(UUID usuarioId, UUID contaId, Integer ano, Integer mes) {
-    Conta conta = contaService.buscarConta(contaId, usuarioId);
+    return montarFatura(buscarCartaoDoUsuario(contaId, usuarioId), usuarioId, ano, mes);
+  }
 
-    if (!conta.ehCartaoDeCredito()) {
-      throw new BusinessException("A conta informada não é um cartão de crédito.");
+  @Transactional
+  public FaturaCartaoResponse pagarFatura(UUID usuarioId, PagarFaturaRequest request) {
+    Conta cartao = buscarCartaoDoUsuario(request.contaId(), usuarioId);
+    YearMonth mesDoVencimento = Competencia.de(request.ano(), request.mes());
+    validarDataPagamento(request.dataPagamento());
+
+    List<LancamentoFinanceiro> pendentes =
+        lancamentoFinanceiroRepository.travarPendentesDaFatura(
+            usuarioId, cartao.getId(), mesDoVencimento.atDay(1), mesDoVencimento.atEndOfMonth());
+
+    if (pendentes.isEmpty()) {
+      throw new BusinessException("Não há compras pendentes nesta fatura.");
     }
 
-    YearMonth mesDoVencimento = Competencia.de(ano, mes);
-    LocalDate dataFechamento = conta.fechamentoDaFatura(mesDoVencimento);
-    List<LancamentoFinanceiro> lancamentos =
-        lancamentoFinanceiroRepository.buscarDaFatura(
-            usuarioId, contaId, mesDoVencimento.atDay(1), mesDoVencimento.atEndOfMonth());
+    BigDecimal valorAPagar = somarFatura(pendentes);
+    if (valorAPagar.signum() > 0) {
+      transferenciaService.criar(
+          usuarioId,
+          new CriarTransferenciaRequest(
+              request.contaPagamentoId(),
+              cartao.getId(),
+              valorAPagar,
+              request.dataPagamento(),
+              "Pagamento da fatura %s %02d/%d"
+                  .formatted(cartao.getNome(), request.mes(), request.ano())));
+    }
 
-    BigDecimal total =
-        lancamentos.stream()
-            .map(
-                lancamento ->
-                    TipoLancamentoFinanceiro.DESPESA.equals(lancamento.getTipo())
-                        ? lancamento.getValor()
-                        : lancamento.getValor().negate())
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    for (LancamentoFinanceiro lancamento : pendentes) {
+      lancamento.setDataPagamento(request.dataPagamento());
+      lancamento.setStatus(StatusLancamentoFinanceiro.PAGO);
+      movimentarSaldoSePago(lancamento);
+    }
+    lancamentoFinanceiroRepository.flush();
 
-    return new FaturaCartaoResponse(
-        conta.getId(),
-        conta.getNome(),
-        ano,
-        mes,
-        dataFechamento,
-        mesDoVencimento.atDay(conta.getDiaVencimento()),
-        hoje().isAfter(dataFechamento),
-        total,
-        lancamentos.stream().map(this::paraResponse).toList());
+    return montarFatura(cartao, usuarioId, request.ano(), request.mes());
   }
 
   @Transactional(readOnly = true)
@@ -359,13 +374,55 @@ public class LancamentoFinanceiroService {
     }
   }
 
-  private Usuario buscarUsuario(UUID usuarioId) {
-    return usuarioService.buscar(usuarioId);
+  private Conta buscarCartaoDoUsuario(UUID contaId, UUID usuarioId) {
+    Conta conta = contaService.buscarConta(contaId, usuarioId);
+
+    if (!conta.ehCartaoDeCredito()) {
+      throw new BusinessException("A conta informada não é um cartão de crédito.");
+    }
+
+    return conta;
+  }
+
+  private FaturaCartaoResponse montarFatura(
+      Conta cartao, UUID usuarioId, Integer ano, Integer mes) {
+    YearMonth mesDoVencimento = Competencia.de(ano, mes);
+    LocalDate dataFechamento = cartao.fechamentoDaFatura(mesDoVencimento);
+    List<LancamentoFinanceiro> lancamentos =
+        lancamentoFinanceiroRepository.buscarDaFatura(
+            usuarioId, cartao.getId(), mesDoVencimento.atDay(1), mesDoVencimento.atEndOfMonth());
+
+    return new FaturaCartaoResponse(
+        cartao.getId(),
+        cartao.getNome(),
+        ano,
+        mes,
+        dataFechamento,
+        mesDoVencimento.atDay(cartao.getDiaVencimento()),
+        hoje().isAfter(dataFechamento),
+        somarFatura(lancamentos),
+        lancamentos.stream().map(this::paraResponse).toList());
+  }
+
+  private static BigDecimal somarFatura(List<LancamentoFinanceiro> lancamentos) {
+    return lancamentos.stream()
+        .map(
+            lancamento ->
+                TipoLancamentoFinanceiro.DESPESA.equals(lancamento.getTipo())
+                    ? lancamento.getValor()
+                    : lancamento.getValor().negate())
+        .reduce(Dinheiro.ZERO, BigDecimal::add);
   }
 
   private LancamentoFinanceiro buscarLancamentoDoUsuario(UUID id, UUID usuarioId) {
     return lancamentoFinanceiroRepository
         .buscarPorIdEUsuarioId(id, usuarioId)
+        .orElseThrow(() -> new ResourceNotFoundException("Lançamento financeiro não encontrado."));
+  }
+
+  private LancamentoFinanceiro travarLancamentoDoUsuario(UUID id, UUID usuarioId) {
+    return lancamentoFinanceiroRepository
+        .travarPorIdEUsuarioId(id, usuarioId)
         .orElseThrow(() -> new ResourceNotFoundException("Lançamento financeiro não encontrado."));
   }
 }

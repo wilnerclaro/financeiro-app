@@ -3,6 +3,7 @@ import { SENHA_CERTA, simularApiDeAutenticacao } from './api-simulada';
 
 test.beforeEach(async ({ page }) => {
   await simularApiDeAutenticacao(page);
+  await page.route('**/api/dashboard-financeiro/**', (rota) => rota.fulfill({ status: 503 }));
 });
 
 test('quem não entrou cai no login', async ({ page }) => {
@@ -36,11 +37,11 @@ test('entra só com o teclado e continua logado depois de recarregar', async ({ 
   await page.getByLabel('Senha', { exact: true }).fill(SENHA_CERTA);
   await page.keyboard.press('Enter');
 
-  await expect(page.getByRole('heading', { name: 'Olá, Ana' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Resumo de / })).toBeVisible();
   await expect(page).toHaveURL(/\/$/);
 
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Olá, Ana' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Resumo de / })).toBeVisible();
 
   const guardado = await page.evaluate(() =>
     JSON.stringify({ ...sessionStorage, ...localStorage }),
@@ -53,7 +54,7 @@ test('sair volta para o login e não restaura a sessão', async ({ page }) => {
   await page.getByLabel('E-mail').fill('ana@exemplo.com');
   await page.getByLabel('Senha', { exact: true }).fill(SENHA_CERTA);
   await page.getByRole('button', { name: 'Entrar' }).click();
-  await expect(page.getByRole('heading', { name: 'Olá, Ana' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Resumo de / })).toBeVisible();
 
   await page.getByRole('button', { name: 'Sair' }).click();
   await expect(page).toHaveURL(/\/login$/);

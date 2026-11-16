@@ -4,6 +4,7 @@ import br.com.financeiro.api.lancamentofinanceiro.dto.AtualizarLancamentoFinance
 import br.com.financeiro.api.lancamentofinanceiro.dto.CriarLancamentoFinanceiroRequest;
 import br.com.financeiro.api.lancamentofinanceiro.dto.FaturaCartaoResponse;
 import br.com.financeiro.api.lancamentofinanceiro.dto.LancamentoFinanceiroResponse;
+import br.com.financeiro.api.lancamentofinanceiro.dto.PagarFaturaRequest;
 import br.com.financeiro.api.lancamentofinanceiro.dto.PagarLancamentoFinanceiroRequest;
 import br.com.financeiro.api.lancamentofinanceiro.enums.StatusLancamentoFinanceiro;
 import br.com.financeiro.api.lancamentofinanceiro.enums.TipoLancamentoFinanceiro;
@@ -101,7 +102,7 @@ public interface LancamentoFinanceiroApiDoc {
       summary = "Fatura do cartão",
       description =
           "Lançamentos e total da fatura de um cartão de crédito que vence no mês informado. "
-              + "Para pagar a fatura, faça uma transferência da conta bancária para o cartão.")
+              + "Para pagar, use PATCH /faturas/pagar.")
   @ApiResponse(responseCode = "200", description = "Fatura encontrada")
   @ApiResponse(
       responseCode = "400",
@@ -112,4 +113,20 @@ public interface LancamentoFinanceiroApiDoc {
       @RequestParam UUID contaId,
       @RequestParam Integer ano,
       @RequestParam Integer mes);
+
+  @Operation(
+      summary = "Pagar fatura do cartão",
+      description =
+          "Paga de uma vez todas as compras pendentes da fatura que vence no mês informado. "
+              + "O valor pendente sai da conta de pagamento por uma transferência para o cartão, "
+              + "na mesma operação. Devolve a fatura atualizada.")
+  @ApiResponse(responseCode = "200", description = "Fatura paga")
+  @ApiResponse(
+      responseCode = "400",
+      description =
+          "A conta não é cartão, a fatura não tem compra pendente, a data é futura ou a conta "
+              + "de pagamento é o próprio cartão ou está inativa")
+  @ApiResponse(responseCode = "404", description = "Cartão ou conta de pagamento não encontrada")
+  ResponseEntity<FaturaCartaoResponse> pagarFatura(
+      @UsuarioLogado UUID usuarioId, @Valid @RequestBody PagarFaturaRequest request);
 }

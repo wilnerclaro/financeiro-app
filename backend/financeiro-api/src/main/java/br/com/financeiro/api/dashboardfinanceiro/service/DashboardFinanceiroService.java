@@ -1,6 +1,7 @@
 package br.com.financeiro.api.dashboardfinanceiro.service;
 
 import br.com.financeiro.api.common.util.Competencia;
+import br.com.financeiro.api.common.util.Dinheiro;
 import br.com.financeiro.api.common.util.Fracao;
 import br.com.financeiro.api.dashboardfinanceiro.dto.ResumoCategoriaFinanceiraResponse;
 import br.com.financeiro.api.dashboardfinanceiro.dto.ResumoMensalFinanceiroResponse;
@@ -37,8 +38,8 @@ public class DashboardFinanceiroService {
     ResumoMensalFinanceiroProjection resumo =
         dashboardFinanceiroRepository.buscarResumoMensal(usuarioId, dataInicio, dataFim);
 
-    BigDecimal totalReceitas = valorOuZero(resumo.getTotalReceitas());
-    BigDecimal totalDespesas = valorOuZero(resumo.getTotalDespesas());
+    BigDecimal totalReceitas = Dinheiro.arredondar(resumo.getTotalReceitas());
+    BigDecimal totalDespesas = Dinheiro.arredondar(resumo.getTotalDespesas());
     Long quantidadeLancamentos = resumo.getQuantidadeLancamentos();
 
     List<ResumoCategoriaFinanceiraResponse> receitasPorCategoria =
@@ -76,7 +77,7 @@ public class DashboardFinanceiroService {
 
   private ResumoCategoriaFinanceiraResponse paraResponse(
       ResumoCategoriaFinanceiraProjection projection, BigDecimal totalPeriodo) {
-    BigDecimal total = valorOuZero(projection.getTotal());
+    BigDecimal total = Dinheiro.arredondar(projection.getTotal());
 
     return new ResumoCategoriaFinanceiraResponse(
         projection.getCategoriaId(),
@@ -84,10 +85,6 @@ public class DashboardFinanceiroService {
         total,
         Fracao.de(total, totalPeriodo),
         projection.getQuantidadeLancamentos());
-  }
-
-  private BigDecimal valorOuZero(BigDecimal valor) {
-    return valor == null ? BigDecimal.ZERO : valor;
   }
 
   private void validarUsuario(UUID usuarioId) {

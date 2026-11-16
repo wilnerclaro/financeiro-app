@@ -1,0 +1,101 @@
+<p-dialog
+  [header]="titulo()"
+  [visible]="!!modo()"
+  (visibleChange)="$event ? null : fechar.emit()"
+  [modal]="true"
+  [draggable]="false"
+  [style]="{ width: 'min(460px, 92vw)' }"
+>
+  <form class="corpo" (ngSubmit)="salvar()" novalidate id="form-conta">
+    @if (modo() === 'saldo') {
+      <p class="aux">
+        Use quando o saldo de partida estava errado. O saldo atual muda pela mesma diferença.
+      </p>
+    } @else {
+      <div class="campo">
+        <label for="conta-nome" class="rotulo-campo">Nome</label>
+        <input
+          pInputText
+          id="conta-nome"
+          name="nome"
+          maxlength="100"
+          [ngModel]="nome()"
+          (ngModelChange)="nome.set($event)"
+          [invalid]="tentouSalvar() && !!erros().nome"
+          placeholder="Ex.: Nubank, Carteira"
+        />
+        @if (tentouSalvar() && erros().nome) {
+          <small class="erro">{{ erros().nome }}</small>
+        }
+      </div>
+      <div class="campo">
+        <label for="conta-tipo" class="rotulo-campo">Tipo</label>
+        <p-select
+          inputId="conta-tipo"
+          name="tipo"
+          [options]="tipos"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="tipo()"
+          (ngModelChange)="tipo.set($event)"
+          appendTo="body"
+          fluid
+        />
+      </div>
+      @if (ehCartao()) {
+        <div class="duas">
+          <div class="campo">
+            <label for="conta-fechamento" class="rotulo-campo">Dia do fechamento</label>
+            <p-inputnumber
+              inputId="conta-fechamento"
+              name="fechamento"
+              [min]="1"
+              [max]="31"
+              [ngModel]="diaFechamento()"
+              (ngModelChange)="diaFechamento.set($event)"
+              fluid
+            />
+          </div>
+          <div class="campo">
+            <label for="conta-vencimento" class="rotulo-campo">Dia do vencimento</label>
+            <p-inputnumber
+              inputId="conta-vencimento"
+              name="vencimento"
+              [min]="1"
+              [max]="31"
+              [ngModel]="diaVencimento()"
+              (ngModelChange)="diaVencimento.set($event)"
+              fluid
+            />
+          </div>
+        </div>
+        @if (tentouSalvar() && erros().dias) {
+          <small class="erro">{{ erros().dias }}</small>
+        }
+      }
+    }
+    @if (modo() !== 'editar') {
+      <div class="campo">
+        <label for="conta-saldo" class="rotulo-campo">Saldo inicial</label>
+        <p-inputnumber
+          inputId="conta-saldo"
+          name="saldo"
+          mode="currency"
+          currency="BRL"
+          locale="pt-BR"
+          [ngModel]="saldoInicial()"
+          (ngModelChange)="saldoInicial.set($event)"
+          [invalid]="tentouSalvar() && !!erros().saldo"
+          fluid
+        />
+        @if (tentouSalvar() && erros().saldo) {
+          <small class="erro">{{ erros().saldo }}</small>
+        }
+      </div>
+    }
+  </form>
+  <ng-template #footer>
+    <p-button label="Voltar" severity="secondary" [outlined]="true" (onClick)="fechar.emit()" />
+    <p-button label="Salvar" [loading]="salvando()" (onClick)="salvar()" />
+  </ng-template>
+</p-dialog>

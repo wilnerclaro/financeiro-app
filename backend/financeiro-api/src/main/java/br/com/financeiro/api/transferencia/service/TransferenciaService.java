@@ -78,7 +78,7 @@ public class TransferenciaService {
 
   @Transactional
   public void cancelar(UUID id, UUID usuarioId) {
-    Transferencia transferencia = buscarDoUsuario(id, usuarioId);
+    Transferencia transferencia = travarDoUsuario(id, usuarioId);
 
     if (Boolean.TRUE.equals(transferencia.getCancelada())) {
       throw new BusinessException("A transferência informada já está cancelada.");
@@ -108,6 +108,12 @@ public class TransferenciaService {
   private Transferencia buscarDoUsuario(UUID id, UUID usuarioId) {
     return transferenciaRepository
         .buscarPorIdEUsuarioId(id, usuarioId)
+        .orElseThrow(() -> new ResourceNotFoundException("Transferência não encontrada."));
+  }
+
+  private Transferencia travarDoUsuario(UUID id, UUID usuarioId) {
+    return transferenciaRepository
+        .travarPorIdEUsuarioId(id, usuarioId)
         .orElseThrow(() -> new ResourceNotFoundException("Transferência não encontrada."));
   }
 }

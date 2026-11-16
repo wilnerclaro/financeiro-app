@@ -5,6 +5,7 @@ import br.com.financeiro.api.lancamentofinanceiro.dto.AtualizarLancamentoFinance
 import br.com.financeiro.api.lancamentofinanceiro.dto.CriarLancamentoFinanceiroRequest;
 import br.com.financeiro.api.lancamentofinanceiro.dto.FaturaCartaoResponse;
 import br.com.financeiro.api.lancamentofinanceiro.dto.LancamentoFinanceiroResponse;
+import br.com.financeiro.api.lancamentofinanceiro.dto.PagarFaturaRequest;
 import br.com.financeiro.api.lancamentofinanceiro.dto.PagarLancamentoFinanceiroRequest;
 import br.com.financeiro.api.lancamentofinanceiro.enums.StatusLancamentoFinanceiro;
 import br.com.financeiro.api.lancamentofinanceiro.enums.TipoLancamentoFinanceiro;
@@ -76,6 +77,12 @@ public class LancamentoFinanceiroController implements LancamentoFinanceiroApiDo
       @RequestParam Integer mes) {
     return ResponseEntity.ok(
         lancamentoFinanceiroService.buscarFatura(usuarioId, contaId, ano, mes));
+  }
+
+  @PatchMapping("/faturas/pagar")
+  public ResponseEntity<FaturaCartaoResponse> pagarFatura(
+      @UsuarioLogado UUID usuarioId, @Valid @RequestBody PagarFaturaRequest request) {
+    return ResponseEntity.ok(lancamentoFinanceiroService.pagarFatura(usuarioId, request));
   }
 
   @GetMapping("/{id}")

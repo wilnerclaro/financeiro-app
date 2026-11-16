@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import { MessageService } from 'primeng/api';
 import { firstValueFrom } from 'rxjs';
 import { tokenDeTeste } from '../testing/sessao-de-teste';
 import { routes } from './app.routes';
@@ -15,7 +16,12 @@ describe('rotas do app', () => {
   beforeEach(() => {
     sessionStorage.clear();
     TestBed.configureTestingModule({
-      providers: [provideRouter(routes), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideRouter(routes),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        MessageService,
+      ],
     });
   });
 
@@ -36,7 +42,7 @@ describe('rotas do app', () => {
     const harness = await RouterTestingHarness.create();
     await harness.navigateByUrl('/', Casca);
 
-    expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toContain('Olá, Ana');
+    expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toContain('Resumo de');
     expect(
       harness.fixture.debugElement.query((d) => d.componentInstance instanceof Inicio),
     ).toBeTruthy();

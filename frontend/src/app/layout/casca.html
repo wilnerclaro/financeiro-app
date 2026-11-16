@@ -4,11 +4,22 @@
     financeiro
   </a>
   <nav class="menu" aria-label="Principal">
-    <a routerLink="/" routerLinkActive="ativo" [routerLinkActiveOptions]="{ exact: true }">
-      <app-icone [icone]="icones.House" />Início
-    </a>
+    @for (item of menu; track item.rota) {
+      <a
+        [routerLink]="item.rota"
+        routerLinkActive="ativo"
+        [routerLinkActiveOptions]="{ exact: item.rota === '/' }"
+      >
+        <app-icone [icone]="item.icone" />{{ item.rotulo }}
+      </a>
+    }
   </nav>
   <div class="acoes">
+    <p-button size="small" routerLink="/lancar" class="so-largo-topo">
+      <app-icone [icone]="icones.Plus" />
+      <span>Novo lançamento</span>
+      <kbd aria-hidden="true">N</kbd>
+    </p-button>
     <p-button
       [text]="true"
       severity="secondary"
@@ -29,3 +40,21 @@
 <main class="conteudo">
   <router-outlet />
 </main>
+<nav class="barra-inferior" aria-label="Atalhos do celular">
+  @for (item of menuDoCelular; track item.rota) {
+    @if (item.rota === '/lancar') {
+      <a routerLink="/lancar" class="lancar" aria-label="Novo lançamento">
+        <app-icone [icone]="icones.Plus" [tamanho]="22" />
+      </a>
+    } @else {
+      <a
+        [routerLink]="item.rota"
+        routerLinkActive="ativo"
+        [routerLinkActiveOptions]="{ exact: item.rota === '/' }"
+      >
+        <app-icone [icone]="item.icone" [tamanho]="20" />
+        <span>{{ item.rotulo }}</span>
+      </a>
+    }
+  }
+</nav>

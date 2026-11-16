@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.Hibernate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -39,7 +40,7 @@ public class ContaService {
 
   @Transactional
   public ContaResponse criar(UUID usuarioId, CriarContaRequest request) {
-    Usuario usuario = buscarUsuario(usuarioId);
+    Usuario usuario = usuarioService.buscar(usuarioId);
     String nomeNormalizado = NormalizadorTexto.normalizarNome(request.nome());
 
     validarDuplicidade(usuarioId, nomeNormalizado, null);
@@ -59,7 +60,7 @@ public class ContaService {
   @Transactional(readOnly = true)
   public Page<ContaResponse> listar(
       UUID usuarioId, TipoConta tipoConta, Boolean ativa, Pageable pageable) {
-    buscarUsuario(usuarioId);
+    usuarioService.buscar(usuarioId);
     return contaRepository
         .buscarPorFiltros(usuarioId, tipoConta, ativa, pageable)
         .map(contaMapper::paraResponse);
@@ -170,11 +171,20 @@ public class ContaService {
 
   @Transactional
   public void travar(Conta... contas) {
-    Stream.of(contas)
-        .distinct()
-        .sorted(Comparator.comparing(Conta::getId))
-        .filter(conta -> entityManager.getLockMode(conta) != LockModeType.PESSIMISTIC_WRITE)
-        .forEach(conta -> entityManager.refresh(conta, LockModeType.PESSIMISTIC_WRITE));
+    List<Conta> aTravar =
+        Stream.of(contas)
+            .map(conta -> Hibernate.unproxy(conta, Conta.class))
+            .distinct()
+            .sorted(Comparator.comparing(Conta::getId))
+            .filter(conta -> entityManager.getLockMode(conta) != LockModeType.PESSIMISTIC_WRITE)
+            .toList();
+
+    if (aTravar.isEmpty()) {
+      return;
+    }
+
+    entityManager.flush();
+    aTravar.forEach(conta -> entityManager.refresh(conta, LockModeType.PESSIMISTIC_WRITE));
   }
 
   @Transactional(readOnly = true)
@@ -194,10 +204,6 @@ public class ContaService {
     boolean cartao = TipoConta.CARTAO_CREDITO.equals(tipo);
     conta.setDiaFechamento(cartao ? diaFechamento : null);
     conta.setDiaVencimento(cartao ? diaVencimento : null);
-  }
-
-  private Usuario buscarUsuario(UUID usuarioId) {
-    return usuarioService.buscar(usuarioId);
   }
 
   private void validarMudancaDeTipo(Conta conta, TipoConta novoTipo) {

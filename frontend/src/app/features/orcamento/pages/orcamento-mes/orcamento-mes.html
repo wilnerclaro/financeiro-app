@@ -1,0 +1,183 @@
+<div class="pagina surgir">
+  <header class="cab">
+    <div>
+      <h1 class="titulo-pagina">Orçamento</h1>
+      <p class="aux">Previsto e realizado de {{ nomeDoMes() }}.</p>
+    </div>
+    <div class="acoes">
+      <app-seletor-mes [(mes)]="mes" />
+      <p-button
+        size="small"
+        severity="secondary"
+        [outlined]="true"
+        [loading]="copiando()"
+        (onClick)="confirmarCopia()"
+      >
+        <app-icone [icone]="icones.Copy" />
+        <span>Copiar mês anterior</span>
+      </p-button>
+    </div>
+  </header>
+
+  <app-abas-orcamento />
+
+  @if (relatorio.error()) {
+    <app-estado-erro
+      [titulo]="'Não foi possível carregar o orçamento de ' + nomeDoMes() + '.'"
+      mensagem="Verifique a conexão e tente de novo."
+      (tentar)="tentarDeNovo()"
+    />
+  } @else if (relatorio.isLoading()) {
+    <p-skeleton height="7rem" />
+    <p-skeleton height="14rem" />
+  } @else if (vazio()) {
+    <app-estado-vazio
+      [icone]="icones.ChartPie"
+      [titulo]="'Sem orçamento em ' + nomeDoMes()"
+      texto="Defina quanto pretende gastar em cada categoria, ou copie o previsto do mês anterior."
+    >
+      <p-button size="small" routerLink="/orcamento/previsto" label="Definir previsto" />
+      <p-button
+        size="small"
+        severity="secondary"
+        [outlined]="true"
+        label="Copiar mês anterior"
+        (onClick)="confirmarCopia()"
+      />
+    </app-estado-vazio>
+  } @else if (relatorio.value(); as r) {
+    <section class="kpis superficie" [attr.aria-label]="'Resumo do orçamento de ' + nomeDoMes()">
+      <div class="kpi">
+        <p class="rotulo">Despesas</p>
+        <p class="valor num des">{{ brl(r.despesas.total.realizado) }}</p>
+        @if (r.despesas.total.previsto > 0) {
+          <p-progressbar
+            [value]="largura(r.despesas.total)"
+            [showValue]="false"
+            [class]="'barra ' + nivel(r.despesas.total.percentualRealizado)"
+            [attr.aria-label]="
+              'Despesas: ' + percentual(r.despesas.total.percentualRealizado) + ' do previsto'
+            "
+          />
+          <p class="delta">
+            <span class="selo" [class]="nivel(r.despesas.total.percentualRealizado)">{{
+              statusDoOrcamento(r.despesas.total.percentualRealizado)
+            }}</span>
+            <span class="aux"
+              >{{ percentual(r.despesas.total.percentualRealizado) }} de
+              {{ brl(r.despesas.total.previsto) }}</span
+            >
+          </p>
+        } @else {
+          <p class="delta aux">Sem previsto de despesas</p>
+        }
+      </div>
+      <div class="kpi">
+        <p class="rotulo">Receitas</p>
+        <p class="valor num rec">{{ brl(r.receitas.total.realizado) }}</p>
+        <p class="delta aux">
+          @if (r.receitas.total.previsto > 0) {
+            {{ percentual(r.receitas.total.percentualRealizado) }} de
+            {{ brl(r.receitas.total.previsto) }} previstos
+          } @else {
+            Sem previsto de receitas
+          }
+        </p>
+      </div>
+      <div class="kpi">
+        <p class="rotulo">Saldo</p>
+        <p class="valor num" [class.des]="r.saldo.realizado < 0">{{ brl(r.saldo.realizado) }}</p>
+        <p class="delta aux">Previsto {{ brl(r.saldo.previsto) }}</p>
+      </div>
+    </section>
+
+    <section class="secao" aria-labelledby="desp-t">
+      <h2 id="desp-t" class="titulo-secao">Despesas por grupo</h2>
+      <ul class="grupos superficie">
+        @for (g of despesas(); track g.categoriaId) {
+          <li>
+            <button
+              type="button"
+              class="linha"
+              [attr.aria-expanded]="g.subitens.length ? abertos().has(g.categoriaId) : null"
+              [disabled]="!g.subitens.length"
+              (click)="alternar(g.categoriaId)"
+            >
+              <span class="nome medio">
+                @if (g.subitens.length) {
+                  <app-icone
+                    [icone]="
+                      abertos().has(g.categoriaId) ? icones.ChevronDown : icones.ChevronRight
+                    "
+                    [tamanho]="14"
+                  />
+                }
+                {{ g.nome }}
+              </span>
+              @if (g.valores.previsto > 0) {
+                <span class="selo" [class]="nivel(g.valores.percentualRealizado)">{{
+                  statusDoOrcamento(g.valores.percentualRealizado)
+                }}</span>
+              } @else {
+                <span class="selo">Sem previsto</span>
+              }
+            </button>
+            @if (g.valores.previsto > 0) {
+              <p-progressbar
+                [value]="largura(g.valores)"
+                [showValue]="false"
+                [class]="'barra ' + nivel(g.valores.percentualRealizado)"
+                [attr.aria-label]="
+                  g.nome + ': ' + percentual(g.valores.percentualRealizado) + ' do previsto'
+                "
+              />
+            }
+            <p class="aux num">
+              {{ brl(g.valores.realizado) }} de {{ brl(g.valores.previsto) }}
+              @if (g.valores.previsto > 0) {
+                · {{ percentual(g.valores.percentualRealizado) }}
+              }
+            </p>
+            @if (abertos().has(g.categoriaId)) {
+              <ul class="subitens">
+                @for (s of g.subitens; track s.categoriaId) {
+                  <li>
+                    <span>{{ s.nome }}</span>
+                    <span class="num aux"
+                      >{{ brl(s.valores.realizado) }} de {{ brl(s.valores.previsto) }}</span
+                    >
+                  </li>
+                }
+              </ul>
+            }
+          </li>
+        } @empty {
+          <li class="aux">Nenhuma despesa prevista ou realizada.</li>
+        }
+      </ul>
+    </section>
+
+    <section class="secao" aria-labelledby="rec-t">
+      <h2 id="rec-t" class="titulo-secao">Receitas por grupo</h2>
+      <ul class="grupos superficie">
+        @for (g of receitas(); track g.categoriaId) {
+          <li>
+            <div class="linha">
+              <span class="nome medio">{{ g.nome }}</span>
+              <span class="num rec forte">{{ brl(g.valores.realizado) }}</span>
+            </div>
+            <p class="aux num">
+              Previsto {{ brl(g.valores.previsto) }}
+              @if (g.valores.previsto > 0) {
+                · {{ percentual(g.valores.percentualRealizado) }} recebido
+              }
+            </p>
+          </li>
+        } @empty {
+          <li class="aux">Nenhuma receita prevista ou realizada.</li>
+        }
+      </ul>
+    </section>
+  }
+</div>
+<p-confirmdialog [style]="{ width: 'min(420px, 92vw)' }" />

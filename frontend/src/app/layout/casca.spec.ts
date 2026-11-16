@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { UsuarioResponse } from '../core/auth/autenticacao.models';
 import { Sessao } from '../core/auth/sessao';
 import { Tema } from '../core/config/tema';
@@ -51,5 +51,22 @@ describe('Casca', () => {
   it('troca o tema pelo botão de sol e lua', () => {
     botao('Usar tema claro').click();
     expect(alternar).toHaveBeenCalledTimes(1);
+  });
+
+  it('abre o novo lançamento pela tecla N fora de campos de texto', () => {
+    const router = TestBed.inject(Router);
+    const navegar = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
+    expect(navegar).toHaveBeenCalledWith('/lancar');
+
+    navegar.mockClear();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'n', ctrlKey: true }));
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'x' }));
+    const campo = document.createElement('input');
+    document.body.appendChild(campo);
+    campo.dispatchEvent(new KeyboardEvent('keydown', { key: 'N', bubbles: true }));
+    campo.remove();
+    expect(navegar).not.toHaveBeenCalled();
   });
 });
