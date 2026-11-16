@@ -132,21 +132,36 @@
 
         <div class="campo">
           <label for="conta" class="rotulo-campo">Conta</label>
-          <p-select
-            inputId="conta"
-            name="conta"
-            [options]="opcoesDeConta()"
-            [ngModel]="contaId()"
-            (ngModelChange)="escolherConta($event)"
-            placeholder="Escolha a conta"
-            [invalid]="tentouSalvar() && !!erros().conta"
-            emptyMessage="Cadastre uma conta primeiro"
-            fluid
-          />
+          @if (contas().length) {
+            <p-select
+              inputId="conta"
+              name="conta"
+              [options]="opcoesDeConta()"
+              [ngModel]="contaId()"
+              (ngModelChange)="escolherConta($event)"
+              placeholder="Escolha a conta"
+              [invalid]="tentouSalvar() && !!erros().conta"
+              fluid
+            />
+          } @else {
+            <p-button
+              label="Cadastre uma conta primeiro"
+              [outlined]="true"
+              (onClick)="cadastrandoConta.set(true)"
+            />
+          }
           @if (tentouSalvar() && erros().conta) {
             <small class="erro">{{ erros().conta }}</small>
           }
         </div>
+      }
+
+      @if (ehTransferencia() && contas().length < 2) {
+        <p-button
+          [label]="contas().length ? 'Cadastrar conta de destino' : 'Cadastre uma conta primeiro'"
+          [outlined]="true"
+          (onClick)="cadastrandoConta.set(true)"
+        />
       }
 
       <div class="duas">
@@ -270,3 +285,9 @@
     </form>
   }
 </div>
+
+<app-conta-dialogo
+  [modo]="cadastrandoConta() ? 'criar' : null"
+  (fechar)="cadastrandoConta.set(false)"
+  (salvo)="contaCriada($event)"
+/>

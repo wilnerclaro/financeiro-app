@@ -42,6 +42,34 @@ describe('Sessao', () => {
     expect(JSON.stringify({ ...sessionStorage, ...localStorage })).not.toContain('acesso-1');
   });
 
+  it('cadastra e já abre a sessão com os tokens devolvidos', async () => {
+    const usuario = firstValueFrom(
+      sessao.cadastrar({ nome: 'Ana', email: 'ana@exemplo.com', senha: 'familia2026' }),
+    );
+
+    const requisicao = http.expectOne('/api/auth/cadastro');
+    expect(requisicao.request.body).toEqual({
+      nome: 'Ana',
+      email: 'ana@exemplo.com',
+      senha: 'familia2026',
+    });
+    requisicao.flush(tokenDeTeste());
+
+    expect((await usuario).email).toBe('ana@exemplo.com');
+    expect(sessao.accessToken()).toBe('acesso-1');
+  });
+
+  it('entra com o ID token do Google', async () => {
+    const usuario = firstValueFrom(sessao.entrarComGoogle('token-do-google'));
+
+    const requisicao = http.expectOne('/api/auth/google');
+    expect(requisicao.request.body).toEqual({ idToken: 'token-do-google' });
+    requisicao.flush(tokenDeTeste(3));
+
+    expect((await usuario).nome).toBe('Ana Souza');
+    expect(sessionStorage.getItem(CHAVE_REFRESH_TOKEN)).toBe('refresh-3');
+  });
+
   it('não chama a API para renovar quando não há refresh token', async () => {
     await expect(firstValueFrom(sessao.renovar())).rejects.toThrow('Não há sessão para renovar.');
   });

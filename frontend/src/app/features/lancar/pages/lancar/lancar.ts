@@ -43,6 +43,7 @@ import { Avisos } from '../../../../shared/util/avisos';
 import { deDate, hojeIso, paraDate } from '../../../../shared/util/datas';
 import { brl } from '../../../../shared/util/formatacao';
 import { valorDe } from '../../../../shared/util/recurso';
+import { ContaDialogo } from '../../../contas/components/conta-dialogo/conta-dialogo';
 
 type TipoDoFormulario = TipoLancamento | 'TRANSFERENCIA';
 
@@ -80,6 +81,7 @@ const TIPOS: { label: string; value: TipoDoFormulario }[] = [
     ToggleSwitch,
     EstadoErro,
     Icone,
+    ContaDialogo,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './lancar.html',
@@ -113,6 +115,7 @@ export class Lancar {
   protected readonly maisDetalhes = signal(false);
   protected readonly salvando = signal(false);
   protected readonly tentouSalvar = signal(false);
+  protected readonly cadastrandoConta = signal(false);
 
   protected readonly base = rxResource({
     params: () => ({ id: this.id() }),
@@ -201,6 +204,16 @@ export class Lancar {
 
   protected tentarDeNovo(): void {
     this.base.reload();
+  }
+
+  protected contaCriada(conta: Conta): void {
+    this.base.update((dados) => dados && { ...dados, contas: [...dados.contas, conta] });
+    if (this.ehTransferencia() && this.contaId()) {
+      this.contaDestinoId.set(conta.id);
+    } else {
+      this.escolherConta(conta.id);
+    }
+    this.cadastrandoConta.set(false);
   }
 
   protected salvar(fazerOutro: boolean): void {

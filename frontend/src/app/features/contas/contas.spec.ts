@@ -141,6 +141,20 @@ describe('Contas', () => {
       return fixture.componentInstance;
     }
 
+    it('seleciona o saldo ao focar ou clicar para permitir substituir o valor', async () => {
+      await abrir('criar');
+      const saldo = fixture.nativeElement.querySelector('#conta-saldo') as HTMLInputElement;
+
+      saldo.dispatchEvent(new FocusEvent('focus'));
+      expect(saldo.selectionStart).toBe(0);
+      expect(saldo.selectionEnd).toBe(saldo.value.length);
+
+      saldo.setSelectionRange(3, 3);
+      saldo.click();
+      expect(saldo.selectionStart).toBe(0);
+      expect(saldo.selectionEnd).toBe(saldo.value.length);
+    });
+
     it('cria cartão exigindo os dias da fatura', async () => {
       const tela = await abrir('criar');
       const salvo = vi.fn();

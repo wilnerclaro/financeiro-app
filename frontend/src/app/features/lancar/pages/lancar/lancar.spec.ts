@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { Router, provideRouter } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import {
@@ -12,6 +13,7 @@ import {
   provedoresDeTeste,
 } from '../../../../../testing/dados-de-teste';
 import { Lancar } from './lancar';
+import { ContaDialogo } from '../../../contas/components/conta-dialogo/conta-dialogo';
 
 describe('Lancar', () => {
   let fixture: ComponentFixture<Lancar>;
@@ -77,6 +79,37 @@ describe('Lancar', () => {
 
     expect(texto()).toContain('Informe um valor maior que zero.');
     expect(texto()).toContain('Escolha uma categoria.');
+  });
+
+  it('cadastra a primeira conta sem perder o lançamento preenchido', async () => {
+    criar();
+    http.expectOne('/api/contas?ativa=true&size=200&sort=nome').flush(pagina([]));
+    http.expectOne('/api/categorias?ativa=true&size=500&sort=nome').flush(pagina(CATEGORIAS));
+    http.expectOne('/api/dashboard-financeiro/inicio').flush(inicio());
+    await fixture.whenStable();
+    tela()['valor'].set(1500);
+    tela()['categoriaId'].set('cat-mercado');
+    tela()['descricao'].set('Compra planejada');
+
+    botao('Cadastre uma conta primeiro').click();
+    await fixture.whenStable();
+    const dialogo = fixture.debugElement.query(By.directive(ContaDialogo))
+      .componentInstance as ContaDialogo;
+    expect(dialogo.modo()).toBe('criar');
+    dialogo['nome'].set('Minha conta');
+    dialogo['salvar']();
+    const pedido = http.expectOne('/api/contas');
+    expect(pedido.request.method).toBe('POST');
+    pedido.flush({ ...CONTAS[0], nome: 'Minha conta' });
+    await fixture.whenStable();
+
+    expect(dialogo.modo()).toBeNull();
+    expect(tela()['contaId']()).toBe(CONTAS[0].id);
+    expect(tela()['opcoesDeConta']()).toContainEqual({ label: 'Minha conta', value: CONTAS[0].id });
+    expect(tela()['valor']()).toBe(1500);
+    expect(tela()['categoriaId']()).toBe('cat-mercado');
+    expect(tela()['descricao']()).toBe('Compra planejada');
+    expect(router.navigateByUrl).not.toHaveBeenCalled();
   });
 
   it('lança uma despesa paga em três toques e volta para a lista', async () => {

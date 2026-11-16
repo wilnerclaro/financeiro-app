@@ -33,22 +33,34 @@ class AutenticacaoIntegracaoTest extends IntegracaoTest {
   }
 
   @Test
-  @DisplayName("e-mail repetido é rejeitado sem diferenciar maiúsculas")
+  @DisplayName("e-mail repetido devolve 409 sem diferenciar maiúsculas")
   void emailRepetido() throws Exception {
     String email = UUID.randomUUID() + "@teste.local";
     cadastrar(email);
 
     publico("/api/auth/cadastro", corpoCadastro(email.toUpperCase(), SENHA_PADRAO))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.message").value("Já existe um usuário cadastrado com esse e-mail."));
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.message").value("Já existe uma conta com este e-mail."));
   }
 
   @Test
-  @DisplayName("cadastro valida e-mail e tamanho da senha")
+  @DisplayName("cadastro valida e-mail, tamanho da senha e letra mais número")
   void cadastroInvalido() throws Exception {
     publico("/api/auth/cadastro", corpoCadastro("nao-e-email", "curta"))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.fieldErrors.length()").value(2));
+        .andExpect(jsonPath("$.fieldErrors.length()").value(3));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"somenteletras", "1234567890"})
+  @DisplayName("senha sem letra ou sem número é recusada no campo senha")
+  void senhaSemLetraOuNumero(String senha) throws Exception {
+    publico("/api/auth/cadastro", corpoCadastro(UUID.randomUUID() + "@teste.local", senha))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.fieldErrors[0].field").value("senha"))
+        .andExpect(
+            jsonPath("$.fieldErrors[0].message")
+                .value("A senha deve ter ao menos uma letra e um número."));
   }
 
   @Test

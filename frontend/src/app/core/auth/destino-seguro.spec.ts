@@ -5,10 +5,16 @@ describe('destinoSeguro', () => {
     expect(destinoSeguro('/orcamento/ano')).toBe('/orcamento/ano');
   });
 
-  it.each([undefined, null, '', 'https://site.com', '//site.com', 'contas', '/login?voltar=/'])(
-    'volta para o início quando o destino é %s',
-    (url) => {
-      expect(destinoSeguro(url)).toBe('/');
-    },
-  );
+  it.each([
+    undefined,
+    null,
+    '',
+    'https://site.com',
+    '//site.com',
+    'contas',
+    '/login?voltar=/',
+    '/criar-conta',
+  ])('volta para o início quando o destino é %s', (url) => {
+    expect(destinoSeguro(url)).toBe('/');
+  });
 });

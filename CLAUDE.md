@@ -21,7 +21,8 @@ o glossário e as regras de cálculo derivados dela estão na skill
 
 ## Estado atual
 
-Implementados: `autenticacao` (JWT), `usuario`, `categoria` (com receita
+Implementados: `autenticacao` (JWT, criar conta e Entrar com Google; identidades
+externas em `usuario_identidades`), `usuario`, `categoria` (com receita
 ativa/passiva e categorias padrão da planilha no cadastro), `conta` (saldo
 guardado na conta com `@Version`; cartão de crédito com fechamento e
 vencimento), `lancamentofinanceiro` (ATRASADO calculado na leitura, fatura do
@@ -29,8 +30,9 @@ cartão), `transferencia`, `orcamento` (Previsto x Realizado e resumo anual),
 `meta` (metas e sonhos) e `dashboardfinanceiro` (resumo mensal e tela Início
 com o Independenciômetro).
 
-No front: login com JWT, casca do app e tema. As telas do protótipo
-(`docs/frontend/prototipo-primeng22.md`) ainda não foram ligadas à API.
+No front: Entrar e Criar conta (com Google), casca do app, tema e as telas do
+protótipo (`docs/frontend/prototipo-primeng22.md`) ligadas à API: Início,
+Lançar, Lançamentos, Orçamento, Contas e Categorias.
 
 Não implementados: todo o lado de investimentos (carteira, trade, opções,
 custo de operações).

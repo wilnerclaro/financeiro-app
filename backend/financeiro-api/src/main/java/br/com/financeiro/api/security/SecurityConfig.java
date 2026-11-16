@@ -26,13 +26,15 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 @EnableWebSecurity
-@EnableConfigurationProperties(JwtPropriedades.class)
+@EnableConfigurationProperties({JwtPropriedades.class, GooglePropriedades.class})
 public class SecurityConfig implements WebMvcConfigurer {
 
   private static final String[] ROTAS_PUBLICAS = {
     "/api/auth/cadastro",
     "/api/auth/login",
     "/api/auth/refresh",
+    "/api/auth/google",
+    "/api/auth/configuracao",
     "/actuator/health",
     "/actuator/info",
     "/v3/api-docs/**",

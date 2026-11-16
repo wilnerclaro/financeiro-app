@@ -1,0 +1,47 @@
+<div class="malha"></div>
+<div class="grade"></div>
+<div class="visual-conteudo">
+  <p class="eyebrow">Controle financeiro da família</p>
+  <h2>Saiba para onde vai<br />cada real do mês.</h2>
+  <p class="apoio">
+    Lance em segundos, acompanhe o orçamento e veja sua independência financeira crescer.
+  </p>
+
+  <div class="cena">
+    <div class="cartao c-sobra">
+      <p class="r">Sobra de novembro</p>
+      <p class="v">R$ 3.507,20</p>
+      <p class="d">↗ 36% do que entrou · meta 30%</p>
+      <div class="barras">
+        @for (barra of barras; track $index) {
+          <span [style.height.%]="barra.altura" [class.baixa]="barra.baixa"></span>
+        }
+      </div>
+      <div class="meses">
+        @for (mes of meses; track mes) {
+          <span>{{ mes }}</span>
+        }
+      </div>
+    </div>
+    <div class="cartao c-ind">
+      <svg viewBox="0 0 64 64" width="64" height="64">
+        <circle cx="32" cy="32" r="26" class="trilho" />
+        <circle cx="32" cy="32" r="26" class="arco" stroke-dasharray="34.8 163.4" />
+      </svg>
+      <div>
+        <p class="r">Independenciômetro</p>
+        <p class="v2">21,3%</p>
+        <p class="d">+1,2 ponto no mês</p>
+      </div>
+    </div>
+    <div class="cartao c-lanc">
+      <span class="ok-ic"><app-icone [icone]="check" [tamanho]="14" [traco]="2.5" /></span>
+      <div>
+        <p class="t">Mercado lançado</p>
+        <p class="r">Alimentação · Nubank · agora</p>
+      </div>
+      <p class="valor-d">− R$ 86,40</p>
+    </div>
+  </div>
+</div>
+<p class="nota">Ilustração com dados de exemplo</p>

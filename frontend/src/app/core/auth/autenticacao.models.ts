@@ -16,3 +16,13 @@ export interface TokenResponse {
   expiraEm: number;
   usuario: UsuarioResponse;
 }
+
+export interface CadastroRequest {
+  nome: string;
+  email: string;
+  senha: string;
+}
+
+export interface ConfiguracaoDeAcesso {
+  googleClientId: string | null;
+}

@@ -8,12 +8,19 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import br.com.financeiro.api.TestcontainersConfiguration;
+import br.com.financeiro.api.common.exception.NaoAutenticadoException;
+import br.com.financeiro.api.security.GooglePropriedades;
+import br.com.financeiro.api.security.IdentidadeGoogle;
+import br.com.financeiro.api.security.VerificadorTokenGoogle;
 import com.jayway.jsonpath.JsonPath;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -27,13 +34,21 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-@SpringBootTest(properties = IntegracaoTest.SEGREDO_JWT_DE_TESTE)
+@SpringBootTest(properties = {IntegracaoTest.SEGREDO_JWT_DE_TESTE, IntegracaoTest.GOOGLE_DE_TESTE})
 @AutoConfigureMockMvc
-@Import({TestcontainersConfiguration.class, IntegracaoTest.RelogioFixo.class})
+@Import({
+  TestcontainersConfiguration.class,
+  IntegracaoTest.RelogioFixo.class,
+  IntegracaoTest.GoogleSimulado.class
+})
 abstract class IntegracaoTest {
 
   static final String SEGREDO_JWT_DE_TESTE =
       "app.jwt.segredo=segredo-apenas-para-testes-com-mais-de-32-bytes";
+
+  static final String GOOGLE_DE_TESTE = "app.google.client-id=client-id-de-teste";
+
+  static final Map<String, IdentidadeGoogle> TOKENS_GOOGLE = new ConcurrentHashMap<>();
 
   static final LocalDate HOJE = LocalDate.of(2026, 6, 15);
 
@@ -56,6 +71,22 @@ abstract class IntegracaoTest {
     Clock relogioFixo() {
       ZoneId fuso = ZoneId.of("America/Sao_Paulo");
       return Clock.fixed(HOJE.atStartOfDay(fuso).plusHours(12).toInstant(), fuso);
+    }
+  }
+
+  @TestConfiguration(proxyBeanMethods = false)
+  static class GoogleSimulado {
+
+    @Bean
+    @Primary
+    VerificadorTokenGoogle verificadorGoogleSimulado(Clock clock) {
+      return new VerificadorTokenGoogle(new GooglePropriedades(null, null), clock) {
+        @Override
+        public IdentidadeGoogle verificar(String idToken) {
+          return Optional.ofNullable(TOKENS_GOOGLE.get(idToken))
+              .orElseThrow(() -> new NaoAutenticadoException("Token do Google recusado."));
+        }
+      };
     }
   }
 

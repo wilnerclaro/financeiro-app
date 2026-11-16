@@ -5,8 +5,18 @@ export const routes: Routes = [
   {
     path: 'login',
     canActivate: [visitanteGuard],
-    loadComponent: () => import('./features/autenticacao/pages/login/login').then((m) => m.Login),
+    loadComponent: () =>
+      import('./features/autenticacao/pages/acesso/acesso').then((m) => m.Acesso),
+    data: { modo: 'entrar' },
     title: 'Entrar · financeiro',
+  },
+  {
+    path: 'criar-conta',
+    canActivate: [visitanteGuard],
+    loadComponent: () =>
+      import('./features/autenticacao/pages/acesso/acesso').then((m) => m.Acesso),
+    data: { modo: 'criar' },
+    title: 'Criar conta · financeiro',
   },
   {
     path: '',
