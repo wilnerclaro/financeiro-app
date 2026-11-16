@@ -6,6 +6,20 @@ Base: `develop` / `feature/dashboard-resumo-mensal`.
 Ordem sugerida de ataque: **1 → 2 → 3 → 4**. Os demais são dívida a resolver
 quando o módulo correspondente for tocado.
 
+## Situação em 16/11/2026
+
+| Item | Situação |
+|---|---|
+| 1. API aberta | Resolvido. Toda rota fora de `/api/auth` exige `Authorization: Bearer`; o usuário vem só do token; cada módulo tem teste de isolamento entre usuários. Entrar com Google valida o ID token nas chaves do Google. |
+| 2. Zero testes | Resolvido. Testes de integração com Testcontainers, ArchUnit e JaCoCo rodam no `mvn verify`; no front, Vitest com 80% de cobertura mínima e Playwright. |
+| 3. `orcamentos_mensais` sem código | Resolvido. Módulo `orcamento` com Previsto x Realizado e resumo anual. |
+| 4. Saldo sem controle de concorrência | Resolvido. `@Version` na conta e trava `SELECT ... FOR UPDATE` em `ContaService.creditar/debitar`, com teste de gravações simultâneas. |
+| 5. `ATRASADO` nunca acontece | Resolvido. O banco guarda só `PENDENTE`, `PAGO` e `CANCELADO`; o atraso é derivado na leitura pelo `Clock`. |
+| 6. Receita ativa/passiva | Resolvido. Categoria de receita tem fonte ativa ou passiva, e o Independenciômetro usa a passiva. |
+| 7. Qualidade de código | Em parte. `Boolean` padronizado com `Boolean.TRUE.equals`, `buscarUsuario` removido dos services, erro 500 logado com stack trace, Spotless normalizando os finais de linha. Continuam abertos: `LancamentoFinanceiroService` grande (cerca de 17 KB) e modelo anêmico. |
+
+O texto abaixo é o levantamento original, mantido como registro.
+
 ---
 
 ## 1. CRÍTICO — A API está aberta

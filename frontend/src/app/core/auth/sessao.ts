@@ -2,7 +2,12 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, finalize, firstValueFrom, map, shareReplay, tap, throwError } from 'rxjs';
 import { AutenticacaoApi } from './autenticacao-api';
-import { LoginRequest, TokenResponse, UsuarioResponse } from './autenticacao.models';
+import {
+  CadastroRequest,
+  LoginRequest,
+  TokenResponse,
+  UsuarioResponse,
+} from './autenticacao.models';
 
 const CHAVE_REFRESH = 'financeiro.refreshToken';
 
@@ -20,10 +25,15 @@ export class Sessao {
   readonly autenticado = computed(() => this.token() !== null);
 
   entrar(credenciais: LoginRequest): Observable<UsuarioResponse> {
-    return this.api.login(credenciais).pipe(
-      tap((resposta) => this.iniciar(resposta)),
-      map((resposta) => resposta.usuario),
-    );
+    return this.abrir(this.api.login(credenciais));
+  }
+
+  cadastrar(dados: CadastroRequest): Observable<UsuarioResponse> {
+    return this.abrir(this.api.cadastrar(dados));
+  }
+
+  entrarComGoogle(idToken: string): Observable<UsuarioResponse> {
+    return this.abrir(this.api.entrarComGoogle(idToken));
   }
 
   renovar(): Observable<string> {
@@ -59,6 +69,13 @@ export class Sessao {
   expirar(urlDeVolta: string): void {
     this.limpar();
     void this.router.navigate(['/login'], { queryParams: { voltar: urlDeVolta } });
+  }
+
+  private abrir(resposta: Observable<TokenResponse>): Observable<UsuarioResponse> {
+    return resposta.pipe(
+      tap((tokens) => this.iniciar(tokens)),
+      map((tokens) => tokens.usuario),
+    );
   }
 
   private iniciar(resposta: TokenResponse): void {

@@ -73,6 +73,12 @@ public class GlobalExceptionHandler {
     return responder(HttpStatus.BAD_REQUEST, exception.getMessage(), request);
   }
 
+  @ExceptionHandler(ConflitoException.class)
+  public ResponseEntity<ApiErrorResponse> tratarConflito(
+      ConflitoException exception, HttpServletRequest request) {
+    return responder(HttpStatus.CONFLICT, exception.getMessage(), request);
+  }
+
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ApiErrorResponse> tratarErroDeValidacao(
       MethodArgumentNotValidException exception, HttpServletRequest request) {

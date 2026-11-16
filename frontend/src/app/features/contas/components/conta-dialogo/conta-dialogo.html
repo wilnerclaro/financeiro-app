@@ -83,6 +83,8 @@
           mode="currency"
           currency="BRL"
           locale="pt-BR"
+          (onFocus)="selecionarSaldo($event)"
+          (click)="selecionarSaldo($event)"
           [ngModel]="saldoInicial()"
           (ngModelChange)="saldoInicial.set($event)"
           [invalid]="tentouSalvar() && !!erros().saldo"

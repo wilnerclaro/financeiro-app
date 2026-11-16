@@ -115,6 +115,12 @@ export class ContaDialogo {
     });
   }
 
+  protected selecionarSaldo(evento: Event): void {
+    if (evento.target instanceof HTMLInputElement) {
+      evento.target.select();
+    }
+  }
+
   private pedido(): Observable<Conta> {
     const conta = this.conta();
     const dados = {

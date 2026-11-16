@@ -2,6 +2,8 @@ package br.com.financeiro.api.autenticacao.controller;
 
 import br.com.financeiro.api.autenticacao.docs.AutenticacaoApiDoc;
 import br.com.financeiro.api.autenticacao.dto.CadastroRequest;
+import br.com.financeiro.api.autenticacao.dto.ConfiguracaoAutenticacaoResponse;
+import br.com.financeiro.api.autenticacao.dto.EntrarComGoogleRequest;
 import br.com.financeiro.api.autenticacao.dto.LoginRequest;
 import br.com.financeiro.api.autenticacao.dto.RefreshTokenRequest;
 import br.com.financeiro.api.autenticacao.dto.TokenResponse;
@@ -34,6 +36,17 @@ public class AutenticacaoController implements AutenticacaoApiDoc {
   @PostMapping("/login")
   public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
     return ResponseEntity.ok(autenticacaoService.login(request));
+  }
+
+  @PostMapping("/google")
+  public ResponseEntity<TokenResponse> entrarComGoogle(
+      @Valid @RequestBody EntrarComGoogleRequest request) {
+    return ResponseEntity.ok(autenticacaoService.entrarComGoogle(request));
+  }
+
+  @GetMapping("/configuracao")
+  public ResponseEntity<ConfiguracaoAutenticacaoResponse> configuracao() {
+    return ResponseEntity.ok(autenticacaoService.buscarConfiguracao());
   }
 
   @PostMapping("/refresh")
