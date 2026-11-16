@@ -1,0 +1,120 @@
+<p-dialog
+  [header]="'Fatura · ' + (cartao()?.nome ?? '')"
+  [visible]="!!cartao()"
+  (visibleChange)="$event ? null : fechar.emit()"
+  [modal]="true"
+  [draggable]="false"
+  [style]="{ width: 'min(560px, 94vw)' }"
+>
+  <div class="corpo">
+    <div class="topo">
+      <span class="aux">Vencimento em</span>
+      <app-seletor-mes [(mes)]="mes" />
+    </div>
+
+    @if (fatura.error()) {
+      <app-estado-erro
+        titulo="Não foi possível carregar a fatura."
+        mensagem="Verifique a conexão e tente de novo."
+        (tentar)="fatura.reload()"
+      />
+    } @else if (fatura.isLoading()) {
+      <p-skeleton height="8rem" />
+    } @else if (fatura.value(); as f) {
+      <div class="resumo superficie">
+        <div>
+          <p class="rotulo">Total</p>
+          <p class="num total">{{ brl(f.total) }}</p>
+        </div>
+        <div>
+          <p class="rotulo">Fecha em</p>
+          <p class="num">{{ dataCompleta(f.dataFechamento) }}</p>
+        </div>
+        <div>
+          <p class="rotulo">Vence em</p>
+          <p class="num">{{ dataCompleta(f.dataVencimento) }}</p>
+        </div>
+        <span class="selo" [class]="quitada() ? 'ok' : f.fechada ? 'amb' : ''">{{
+          quitada() ? 'Paga' : f.fechada ? 'Fechada' : 'Aberta'
+        }}</span>
+      </div>
+
+      <ul class="lista superficie compras">
+        @for (l of f.lancamentos; track l.id) {
+          <li>
+            <div class="txt">
+              <p class="medio">{{ l.descricao }}</p>
+              <p class="aux">
+                {{ dataCurta(l.dataCompra ?? l.dataCompetencia) }} · {{ l.nomeCategoria }}
+              </p>
+            </div>
+            <span class="num forte" [class]="l.tipo === 'RECEITA' ? 'rec' : 'des'">{{
+              brlComSinal(l.valor, l.tipo)
+            }}</span>
+          </li>
+        } @empty {
+          <li class="aux">Nenhuma compra nesta fatura.</li>
+        }
+      </ul>
+
+      @if (pendentes().length) {
+        @if (confirmando()) {
+          <div class="pagamento superficie">
+            <div class="campo">
+              <label for="fatura-conta" class="rotulo-campo">Pagar com</label>
+              <p-select
+                inputId="fatura-conta"
+                [options]="opcoesDePagamento()"
+                [ngModel]="contaPagamentoId()"
+                (ngModelChange)="contaPagamentoId.set($event)"
+                placeholder="Escolha a conta"
+                emptyMessage="Cadastre uma conta que não seja cartão"
+                appendTo="body"
+                fluid
+              />
+            </div>
+            <div class="campo">
+              <label for="fatura-data" class="rotulo-campo">Data do pagamento</label>
+              <p-datepicker
+                inputId="fatura-data"
+                [ngModel]="dataPagamento()"
+                (ngModelChange)="dataPagamento.set($event ?? dataPagamento())"
+                [maxDate]="hoje"
+                [showOnFocus]="false"
+                [showIcon]="true"
+                iconDisplay="input"
+                dateFormat="dd/mm/yy"
+                appendTo="body"
+                fluid
+              />
+            </div>
+            <p class="aux">
+              {{ pendentes().length }}
+              {{
+                pendentes().length === 1
+                  ? 'compra pendente fica paga'
+                  : 'compras pendentes ficam pagas'
+              }}
+              e o valor sai da conta escolhida.
+            </p>
+          </div>
+        }
+      }
+    }
+  </div>
+  <ng-template #footer>
+    <p-button label="Fechar" severity="secondary" [outlined]="true" (onClick)="fechar.emit()" />
+    @if (pendentes().length) {
+      @if (confirmando()) {
+        <p-button
+          label="Confirmar pagamento"
+          [disabled]="!contaPagamentoId()"
+          [loading]="pagando()"
+          (onClick)="pagar()"
+        />
+      } @else {
+        <p-button label="Pagar fatura" (onClick)="iniciarPagamento()" />
+      }
+    }
+  </ng-template>
+</p-dialog>

@@ -1,0 +1,60 @@
+<header class="topo">
+  <a routerLink="/" class="marca" aria-label="financeiro, ir para o início">
+    <span class="logo"><app-icone [icone]="icones.ChartLine" /></span>
+    financeiro
+  </a>
+  <nav class="menu" aria-label="Principal">
+    @for (item of menu; track item.rota) {
+      <a
+        [routerLink]="item.rota"
+        routerLinkActive="ativo"
+        [routerLinkActiveOptions]="{ exact: item.rota === '/' }"
+      >
+        <app-icone [icone]="item.icone" />{{ item.rotulo }}
+      </a>
+    }
+  </nav>
+  <div class="acoes">
+    <p-button size="small" routerLink="/lancar" class="so-largo-topo">
+      <app-icone [icone]="icones.Plus" />
+      <span>Novo lançamento</span>
+      <kbd aria-hidden="true">N</kbd>
+    </p-button>
+    <p-button
+      [text]="true"
+      severity="secondary"
+      size="small"
+      [pTooltip]="tema.escuro() ? 'Tema claro' : 'Tema escuro'"
+      [ariaLabel]="tema.escuro() ? 'Usar tema claro' : 'Usar tema escuro'"
+      (onClick)="tema.alternar()"
+    >
+      <app-icone [icone]="tema.escuro() ? icones.Sun : icones.Moon" />
+    </p-button>
+    <span class="usuario">{{ nomeDoUsuario() }}</span>
+    <p-button [outlined]="true" severity="secondary" size="small" (onClick)="sair()">
+      <app-icone [icone]="icones.LogOut" />
+      <span>Sair</span>
+    </p-button>
+  </div>
+</header>
+<main class="conteudo">
+  <router-outlet />
+</main>
+<nav class="barra-inferior" aria-label="Atalhos do celular">
+  @for (item of menuDoCelular; track item.rota) {
+    @if (item.rota === '/lancar') {
+      <a routerLink="/lancar" class="lancar" aria-label="Novo lançamento">
+        <app-icone [icone]="icones.Plus" [tamanho]="22" />
+      </a>
+    } @else {
+      <a
+        [routerLink]="item.rota"
+        routerLinkActive="ativo"
+        [routerLinkActiveOptions]="{ exact: item.rota === '/' }"
+      >
+        <app-icone [icone]="item.icone" [tamanho]="20" />
+        <span>{{ item.rotulo }}</span>
+      </a>
+    }
+  }
+</nav>

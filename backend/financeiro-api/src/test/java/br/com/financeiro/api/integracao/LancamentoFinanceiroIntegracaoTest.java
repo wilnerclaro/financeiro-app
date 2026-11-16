@@ -111,6 +111,23 @@ class LancamentoFinanceiroIntegracaoTest extends IntegracaoTest {
   }
 
   @Test
+  @DisplayName("editar o valor de lançamento pago na mesma conta estorna o antigo e debita o novo")
+  void editarValorNaMesmaConta() throws Exception {
+    UUID id =
+        idDe(
+            criarLancamento(usuario, contaId, despesaId, "DESPESA", "100.00", null, HOJE)
+                .andExpect(status().isCreated()));
+
+    atualizar(
+            usuario,
+            URL + "/" + id,
+            corpoLancamento(contaId, despesaId, "DESPESA", "150.00", null, HOJE))
+        .andExpect(status().isOk());
+
+    assertThat(saldoAtual(contaId, usuario)).isEqualByComparingTo("850.00");
+  }
+
+  @Test
   @DisplayName("cancelar lançamento pago estorna o saldo e trava edição e pagamento")
   void cancelarLancamentoPago() throws Exception {
     UUID id =

@@ -28,4 +28,4 @@ Thumbs.db
 node_modules/
 dist/
 .angular/
-coverage/
+coverage/*:Zone.Identifier

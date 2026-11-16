@@ -2,6 +2,7 @@ package br.com.financeiro.api.lancamentofinanceiro.repository;
 
 import br.com.financeiro.api.lancamentofinanceiro.entity.LancamentoFinanceiro;
 import br.com.financeiro.api.lancamentofinanceiro.enums.TipoLancamentoFinanceiro;
+import jakarta.persistence.LockModeType;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -13,6 +14,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -34,6 +36,17 @@ public interface LancamentoFinanceiroRepository
   Optional<LancamentoFinanceiro> buscarPorIdEUsuarioId(
       @Param("id") UUID id, @Param("usuarioId") UUID usuarioId);
 
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query(
+      """
+            SELECT l
+            FROM LancamentoFinanceiro l
+            WHERE l.id = :id
+              AND l.usuario.id = :usuarioId
+            """)
+  Optional<LancamentoFinanceiro> travarPorIdEUsuarioId(
+      @Param("id") UUID id, @Param("usuarioId") UUID usuarioId);
+
   @EntityGraph(attributePaths = {"conta", "categoria"})
   @Query(
       """
@@ -46,6 +59,23 @@ public interface LancamentoFinanceiroRepository
             ORDER BY l.dataCompra, l.criadoEm
             """)
   List<LancamentoFinanceiro> buscarDaFatura(
+      @Param("usuarioId") UUID usuarioId,
+      @Param("contaId") UUID contaId,
+      @Param("inicio") LocalDate inicio,
+      @Param("fim") LocalDate fim);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query(
+      """
+            SELECT l
+            FROM LancamentoFinanceiro l
+            WHERE l.usuario.id = :usuarioId
+              AND l.conta.id = :contaId
+              AND l.status = br.com.financeiro.api.lancamentofinanceiro.enums.StatusLancamentoFinanceiro.PENDENTE
+              AND l.dataCompetencia BETWEEN :inicio AND :fim
+            ORDER BY l.id
+            """)
+  List<LancamentoFinanceiro> travarPendentesDaFatura(
       @Param("usuarioId") UUID usuarioId,
       @Param("contaId") UUID contaId,
       @Param("inicio") LocalDate inicio,

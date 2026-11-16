@@ -1,0 +1,272 @@
+<div class="pagina surgir formulario">
+  <header class="cab">
+    <div>
+      <h1 class="titulo-pagina">{{ editando() ? 'Editar lançamento' : 'Novo lançamento' }}</h1>
+      <p class="aux">
+        {{ editando() ? 'Ajuste o que mudou e salve.' : 'Valor, categoria e pronto.' }}
+      </p>
+    </div>
+  </header>
+
+  @if (base.error()) {
+    <app-estado-erro
+      titulo="Não foi possível abrir o formulário."
+      mensagem="Verifique a conexão e tente de novo."
+      (tentar)="tentarDeNovo()"
+    />
+  } @else if (base.isLoading()) {
+    <div class="superficie corpo">
+      <p-skeleton height="2.5rem" />
+      <p-skeleton height="3.5rem" />
+      <p-skeleton height="6rem" />
+      <p-skeleton height="2.5rem" />
+    </div>
+  } @else {
+    <form class="superficie corpo" (ngSubmit)="salvar(false)" novalidate>
+      @if (!editando()) {
+        <p-selectbutton
+          [options]="tipos"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="tipo()"
+          (ngModelChange)="escolherTipo($event)"
+          name="tipo"
+          [allowEmpty]="false"
+          ariaLabelledBy="rotulo-tipo"
+          class="tipos"
+        />
+        <span id="rotulo-tipo" class="sr-only">Tipo do lançamento</span>
+      }
+
+      <div class="campo">
+        <label for="valor" class="rotulo-campo">Valor</label>
+        <p-inputnumber
+          inputId="valor"
+          name="valor"
+          mode="currency"
+          currency="BRL"
+          locale="pt-BR"
+          [min]="0"
+          [ngModel]="valor()"
+          (ngModelChange)="valor.set($event)"
+          [autofocus]="!editando()"
+          inputStyleClass="valor"
+          [invalid]="tentouSalvar() && !!erros().valor"
+          placeholder="R$ 0,00"
+          fluid
+        />
+        @if (tentouSalvar() && erros().valor) {
+          <small class="erro">{{ erros().valor }}</small>
+        }
+      </div>
+
+      @if (ehTransferencia()) {
+        <div class="duas">
+          <div class="campo">
+            <label for="origem" class="rotulo-campo">De</label>
+            <p-select
+              inputId="origem"
+              name="origem"
+              [options]="opcoesDeConta()"
+              [ngModel]="contaId()"
+              (ngModelChange)="escolherConta($event)"
+              placeholder="Conta de origem"
+              [invalid]="tentouSalvar() && !!erros().conta"
+              fluid
+            />
+          </div>
+          <div class="campo">
+            <label for="destino" class="rotulo-campo">Para</label>
+            <p-select
+              inputId="destino"
+              name="destino"
+              [options]="opcoesDeDestino()"
+              [ngModel]="contaDestinoId()"
+              (ngModelChange)="contaDestinoId.set($event)"
+              placeholder="Conta de destino"
+              [invalid]="tentouSalvar() && !!erros().destino"
+              fluid
+            />
+            @if (tentouSalvar() && erros().destino) {
+              <small class="erro">{{ erros().destino }}</small>
+            }
+          </div>
+        </div>
+      } @else {
+        <fieldset class="campo">
+          <legend class="rotulo-campo">Categoria</legend>
+          @if (sugestoes().length) {
+            <div class="chips">
+              @for (s of sugestoes(); track s.value) {
+                <button
+                  type="button"
+                  class="chip"
+                  [class.escolhido]="categoriaId() === s.value"
+                  [attr.aria-pressed]="categoriaId() === s.value"
+                  (click)="categoriaId.set(s.value)"
+                >
+                  {{ s.label }}
+                </button>
+              }
+            </div>
+          }
+          <p-select
+            inputId="categoria"
+            name="categoria"
+            [options]="opcoesDeCategoria()"
+            [ngModel]="categoriaId()"
+            (ngModelChange)="categoriaId.set($event)"
+            [filter]="true"
+            filterBy="label"
+            [placeholder]="sugestoes().length ? 'Outra categoria' : 'Escolha a categoria'"
+            ariaLabel="Categoria"
+            [invalid]="tentouSalvar() && !!erros().categoria"
+            emptyMessage="Nenhuma categoria"
+            emptyFilterMessage="Nenhuma categoria com esse nome"
+            fluid
+          />
+          @if (tentouSalvar() && erros().categoria) {
+            <small class="erro">{{ erros().categoria }}</small>
+          }
+        </fieldset>
+
+        <div class="campo">
+          <label for="conta" class="rotulo-campo">Conta</label>
+          <p-select
+            inputId="conta"
+            name="conta"
+            [options]="opcoesDeConta()"
+            [ngModel]="contaId()"
+            (ngModelChange)="escolherConta($event)"
+            placeholder="Escolha a conta"
+            [invalid]="tentouSalvar() && !!erros().conta"
+            emptyMessage="Cadastre uma conta primeiro"
+            fluid
+          />
+          @if (tentouSalvar() && erros().conta) {
+            <small class="erro">{{ erros().conta }}</small>
+          }
+        </div>
+      }
+
+      <div class="duas">
+        <div class="campo">
+          <label for="data" class="rotulo-campo">{{
+            ehCartao() ? 'Data da compra' : 'Data'
+          }}</label>
+          <p-datepicker
+            inputId="data"
+            name="data"
+            [ngModel]="data()"
+            (ngModelChange)="data.set($event ?? data())"
+            dateFormat="dd/mm/yy"
+            [showIcon]="true"
+            iconDisplay="input"
+            fluid
+          />
+        </div>
+        @if (!ehTransferencia()) {
+          <div class="campo pago">
+            @if (ehCartao()) {
+              <p class="aux dica">
+                <app-icone [icone]="icones.CreditCard" />
+                Entra na fatura do cartão e fica pendente até você pagar a fatura.
+              </p>
+            } @else {
+              <label for="pago" class="rotulo-campo">{{ rotuloDoPago() }}</label>
+              <p-toggleswitch
+                inputId="pago"
+                name="pago"
+                [ngModel]="ficaPago()"
+                (ngModelChange)="pago.set($event)"
+                [disabled]="!podeMarcarPago()"
+              />
+              @if (dataFutura()) {
+                <small class="aux">Data futura fica pendente.</small>
+              }
+            }
+          </div>
+        }
+      </div>
+
+      <button
+        type="button"
+        class="mais link"
+        [attr.aria-expanded]="maisDetalhes()"
+        aria-controls="detalhes"
+        (click)="maisDetalhes.set(!maisDetalhes())"
+      >
+        {{ maisDetalhes() ? 'Menos detalhes' : 'Mais detalhes' }}
+        <app-icone
+          [icone]="maisDetalhes() ? icones.ChevronUp : icones.ChevronDown"
+          [tamanho]="14"
+        />
+      </button>
+
+      @if (maisDetalhes()) {
+        <div id="detalhes" class="detalhes">
+          <div class="campo">
+            <label for="descricao" class="rotulo-campo">Descrição</label>
+            <input
+              pInputText
+              id="descricao"
+              name="descricao"
+              maxlength="180"
+              [ngModel]="descricao()"
+              (ngModelChange)="descricao.set($event)"
+              [placeholder]="nomeDaCategoria() || 'Usa o nome da categoria'"
+            />
+          </div>
+          @if (!ehTransferencia() && !ficaPago() && !ehCartao()) {
+            <div class="campo">
+              <label for="vencimento" class="rotulo-campo">Vencimento</label>
+              <p-datepicker
+                inputId="vencimento"
+                name="vencimento"
+                [ngModel]="vencimento()"
+                (ngModelChange)="vencimento.set($event)"
+                dateFormat="dd/mm/yy"
+                placeholder="Mesmo dia da data"
+                [showClear]="true"
+                fluid
+              />
+            </div>
+          }
+          @if (!ehTransferencia()) {
+            <div class="campo">
+              <label for="observacao" class="rotulo-campo">Observação</label>
+              <textarea
+                pTextarea
+                id="observacao"
+                name="observacao"
+                rows="2"
+                [ngModel]="observacao()"
+                (ngModelChange)="observacao.set($event)"
+              ></textarea>
+            </div>
+          }
+        </div>
+      }
+
+      <div class="botoes">
+        @if (editando()) {
+          <p-button
+            label="Cancelar"
+            severity="secondary"
+            [outlined]="true"
+            routerLink="/lancamentos"
+          />
+        } @else {
+          <p-button
+            label="Lançar e fazer outro"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="salvando()"
+            (onClick)="salvar(true)"
+          />
+        }
+        <p-button type="submit" [label]="editando() ? 'Salvar' : 'Lançar'" [loading]="salvando()" />
+      </div>
+    </form>
+  }
+</div>

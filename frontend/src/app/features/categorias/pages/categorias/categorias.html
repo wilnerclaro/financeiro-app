@@ -1,0 +1,168 @@
+<div class="pagina surgir">
+  <header class="cab">
+    <div>
+      <h1 class="titulo-pagina">Categorias</h1>
+      <p class="aux">Grupos e subcategorias que organizam seus lançamentos.</p>
+    </div>
+    <div class="acoes">
+      @if (temInativas()) {
+        <span class="alternar aux">
+          <p-toggleswitch
+            inputId="mostrar-inativas"
+            [ngModel]="mostrarInativas()"
+            (ngModelChange)="mostrarInativas.set($event)"
+          />
+          <label for="mostrar-inativas">Mostrar inativas</label>
+        </span>
+      }
+      <p-button size="small" (onClick)="novaCategoria()">
+        <app-icone [icone]="icones.Plus" />
+        <span>Nova categoria</span>
+      </p-button>
+    </div>
+  </header>
+
+  <p-selectbutton
+    [options]="tipos"
+    optionLabel="label"
+    optionValue="value"
+    [ngModel]="tipo()"
+    (ngModelChange)="escolherTipo($event)"
+    [allowEmpty]="false"
+    size="small"
+    ariaLabelledBy="rotulo-tipo-categoria"
+  />
+  <span id="rotulo-tipo-categoria" class="sr-only">Tipo de categoria</span>
+
+  @if (categorias.error()) {
+    <app-estado-erro
+      titulo="Não foi possível carregar as categorias."
+      mensagem="Verifique a conexão e tente de novo."
+      (tentar)="categorias.reload()"
+    />
+  } @else if (categorias.isLoading()) {
+    <p-skeleton height="16rem" />
+  } @else {
+    <ul class="grupos superficie">
+      @for (g of grupos(); track g.categoria.id) {
+        <li [class.inativa]="!g.categoria.ativa">
+          <div class="linha">
+            <div>
+              <p class="medio">{{ g.categoria.nome }}</p>
+              <p class="aux">
+                @if (g.categoria.fonteReceita) {
+                  Renda {{ g.categoria.fonteReceita === 'PASSIVA' ? 'passiva' : 'ativa' }} ·
+                }
+                {{ g.subcategorias.length }}
+                {{ g.subcategorias.length === 1 ? 'subcategoria' : 'subcategorias' }}
+                @if (!g.categoria.ativa) {
+                  · inativa
+                }
+              </p>
+            </div>
+            <p-button
+              [text]="true"
+              severity="secondary"
+              size="small"
+              [ariaLabel]="'Ações de ' + g.categoria.nome"
+              (onClick)="abrirAcoes(menu, $event, g.categoria, true)"
+            >
+              <app-icone [icone]="icones.EllipsisVertical" />
+            </p-button>
+          </div>
+          @if (g.subcategorias.length) {
+            <ul class="chips">
+              @for (s of g.subcategorias; track s.id) {
+                <li>
+                  <button
+                    type="button"
+                    class="chip"
+                    [class.inativa]="!s.ativa"
+                    [attr.aria-label]="'Ações de ' + s.nome"
+                    (click)="abrirAcoes(menu, $event, s, false)"
+                  >
+                    {{ s.nome }}{{ s.ativa ? '' : ' (inativa)' }}
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </li>
+      } @empty {
+        <li>
+          <app-estado-vazio
+            [icone]="icones.Tags"
+            titulo="Nenhuma categoria deste tipo"
+            texto="Crie um grupo e, dentro dele, as subcategorias que você usa no dia a dia."
+          />
+        </li>
+      }
+    </ul>
+  }
+</div>
+
+<p-menu #menu [model]="acoes()" [popup]="true" appendTo="body" />
+<p-confirmdialog [style]="{ width: 'min(420px, 92vw)' }" />
+
+<p-dialog
+  [header]="tituloDoDialogo()"
+  [visible]="dialogoAberto()"
+  (visibleChange)="$event ? null : fecharDialogo()"
+  [modal]="true"
+  [draggable]="false"
+  [style]="{ width: 'min(440px, 92vw)' }"
+>
+  <form class="dialogo" (ngSubmit)="salvar()" novalidate>
+    <div class="campo">
+      <label for="categoria-nome" class="rotulo-campo">Nome</label>
+      <input
+        pInputText
+        id="categoria-nome"
+        name="nome"
+        maxlength="100"
+        [ngModel]="nome()"
+        (ngModelChange)="nome.set($event)"
+        [invalid]="tentouSalvar() && !!erroDoNome()"
+      />
+      @if (tentouSalvar() && erroDoNome()) {
+        <small class="erro">{{ erroDoNome() }}</small>
+      }
+    </div>
+    <div class="campo">
+      <label for="categoria-pai" class="rotulo-campo">Dentro de</label>
+      <p-select
+        inputId="categoria-pai"
+        name="pai"
+        [options]="opcoesDePai()"
+        [ngModel]="paiId()"
+        (ngModelChange)="paiId.set($event)"
+        [showClear]="true"
+        placeholder="Nenhum (vira um grupo)"
+        appendTo="body"
+        fluid
+      />
+    </div>
+    @if (mostraFonte()) {
+      <div class="campo">
+        <label for="categoria-fonte" class="rotulo-campo">Fonte da receita</label>
+        <p-select
+          inputId="categoria-fonte"
+          name="fonte"
+          [options]="fontes"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="fonte()"
+          (ngModelChange)="fonte.set($event)"
+          appendTo="body"
+          fluid
+        />
+        <small class="aux">A renda passiva entra no índice de independência financeira.</small>
+      </div>
+    }
+    <button type="submit" hidden></button>
+  </form>
+  <ng-template #footer>
+    <p-button label="Voltar" severity="secondary" [outlined]="true" (onClick)="fecharDialogo()" />
+    <p-button label="Salvar" [loading]="salvando()" (onClick)="salvar()" />
+  </ng-template>
+</p-dialog>

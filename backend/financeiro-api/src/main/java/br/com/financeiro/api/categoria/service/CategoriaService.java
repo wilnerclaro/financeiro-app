@@ -31,7 +31,7 @@ public class CategoriaService {
 
   @Transactional
   public CategoriaResponse criar(UUID usuarioId, CriarCategoriaRequest request) {
-    Usuario usuario = buscarUsuario(usuarioId);
+    Usuario usuario = usuarioService.buscar(usuarioId);
     String nomeNormalizado = NormalizadorTexto.normalizarNome(request.nome());
 
     Categoria categoriaPai =
@@ -53,7 +53,7 @@ public class CategoriaService {
   @Transactional(readOnly = true)
   public Page<CategoriaResponse> listar(
       UUID usuarioId, TipoCategoria tipo, Boolean ativa, Pageable pageable) {
-    buscarUsuario(usuarioId);
+    usuarioService.buscar(usuarioId);
 
     return categoriaRepository
         .buscarPorFiltros(usuarioId, tipo, ativa, pageable)
@@ -167,10 +167,6 @@ public class CategoriaService {
     }
 
     return fonteInformada == null ? FonteReceita.ATIVA : fonteInformada;
-  }
-
-  private Usuario buscarUsuario(UUID usuarioId) {
-    return usuarioService.buscar(usuarioId);
   }
 
   private void validarMudancaDeTipo(Categoria categoria, boolean possuiSubcategorias) {

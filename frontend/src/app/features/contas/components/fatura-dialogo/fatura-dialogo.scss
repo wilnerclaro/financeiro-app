@@ -1,0 +1,52 @@
+p {
+  margin: 0;
+}
+
+.corpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e4);
+}
+
+.topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e2);
+}
+
+.resumo {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  align-items: start;
+  gap: var(--e3);
+  padding: var(--e3) var(--e4);
+}
+
+.resumo .selo {
+  justify-self: start;
+}
+
+.total {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.compras {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.pagamento {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e3);
+  padding: var(--e4);
+}
+
+@media (max-width: 600px) {
+  .resumo {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

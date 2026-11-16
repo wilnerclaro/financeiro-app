@@ -16,7 +16,8 @@ o glossário e as regras de cálculo derivados dela estão na skill
 - Testes de integração com Testcontainers (exigem Docker rodando)
 - JPA/Hibernate, `open-in-view: false`
 - Lombok + MapStruct, springdoc-openapi
-- Frontend: Angular (ainda não iniciado)
+- Frontend em `frontend/`: Angular 22 + PrimeNG 22 (tema Aura), Vitest e
+  Playwright. Regras no agente `angular-frontend`; design no agente `ux-ui`
 
 ## Estado atual
 
@@ -27,6 +28,9 @@ vencimento), `lancamentofinanceiro` (ATRASADO calculado na leitura, fatura do
 cartão), `transferencia`, `orcamento` (Previsto x Realizado e resumo anual),
 `meta` (metas e sonhos) e `dashboardfinanceiro` (resumo mensal e tela Início
 com o Independenciômetro).
+
+No front: login com JWT, casca do app e tema. As telas do protótipo
+(`docs/frontend/prototipo-primeng22.md`) ainda não foram ligadas à API.
 
 Não implementados: todo o lado de investimentos (carteira, trade, opções,
 custo de operações).
@@ -132,6 +136,9 @@ mvn verify
 
 Isso roda Spotless (formatação), Checkstyle (estilo), JaCoCo (cobertura) e
 ArchUnit (regras de arquitetura como teste). Ver `docs/QUALIDADE-BUILD.md`.
+
+No front, dentro de `frontend/`: `npm run verify` (Prettier, ESLint, Vitest com
+cobertura mínima de 80% e build de produção) e `npm run e2e` (Playwright).
 
 **Regra inegociável**: a exclusão do JaCoCo só tem o que não tem lógica (DTO,
 entidade, enum, docs, config, mappers gerados). **Nenhum service ou controller

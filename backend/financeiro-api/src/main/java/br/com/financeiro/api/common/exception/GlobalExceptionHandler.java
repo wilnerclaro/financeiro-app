@@ -7,6 +7,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -126,6 +127,16 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ApiErrorResponse> tratarConflitoDeConcorrencia(
       ObjectOptimisticLockingFailureException exception, HttpServletRequest request) {
     log.info("Conflito de concorrência em {}: {}", request.getRequestURI(), exception.getMessage());
+    return responder(
+        HttpStatus.CONFLICT,
+        "Os dados foram alterados por outra operação ao mesmo tempo. Tente novamente.",
+        request);
+  }
+
+  @ExceptionHandler(PessimisticLockingFailureException.class)
+  public ResponseEntity<ApiErrorResponse> tratarFalhaDeTrava(
+      PessimisticLockingFailureException exception, HttpServletRequest request) {
+    log.warn("Falha de trava em {}: {}", request.getRequestURI(), exception.getMessage());
     return responder(
         HttpStatus.CONFLICT,
         "Os dados foram alterados por outra operação ao mesmo tempo. Tente novamente.",

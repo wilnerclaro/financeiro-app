@@ -12,6 +12,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -136,6 +137,18 @@ class GlobalExceptionHandlerTest {
   }
 
   @Test
+  @DisplayName("falha de trava no banco (deadlock ou espera esgotada) vira 409")
+  void falhaDeTrava() throws Exception {
+    mockMvc
+        .perform(get("/teste/trava"))
+        .andExpect(status().isConflict())
+        .andExpect(
+            jsonPath("$.message")
+                .value(
+                    "Os dados foram alterados por outra operação ao mesmo tempo. Tente novamente."));
+  }
+
+  @Test
   @DisplayName("violação de integridade do banco vira 409")
   void violacaoDeIntegridade() throws Exception {
     mockMvc
@@ -182,6 +195,11 @@ class GlobalExceptionHandlerTest {
     @GetMapping("/teste/concorrencia")
     void concorrencia() {
       throw new ObjectOptimisticLockingFailureException("Conta", UUID.randomUUID());
+    }
+
+    @GetMapping("/teste/trava")
+    void trava() {
+      throw new CannotAcquireLockException("deadlock detected");
     }
 
     @GetMapping("/teste/rota")
