@@ -34,7 +34,7 @@ jobs:
 
       - name: Publicar relatório de cobertura
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: jacoco
           path: backend/financeiro-api/target/site/jacoco
@@ -70,7 +70,7 @@ jobs:
 
       - name: Publicar relatório do Playwright
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: frontend/playwright-report
