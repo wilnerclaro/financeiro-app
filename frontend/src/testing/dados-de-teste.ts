@@ -7,7 +7,10 @@ import {
   Inicio,
   Lancamento,
   PrevistoRealizado,
+  LinhaDoAno,
+  MesDaLinha,
   ResumoAnual,
+  TotaisDoMes,
   Transferencia,
   Valores,
 } from '../app/shared/api/api.models';
@@ -357,43 +360,91 @@ export function previstoRealizado(): PrevistoRealizado {
   };
 }
 
+function mesesDoAno(previsto: number, realizados: number[]): MesDaLinha[] {
+  return Array.from({ length: 12 }, (_, i) => {
+    const realizado = realizados[i] ?? 0;
+    return {
+      mes: i + 1,
+      previsto,
+      realizado,
+      percentualRealizado: previsto ? Math.round((realizado / previsto) * 10000) / 10000 : 0,
+    };
+  });
+}
+
+function linhaDoAno(dados: Partial<LinhaDoAno> & Pick<LinhaDoAno, 'categoriaId' | 'nome'>) {
+  const meses = dados.meses ?? mesesDoAno(0, []);
+  return {
+    categoriaPaiId: null,
+    tipo: 'DESPESA' as const,
+    fonteReceita: null,
+    totalPrevisto: meses.reduce((t, m) => t + m.previsto, 0),
+    totalRealizado: meses.reduce((t, m) => t + m.realizado, 0),
+    mediaPrevisto: 0,
+    mediaRealizado: 0,
+    ...dados,
+    meses,
+  };
+}
+
+function totaisDoMes(mes: number, receita: number, despesa: number, passiva = 0): TotaisDoMes {
+  return {
+    mes,
+    receitas: valores(8000, receita),
+    receitasFonteAtiva: valores(8000, receita - passiva),
+    receitasFontePassiva: valores(0, passiva),
+    despesas: valores(1000, despesa),
+    guardou: receita - despesa,
+    percentualGuardado: receita ? Math.round(((receita - despesa) / receita) * 10000) / 10000 : 0,
+    evolucaoDespesas: mes === 1 || !despesa ? null : mes === 3 ? 0.1 : mes === 4 ? 0 : -0.05,
+    independenciometro: despesa ? Math.round((passiva / despesa) * 10000) / 10000 : 0,
+  };
+}
+
+const MERCADO_NO_ANO = mesesDoAno(1000, [900, 950, 1100, 1000, 0, 0, 0, 0, 0, 0, 980]);
+
 export const RESUMO_ANUAL: ResumoAnual = {
   ano: 2026,
   linhas: [
-    {
-      categoriaId: 'cat-alimentacao',
-      nome: 'Alimentação',
-      categoriaPaiId: null,
-      tipo: 'DESPESA',
-      totalPrevisto: 12000,
-      totalRealizado: 11000,
-      mediaPrevisto: 1000,
-      mediaRealizado: 916.67,
-      meses: [],
-    },
-    {
+    linhaDoAno({ categoriaId: 'cat-alimentacao', nome: 'Alimentação' }),
+    linhaDoAno({
       categoriaId: 'cat-mercado',
       nome: 'Supermercado',
       categoriaPaiId: 'cat-alimentacao',
-      tipo: 'DESPESA',
-      totalPrevisto: 12000,
-      totalRealizado: 11000,
-      mediaPrevisto: 1000,
-      mediaRealizado: 916.67,
-      meses: [],
-    },
-    {
-      categoriaId: 'cat-pet',
-      nome: 'Pet',
-      categoriaPaiId: null,
-      tipo: 'DESPESA',
-      totalPrevisto: 0,
-      totalRealizado: 0,
-      mediaPrevisto: 0,
-      mediaRealizado: 0,
-      meses: [],
-    },
+      meses: MERCADO_NO_ANO,
+    }),
+    linhaDoAno({ categoriaId: 'cat-padaria', nome: 'Padaria', categoriaPaiId: 'cat-alimentacao' }),
+    linhaDoAno({ categoriaId: 'cat-pet', nome: 'Pet' }),
   ],
+  grupos: [
+    linhaDoAno({
+      categoriaId: 'cat-renda',
+      nome: 'Receitas ativas',
+      tipo: 'RECEITA',
+      fonteReceita: 'ATIVA',
+      meses: mesesDoAno(8000, [8000, 8000, 8000, 0, 0, 0, 0, 0, 0, 0, 8200]),
+    }),
+    linhaDoAno({ categoriaId: 'cat-alimentacao', nome: 'Alimentação', meses: MERCADO_NO_ANO }),
+    linhaDoAno({ categoriaId: 'cat-lazer', nome: 'Lazer', meses: mesesDoAno(0, [0, 80]) }),
+  ],
+  indicadores: {
+    entrou: 32200,
+    saiu: 4930,
+    guardou: 27270,
+    percentualGuardado: 0.8469,
+    mediaEntrou: 8050,
+    mediaSaiu: 986,
+    previstoReceitas: 96000,
+    previstoDespesas: 12000,
+  },
+  meses: Array.from({ length: 12 }, (_, i) =>
+    totaisDoMes(
+      i + 1,
+      [8000, 8000, 8000, 0][i] ?? (i === 10 ? 8200 : 0),
+      [900, 1030, 1100, 1000][i] ?? (i === 10 ? 980 : 0),
+      i === 10 ? 245 : i === 0 ? 90 : 0,
+    ),
+  ),
 };
 
 export const TRANSFERENCIA: Transferencia = {

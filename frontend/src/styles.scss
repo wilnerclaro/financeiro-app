@@ -320,6 +320,9 @@ button:focus-visible {
 .barra.des .p-progressbar-value {
   background: var(--des);
 }
+.barra.rec .p-progressbar-value {
+  background: var(--rec);
+}
 
 .tabela .p-datatable-thead > tr > th {
   background: transparent;

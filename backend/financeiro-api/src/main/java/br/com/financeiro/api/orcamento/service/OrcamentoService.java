@@ -33,6 +33,7 @@ import java.time.Month;
 import java.time.Year;
 import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -52,6 +53,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class OrcamentoService {
+
+  private static final String RECEITAS = "receitas";
+  private static final String ATIVAS = "ativas";
+  private static final String PASSIVAS = "passivas";
+  private static final String DESPESAS = "despesas";
 
   private final OrcamentoMensalRepository orcamentoMensalRepository;
   private final CategoriaService categoriaService;
@@ -167,36 +173,151 @@ public class OrcamentoService {
                 Year.of(ano).atMonth(Month.DECEMBER).atEndOfMonth()));
 
     List<ResumoAnualOrcamentoResponse.Linha> linhas = new ArrayList<>();
+    Map<UUID, BigDecimal[]> previstosDosGrupos = new HashMap<>();
+    Map<UUID, BigDecimal[]> realizadosDosGrupos = new HashMap<>();
+    Map<String, BigDecimal[]> previstosDosTotais = new HashMap<>();
+    Map<String, BigDecimal[]> realizadosDosTotais = new HashMap<>();
     for (Categoria categoria : ordenarComoArvore(categorias)) {
+      Categoria grupo =
+          categoria.getCategoriaPai() == null ? categoria : categoria.getCategoriaPai();
       BigDecimal[] previsto =
           previstos.getOrDefault(categoria.getId(), new BigDecimal[MESES_NO_ANO]);
       BigDecimal[] realizado =
           realizados.getOrDefault(categoria.getId(), new BigDecimal[MESES_NO_ANO]);
-      boolean temValor =
-          previstos.containsKey(categoria.getId()) || realizados.containsKey(categoria.getId());
-      if (!Boolean.TRUE.equals(categoria.getAtiva()) && !temValor) {
-        continue;
+      acumular(previstosDosGrupos, grupo.getId(), previsto);
+      acumular(realizadosDosGrupos, grupo.getId(), realizado);
+      for (String total : totaisDa(grupo)) {
+        acumular(previstosDosTotais, total, previsto);
+        acumular(realizadosDosTotais, total, realizado);
       }
 
-      List<ResumoAnualOrcamentoResponse.Mes> meses = new ArrayList<>();
-      for (int i = 0; i < MESES_NO_ANO; i++) {
-        meses.add(
-            new ResumoAnualOrcamentoResponse.Mes(
-                i + 1, Dinheiro.arredondar(previsto[i]), Dinheiro.arredondar(realizado[i])));
+      boolean temValor =
+          previstos.containsKey(categoria.getId()) || realizados.containsKey(categoria.getId());
+      if (Boolean.TRUE.equals(categoria.getAtiva()) || temValor) {
+        linhas.add(linhaDoAno(categoria, previsto, realizado));
       }
-      linhas.add(
-          new ResumoAnualOrcamentoResponse.Linha(
-              categoria.getId(),
-              categoria.getNome(),
-              categoria.getCategoriaPai() == null ? null : categoria.getCategoriaPai().getId(),
-              categoria.getTipo(),
-              somar(previsto),
-              somar(realizado),
-              mediaDosMesesComValor(previsto),
-              mediaDosMesesComValor(realizado),
-              meses));
     }
-    return new ResumoAnualOrcamentoResponse(ano, linhas);
+
+    List<ResumoAnualOrcamentoResponse.Linha> grupos = new ArrayList<>();
+    for (Categoria categoria : ordenarComoArvore(categorias)) {
+      BigDecimal[] previsto = previstosDosGrupos.get(categoria.getId());
+      BigDecimal[] realizado = realizadosDosGrupos.get(categoria.getId());
+      if (categoria.getCategoriaPai() == null
+          && (temAlgumValor(previsto) || temAlgumValor(realizado))) {
+        grupos.add(linhaDoAno(categoria, previsto, realizado));
+      }
+    }
+
+    return new ResumoAnualOrcamentoResponse(
+        ano,
+        linhas,
+        grupos,
+        indicadoresDoAno(previstosDosTotais, realizadosDosTotais),
+        totaisDosMeses(previstosDosTotais, realizadosDosTotais));
+  }
+
+  private static ResumoAnualOrcamentoResponse.Linha linhaDoAno(
+      Categoria categoria, BigDecimal[] previsto, BigDecimal[] realizado) {
+    List<ResumoAnualOrcamentoResponse.Mes> meses = new ArrayList<>();
+    for (int i = 0; i < MESES_NO_ANO; i++) {
+      BigDecimal previstoDoMes = Dinheiro.arredondar(previsto[i]);
+      BigDecimal realizadoDoMes = Dinheiro.arredondar(realizado[i]);
+      meses.add(
+          new ResumoAnualOrcamentoResponse.Mes(
+              i + 1, previstoDoMes, realizadoDoMes, Fracao.de(realizadoDoMes, previstoDoMes)));
+    }
+    return new ResumoAnualOrcamentoResponse.Linha(
+        categoria.getId(),
+        categoria.getNome(),
+        categoria.getCategoriaPai() == null ? null : categoria.getCategoriaPai().getId(),
+        categoria.getTipo(),
+        categoria.getFonteReceita(),
+        somar(previsto),
+        somar(realizado),
+        mediaDosMesesComValor(previsto),
+        mediaDosMesesComValor(realizado),
+        meses);
+  }
+
+  private static List<String> totaisDa(Categoria grupo) {
+    if (grupo.getTipo() == TipoCategoria.DESPESA) {
+      return List.of(DESPESAS);
+    }
+    return List.of(RECEITAS, grupo.getFonteReceita() == FonteReceita.PASSIVA ? PASSIVAS : ATIVAS);
+  }
+
+  private static ResumoAnualOrcamentoResponse.Indicadores indicadoresDoAno(
+      Map<String, BigDecimal[]> previstos, Map<String, BigDecimal[]> realizados) {
+    BigDecimal[] receitas = realizados.getOrDefault(RECEITAS, vazio());
+    BigDecimal[] despesas = realizados.getOrDefault(DESPESAS, vazio());
+    BigDecimal entrou = somar(receitas);
+    BigDecimal saiu = somar(despesas);
+    BigDecimal guardou = entrou.subtract(saiu);
+    return new ResumoAnualOrcamentoResponse.Indicadores(
+        entrou,
+        saiu,
+        guardou,
+        Fracao.de(guardou, entrou),
+        mediaDosMesesComValor(receitas),
+        mediaDosMesesComValor(despesas),
+        somar(previstos.getOrDefault(RECEITAS, vazio())),
+        somar(previstos.getOrDefault(DESPESAS, vazio())));
+  }
+
+  private static List<ResumoAnualOrcamentoResponse.TotaisDoMes> totaisDosMeses(
+      Map<String, BigDecimal[]> previstos, Map<String, BigDecimal[]> realizados) {
+    List<ResumoAnualOrcamentoResponse.TotaisDoMes> meses = new ArrayList<>();
+    BigDecimal[] despesasRealizadas = realizados.getOrDefault(DESPESAS, vazio());
+    for (int i = 0; i < MESES_NO_ANO; i++) {
+      Valores receitas = valoresDoMes(previstos, realizados, RECEITAS, i);
+      Valores despesas = valoresDoMes(previstos, realizados, DESPESAS, i);
+      Valores passivas = valoresDoMes(previstos, realizados, PASSIVAS, i);
+      BigDecimal guardou = receitas.realizado().subtract(despesas.realizado());
+      BigDecimal evolucao =
+          i == 0 || despesasRealizadas[i] == null
+              ? null
+              : Fracao.evolucao(
+                  despesas.realizado(), Dinheiro.arredondar(despesasRealizadas[i - 1]));
+      meses.add(
+          new ResumoAnualOrcamentoResponse.TotaisDoMes(
+              i + 1,
+              receitas,
+              valoresDoMes(previstos, realizados, ATIVAS, i),
+              passivas,
+              despesas,
+              guardou,
+              Fracao.de(guardou, receitas.realizado()),
+              evolucao,
+              Fracao.de(passivas.realizado(), despesas.realizado())));
+    }
+    return meses;
+  }
+
+  private static Valores valoresDoMes(
+      Map<String, BigDecimal[]> previstos,
+      Map<String, BigDecimal[]> realizados,
+      String total,
+      int mes) {
+    return valores(
+        Dinheiro.arredondar(previstos.getOrDefault(total, vazio())[mes]),
+        Dinheiro.arredondar(realizados.getOrDefault(total, vazio())[mes]));
+  }
+
+  private static <K> void acumular(Map<K, BigDecimal[]> acumulado, K chave, BigDecimal[] meses) {
+    BigDecimal[] soma = acumulado.computeIfAbsent(chave, k -> vazio());
+    for (int i = 0; i < MESES_NO_ANO; i++) {
+      if (meses[i] != null) {
+        soma[i] = soma[i] == null ? meses[i] : soma[i].add(meses[i]);
+      }
+    }
+  }
+
+  private static boolean temAlgumValor(BigDecimal[] meses) {
+    return meses != null && Arrays.stream(meses).anyMatch(Objects::nonNull);
+  }
+
+  private static BigDecimal[] vazio() {
+    return new BigDecimal[MESES_NO_ANO];
   }
 
   private PrevistoRealizadoResponse montarRelatorio(
@@ -259,7 +380,7 @@ public class OrcamentoService {
         BigDecimal realizado = Dinheiro.arredondar(realizados.get(sub.getId()));
         previstoGrupo = previstoGrupo.add(previsto);
         realizadoGrupo = realizadoGrupo.add(realizado);
-        if (mostrar(sub, previsto, realizado)) {
+        if (temValor(previsto, realizado)) {
           subitens.add(
               new Item(
                   sub.getId(),
@@ -270,7 +391,7 @@ public class OrcamentoService {
         }
       }
 
-      if (!mostrar(grupo, previstoGrupo, realizadoGrupo)) {
+      if (!temValor(previstoGrupo, realizadoGrupo)) {
         continue;
       }
       totalPrevisto = totalPrevisto.add(previstoGrupo);
@@ -288,10 +409,8 @@ public class OrcamentoService {
     return new Bloco(valores(totalPrevisto, totalRealizado), grupos);
   }
 
-  private static boolean mostrar(Categoria categoria, BigDecimal previsto, BigDecimal realizado) {
-    return Boolean.TRUE.equals(categoria.getAtiva())
-        || previsto.signum() != 0
-        || realizado.signum() != 0;
+  private static boolean temValor(BigDecimal previsto, BigDecimal realizado) {
+    return previsto.signum() != 0 || realizado.signum() != 0;
   }
 
   private static Valores somarGruposDaFonte(Bloco receitas, FonteReceita fonte) {

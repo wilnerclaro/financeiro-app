@@ -235,6 +235,57 @@ const ORCAMENTO = {
   saldo: valores(7000, 7660),
 };
 
+const meses = (previsto: number, realizado: number) =>
+  Array.from({ length: 12 }, (_, i) => ({
+    mes: i + 1,
+    previsto,
+    realizado: i < 11 ? realizado : 0,
+    percentualRealizado: i < 11 ? realizado / previsto : 0,
+  }));
+
+const grupoDoAno = (categoriaId: string, nome: string, previsto: number, realizado: number) => ({
+  categoriaId,
+  nome,
+  categoriaPaiId: null,
+  tipo: categoriaId === 'renda' ? 'RECEITA' : 'DESPESA',
+  fonteReceita: categoriaId === 'renda' ? 'ATIVA' : null,
+  totalPrevisto: previsto * 12,
+  totalRealizado: realizado * 11,
+  mediaPrevisto: previsto,
+  mediaRealizado: realizado,
+  meses: meses(previsto, realizado),
+});
+
+const RESUMO_DO_ANO = {
+  ano: 2026,
+  linhas: [{ ...grupoDoAno('mercado', 'Supermercado', 1000, 940), categoriaPaiId: 'g1' }],
+  grupos: [
+    grupoDoAno('renda', 'Receitas ativas', 8000, 8000),
+    grupoDoAno('g1', 'Alimentação', 1000, 940),
+  ],
+  indicadores: {
+    entrou: 88000,
+    saiu: 10340,
+    guardou: 77660,
+    percentualGuardado: 0.8825,
+    mediaEntrou: 8000,
+    mediaSaiu: 940,
+    previstoReceitas: 96000,
+    previstoDespesas: 12000,
+  },
+  meses: Array.from({ length: 12 }, (_, i) => ({
+    mes: i + 1,
+    receitas: valores(8000, i < 11 ? 8000 : 0),
+    receitasFonteAtiva: valores(8000, i < 11 ? 8000 : 0),
+    receitasFontePassiva: valores(0, 0),
+    despesas: valores(1000, i < 11 ? 940 : 0),
+    guardou: i < 11 ? 7060 : 0,
+    percentualGuardado: i < 11 ? 0.8825 : 0,
+    evolucaoDespesas: i > 0 && i < 11 ? 0 : null,
+    independenciometro: 0,
+  })),
+};
+
 export interface ApiDoApp {
   lancamentosCriados: unknown[];
   faturasPagas: unknown[];
@@ -259,7 +310,7 @@ export async function simularApiDoApp(page: Page): Promise<ApiDoApp> {
   await page.route('**/api/categorias?**', (r) => json(r, pagina(CATEGORIAS)));
   await page.route('**/api/transferencias?**', (r) => json(r, pagina([])));
   await page.route('**/api/orcamentos/2026/11', (r) => json(r, ORCAMENTO));
-  await page.route('**/api/orcamentos/2026', (r) => json(r, { ano: 2026, linhas: [] }));
+  await page.route('**/api/orcamentos/2026', (r) => json(r, RESUMO_DO_ANO));
   await page.route('**/api/lancamentos-financeiros/faturas/pagar', async (r) => {
     registro.faturasPagas.push(r.request().postDataJSON());
     compraPaga = true;

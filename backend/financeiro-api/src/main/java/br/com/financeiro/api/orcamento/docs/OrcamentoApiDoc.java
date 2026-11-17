@@ -26,7 +26,8 @@ public interface OrcamentoApiDoc {
       description =
           "Receitas (com totais de fonte ativa e passiva) e despesas por grupo e subitem. O "
               + "realizado é a soma dos lançamentos pagos pela competência. Percentuais são "
-              + "fração (1.0 = 100%).")
+              + "fração (1.0 = 100%). Grupo e subitem sem previsto e sem realizado no mês "
+              + "ficam fora da lista.")
   @ApiResponse(responseCode = "200", description = "Relatório do mês")
   @ApiResponse(responseCode = "400", description = "Ano ou mês inválido")
   ResponseEntity<PrevistoRealizadoResponse> previstoRealizado(
@@ -81,8 +82,10 @@ public interface OrcamentoApiDoc {
   @Operation(
       summary = "Resumo do ano",
       description =
-          "Total e média do ano por categoria, previsto e realizado, com os 12 meses. A média "
-              + "conta só os meses com valor.")
+          "Total e média do ano por categoria e por grupo (soma das subcategorias), previsto e "
+              + "realizado, com os 12 meses. Traz também o que entrou, saiu e foi guardado no "
+              + "ano e, por mês, receitas (ativa e passiva), despesas, evolução dos gastos e "
+              + "Independenciômetro. A média conta só os meses com valor.")
   @ApiResponse(responseCode = "200", description = "Resumo do ano")
   ResponseEntity<ResumoAnualOrcamentoResponse> resumoAnual(
       @UsuarioLogado UUID usuarioId, @PathVariable int ano);
