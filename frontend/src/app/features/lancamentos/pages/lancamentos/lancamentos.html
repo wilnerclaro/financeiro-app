@@ -5,7 +5,12 @@
       <p class="aux">Receitas e despesas de {{ nomeDoMes() }}, por competência.</p>
     </div>
     <div class="acoes-cabecalho">
-      <p-button label="Importar extrato" routerLink="/importar" severity="secondary" [outlined]="true" />
+      <p-button
+        label="Importar extrato"
+        routerLink="/importar"
+        severity="secondary"
+        [outlined]="true"
+      />
       <app-seletor-mes [(mes)]="mes" />
     </div>
   </header>

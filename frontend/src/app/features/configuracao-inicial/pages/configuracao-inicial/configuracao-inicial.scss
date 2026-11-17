@@ -63,14 +63,8 @@
 .boas-vindas li:last-child {
   border-bottom: 0;
 }
-h2 {
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 600;
-  margin: 0;
-}
 .explicacao {
-  border-left: 2px solid var(--ok);
+  border-left: 2px solid var(--p-content-border-color);
   padding-left: var(--e4);
   margin-top: var(--e4);
 }

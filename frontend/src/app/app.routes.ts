@@ -25,7 +25,8 @@ export const routes: Routes = [
     children: [
       {
         path: 'importar',
-        loadComponent: () => import('./features/importar/pages/importar/importar').then((m) => m.Importar),
+        loadComponent: () =>
+          import('./features/importar/pages/importar/importar').then((m) => m.Importar),
         title: 'Importar extrato · financeiro',
       },
       {

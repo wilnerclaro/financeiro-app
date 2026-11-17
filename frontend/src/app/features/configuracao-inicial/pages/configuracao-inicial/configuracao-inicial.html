@@ -36,19 +36,19 @@
             </p>
             <ol class="superficie boas-vindas">
               <li>
-                <h2>Defina seu objetivo</h2>
+                <h2 class="titulo-secao">Defina seu objetivo</h2>
                 <p class="aux">A renda passiva mensal que você deseja alcançar.</p>
               </li>
               <li>
-                <h2>Planeje seu mês</h2>
+                <h2 class="titulo-secao">Planeje seu mês</h2>
                 <p class="aux">O que você prevê receber e gastar.</p>
               </li>
               <li>
-                <h2>Prepare suas contas</h2>
+                <h2 class="titulo-secao">Prepare suas contas</h2>
                 <p class="aux">Onde seu dinheiro está e o saldo de partida.</p>
               </li>
               <li>
-                <h2>Faça seu primeiro lançamento</h2>
+                <h2 class="titulo-secao">Faça seu primeiro lançamento</h2>
                 <p class="aux">Registre o que aconteceu, quando estiver pronto.</p>
               </li>
             </ol>
@@ -78,7 +78,7 @@
                 pode mudar esse objetivo depois.
               </p>
               <div class="explicacao">
-                <h2>Seu objetivo e o Independenciômetro</h2>
+                <h2 class="titulo-secao">Seu objetivo e o Independenciômetro</h2>
                 <p class="aux">
                   O objetivo é uma referência para o futuro. O Independenciômetro continua
                   acompanhando quanto das suas despesas reais é coberto por renda passiva.
@@ -96,7 +96,11 @@
             </div>
             <div class="superficie painel">
               @for (bloco of blocos(); track bloco.tipo) {
-                <h2 [class.rec]="bloco.tipo === 'RECEITA'" [class.des]="bloco.tipo === 'DESPESA'">
+                <h2
+                  class="titulo-secao"
+                  [class.rec]="bloco.tipo === 'RECEITA'"
+                  [class.des]="bloco.tipo === 'DESPESA'"
+                >
                   {{ bloco.titulo }}
                 </h2>
                 <div class="linha cabecalho aux">
@@ -130,7 +134,7 @@
                 }
               }
               <div class="resumo">
-                <h2>Sobra prevista</h2>
+                <h2 class="titulo-secao">Sobra prevista</h2>
                 <strong class="valor num" [class.ok]="sobra() >= 0" [class.des]="sobra() < 0">{{
                   brl(sobra())
                 }}</strong>
@@ -150,7 +154,7 @@
               @for (conta of contas(); track conta.id) {
                 <div class="conta">
                   <div>
-                    <h2>{{ conta.nome }}</h2>
+                    <h2 class="titulo-secao">{{ conta.nome }}</h2>
                     <p class="aux">
                       {{ rotuloDoTipo(conta.tipo) }} · saldo atual {{ brl(conta.saldoAtual) }}
                     </p>
@@ -193,7 +197,7 @@
               Seu planejamento está pronto. Agora você pode acompanhar o realizado.
             </p>
             <div class="superficie painel">
-              <h2>Seu primeiro lançamento</h2>
+              <h2 class="titulo-secao">Seu primeiro lançamento</h2>
               <p class="aux">
                 Use suas contas e categorias para registrar uma receita ou despesa. Compras no
                 cartão entram na fatura.
