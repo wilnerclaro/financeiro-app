@@ -1,5 +1,6 @@
 package br.com.financeiro.api.integracao;
 
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -34,7 +35,8 @@ class OrcamentoIntegracaoTest extends IntegracaoTest {
   }
 
   @Test
-  @DisplayName("grupo soma os subitens, com desvio, percentual, fontes e saldo")
+  @DisplayName(
+      "grupo soma os subitens, com desvio, percentual, fontes e saldo, sem categoria zerada")
   void previstoRealizado() throws Exception {
     definir(
             2026,
@@ -58,8 +60,11 @@ class OrcamentoIntegracaoTest extends IntegracaoTest {
         .andExpect(grupo("despesas", "Alimentação", "valores.realizado").value(1550.00))
         .andExpect(grupo("despesas", "Alimentação", "valores.desvio").value(50.00))
         .andExpect(grupo("despesas", "Alimentação", "valores.percentualRealizado").value(1.0333))
-        .andExpect(grupo("despesas", "Moradia", "valores.previsto").value(0.00))
-        .andExpect(grupo("despesas", "Moradia", "valores.percentualRealizado").value(0.0))
+        .andExpect(grupo("despesas", "Alimentação", "subitens.length()").value(2))
+        .andExpect(
+            grupo("despesas", "Alimentação", "subitens[*].nome")
+                .value(containsInAnyOrder("Supermercado", "Restaurante")))
+        .andExpect(jsonPath("$.despesas.grupos[?(@.nome == 'Moradia')]").isEmpty())
         .andExpect(jsonPath("$.receitasFonteAtiva.realizado").value(5000.00))
         .andExpect(jsonPath("$.receitasFontePassiva.previsto").value(200.00))
         .andExpect(jsonPath("$.receitasFontePassiva.realizado").value(100.00))
@@ -180,6 +185,59 @@ class OrcamentoIntegracaoTest extends IntegracaoTest {
         .andExpect(jsonPath(linha + "totalRealizado").value(900.00))
         .andExpect(jsonPath(linha + "mediaRealizado").value(900.00))
         .andExpect(jsonPath("$.linhas[?(@.nome == 'Padaria')].mediaPrevisto").value(0.0));
+  }
+
+  @Test
+  @DisplayName("resumo do ano soma grupos, totais do mês, evolução e Independenciômetro")
+  void resumoAnualComTotais() throws Exception {
+    definir(2026, 3, item(supermercado, "1000.00"), item(salarios, "5000.00"));
+    definir(2026, 4, item(supermercado, "1000.00"), item(restaurante, "500.00"));
+    pagar(supermercado, "DESPESA", "800.00", LocalDate.of(2026, 3, 10));
+    pagar(supermercado, "DESPESA", "900.00", LocalDate.of(2026, 4, 10));
+    pagar(restaurante, "DESPESA", "300.00", LocalDate.of(2026, 4, 12));
+    pagar(salarios, "RECEITA", "5000.00", LocalDate.of(2026, 3, 5));
+    pagar(salarios, "RECEITA", "5000.00", LocalDate.of(2026, 4, 5));
+    pagar(dividendos, "RECEITA", "240.00", LocalDate.of(2026, 4, 20));
+
+    String alimentacao = "$.grupos[?(@.nome == 'Alimentação')].";
+    consultar(URL + "/2026", usuario)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath(alimentacao + "totalPrevisto").value(2500.00))
+        .andExpect(jsonPath(alimentacao + "totalRealizado").value(2000.00))
+        .andExpect(jsonPath(alimentacao + "mediaRealizado").value(1000.00))
+        .andExpect(jsonPath(alimentacao + "meses[3].realizado").value(1200.00))
+        .andExpect(jsonPath(alimentacao + "meses[3].percentualRealizado").value(0.8))
+        .andExpect(jsonPath("$.grupos[?(@.nome == 'Moradia')]").isEmpty())
+        .andExpect(
+            jsonPath("$.linhas[?(@.nome == 'Supermercado')].meses[2].percentualRealizado")
+                .value(0.8))
+        .andExpect(jsonPath("$.indicadores.entrou").value(10240.00))
+        .andExpect(jsonPath("$.indicadores.saiu").value(2000.00))
+        .andExpect(jsonPath("$.indicadores.guardou").value(8240.00))
+        .andExpect(jsonPath("$.indicadores.percentualGuardado").value(0.8047))
+        .andExpect(jsonPath("$.indicadores.mediaEntrou").value(5120.00))
+        .andExpect(jsonPath("$.indicadores.mediaSaiu").value(1000.00))
+        .andExpect(jsonPath("$.indicadores.previstoReceitas").value(5000.00))
+        .andExpect(jsonPath("$.indicadores.previstoDespesas").value(2500.00))
+        .andExpect(jsonPath("$.meses.length()").value(12))
+        .andExpect(jsonPath("$.meses[2].evolucaoDespesas").value(0.0))
+        .andExpect(jsonPath("$.meses[3].despesas.previsto").value(1500.00))
+        .andExpect(jsonPath("$.meses[3].despesas.realizado").value(1200.00))
+        .andExpect(jsonPath("$.meses[3].receitas.realizado").value(5240.00))
+        .andExpect(jsonPath("$.meses[3].receitasFonteAtiva.realizado").value(5000.00))
+        .andExpect(jsonPath("$.meses[3].receitasFontePassiva.realizado").value(240.00))
+        .andExpect(jsonPath("$.meses[3].guardou").value(4040.00))
+        .andExpect(jsonPath("$.meses[3].percentualGuardado").value(0.771))
+        .andExpect(jsonPath("$.meses[3].evolucaoDespesas").value(0.5))
+        .andExpect(jsonPath("$.meses[3].independenciometro").value(0.2))
+        .andExpect(jsonPath("$.meses[0].evolucaoDespesas").isEmpty())
+        .andExpect(jsonPath("$.meses[4].evolucaoDespesas").isEmpty())
+        .andExpect(jsonPath("$.meses[4].independenciometro").value(0.0));
+
+    consultar(URL + "/2026", criarUsuario())
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.grupos").isEmpty())
+        .andExpect(jsonPath("$.indicadores.entrou").value(0.00));
   }
 
   private org.springframework.test.web.servlet.ResultActions definir(

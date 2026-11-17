@@ -1,13 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
-import { ChartPie, ChevronDown, ChevronRight, Copy } from 'lucide';
+import { ChartPie, CircleAlert, CircleCheck, Copy, IconNode, TriangleAlert } from 'lucide';
 import { ConfirmationService } from 'primeng/api';
 import { Button } from 'primeng/button';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { ProgressBar } from 'primeng/progressbar';
 import { Skeleton } from 'primeng/skeleton';
-import { GrupoDoOrcamento, Valores } from '../../../../shared/api/api.models';
+import { FonteReceita, ItemDoOrcamento, Valores } from '../../../../shared/api/api.models';
 import { OrcamentoApi } from '../../../../shared/api/orcamento-api';
 import { EstadoErro } from '../../../../shared/components/estado-erro/estado-erro';
 import { EstadoVazio } from '../../../../shared/components/estado-vazio/estado-vazio';
@@ -19,7 +19,32 @@ import { MesDoAno, competenciaIso, mesAtual, somarMeses } from '../../../../shar
 import { MESES_LONGOS, brl, percentual } from '../../../../shared/util/formatacao';
 import { nivelDoOrcamento, statusDoOrcamento } from '../../../../shared/util/orcamento';
 import { AbasOrcamento } from '../../components/abas-orcamento/abas-orcamento';
+import { LinhaDoOrcamento, LinhaOrcamento } from '../../components/linha-orcamento/linha-orcamento';
 import { valorDe } from '../../../../shared/util/recurso';
+
+interface CartaoDeReceita {
+  id: string;
+  nome: string;
+  fonte: string;
+  valores: Valores;
+  largura: number;
+  subitens: ItemDoOrcamento[];
+}
+
+interface Alerta {
+  id: string;
+  cor: 'des' | 'lar' | '';
+  icone: IconNode;
+  titulo: string;
+  detalhe: string;
+  acao: string;
+  rota: string;
+}
+
+const RAIO_DO_ANEL = 52;
+const VOLTA_DO_ANEL = 2 * Math.PI * RAIO_DO_ANEL;
+const FONTES: Record<FonteReceita, string> = { ATIVA: 'Ativa', PASSIVA: 'Passiva' };
+const PESO_DO_ALERTA = { des: 0, lar: 1, '': 2 };
 
 @Component({
   selector: 'app-orcamento-mes',
@@ -34,6 +59,7 @@ import { valorDe } from '../../../../shared/util/recurso';
     Icone,
     SeletorMes,
     AbasOrcamento,
+    LinhaOrcamento,
   ],
   providers: [ConfirmationService],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -46,11 +72,11 @@ export class OrcamentoMes {
   private readonly avisos = inject(Avisos);
   private readonly agora = inject(AGORA);
 
-  protected readonly icones = { ChartPie, ChevronDown, ChevronRight, Copy };
+  protected readonly icones = { ChartPie, CircleCheck, Copy };
   protected readonly brl = brl;
   protected readonly percentual = percentual;
-  protected readonly nivel = nivelDoOrcamento;
-  protected readonly statusDoOrcamento = statusDoOrcamento;
+  protected readonly voltaDoAnel = VOLTA_DO_ANEL;
+  protected readonly raioDoAnel = RAIO_DO_ANEL;
 
   protected readonly mes = signal<MesDoAno>(mesAtual(this.agora()));
   protected readonly abertos = signal<ReadonlySet<string>>(new Set());
@@ -73,11 +99,51 @@ export class OrcamentoMes {
     );
   });
 
+  protected readonly totalDeDespesas = computed(() => {
+    const total = valorDe(this.relatorio)?.despesas.total;
+    return total ? this.linha({ categoriaId: 'total', nome: 'Total de despesas' }, total) : null;
+  });
+
+  protected readonly anel = computed(() => {
+    const total = this.totalDeDespesas();
+    return VOLTA_DO_ANEL * (1 - (total?.largura ?? 0) / 100);
+  });
+
   protected readonly despesas = computed(() =>
-    this.comMovimento(valorDe(this.relatorio)?.despesas.grupos),
+    comMovimento(valorDe(this.relatorio)?.despesas.grupos).map((g) =>
+      this.linha(
+        g,
+        g.valores,
+        comMovimento(g.subitens).map((s) => this.linha(s, s.valores)),
+      ),
+    ),
   );
-  protected readonly receitas = computed(() =>
-    this.comMovimento(valorDe(this.relatorio)?.receitas.grupos),
+
+  protected readonly receitas = computed<CartaoDeReceita[]>(() =>
+    comMovimento(valorDe(this.relatorio)?.receitas.grupos).map((g) => ({
+      id: g.categoriaId,
+      nome: g.nome,
+      fonte: g.fonteReceita ? FONTES[g.fonteReceita] : '',
+      valores: g.valores,
+      largura: largura(g.valores),
+      subitens: comMovimento(g.subitens),
+    })),
+  );
+
+  protected readonly expansiveis = computed(() =>
+    this.despesas()
+      .filter((g) => g.subitens.length)
+      .map((g) => g.id),
+  );
+
+  protected readonly tudoAberto = computed(
+    () => this.expansiveis().length > 0 && this.expansiveis().every((id) => this.abertos().has(id)),
+  );
+
+  protected readonly atencao = computed<Alerta[]>(() =>
+    this.despesas()
+      .flatMap((g) => this.alertasDo(g))
+      .sort((a, b) => PESO_DO_ALERTA[a.cor] - PESO_DO_ALERTA[b.cor]),
   );
 
   protected alternar(id: string): void {
@@ -88,8 +154,8 @@ export class OrcamentoMes {
     this.abertos.set(abertos);
   }
 
-  protected largura(valores: Valores): number {
-    return Math.min(100, valores.percentualRealizado * 100);
+  protected alternarTodos(): void {
+    this.abertos.set(new Set(this.tudoAberto() ? [] : this.expansiveis()));
   }
 
   protected tentarDeNovo(): void {
@@ -131,7 +197,90 @@ export class OrcamentoMes {
       });
   }
 
-  private comMovimento(grupos: GrupoDoOrcamento[] | undefined): GrupoDoOrcamento[] {
-    return (grupos ?? []).filter((g) => g.valores.previsto !== 0 || g.valores.realizado !== 0);
+  private linha(
+    item: Pick<ItemDoOrcamento, 'categoriaId' | 'nome'>,
+    valores: Valores,
+    subitens: LinhaDoOrcamento[] = [],
+  ): LinhaDoOrcamento {
+    const previsto = valores.previsto > 0;
+    return {
+      id: item.categoriaId,
+      nome: item.nome,
+      valores,
+      nivel: previsto ? nivelDoOrcamento(valores.percentualRealizado) : null,
+      status: previsto ? statusDoOrcamento(valores.percentualRealizado) : 'Sem previsto',
+      largura: largura(valores),
+      subitens,
+    };
   }
+
+  private alertasDo(grupo: LinhaDoOrcamento): Alerta[] {
+    const { previsto, realizado, desvio, percentualRealizado } = grupo.valores;
+    const usado = `${percentual(percentualRealizado)} de ${brl(previsto)}`;
+    const passaram = grupo.subitens
+      .filter((s) => s.nivel === 'des')
+      .sort((a, b) => b.valores.desvio - a.valores.desvio);
+
+    if (grupo.nivel === null) {
+      return [
+        {
+          id: grupo.id,
+          cor: '',
+          icone: CircleAlert,
+          titulo: `${grupo.nome} não tem previsto`,
+          detalhe: `${brl(realizado)} gastos sem um valor planejado para o mês.`,
+          acao: 'Definir previsto',
+          rota: '/orcamento/previsto',
+        },
+      ];
+    }
+    if (grupo.nivel === 'des') {
+      const nomes = passaram.slice(0, 2).map((s) => s.nome);
+      const motivo = nomes.length
+        ? ` ${nomes.join(' e ')} ${nomes.length === 1 ? 'puxou' : 'puxaram'} a alta.`
+        : '';
+      return [
+        {
+          id: grupo.id,
+          cor: 'des',
+          icone: TriangleAlert,
+          titulo: `${grupo.nome} passou do previsto`,
+          detalhe: `${brl(desvio)} acima (${usado}).${motivo}`,
+          acao: 'Ver lançamentos',
+          rota: '/lancamentos',
+        },
+      ];
+    }
+    const alertas: Alerta[] = passaram.map((s) => ({
+      id: s.id,
+      cor: 'des',
+      icone: TriangleAlert,
+      titulo: `${s.nome} passou do previsto`,
+      detalhe: `${brl(s.valores.desvio)} acima (${percentual(s.valores.percentualRealizado)} de ${brl(s.valores.previsto)}), em ${grupo.nome}.`,
+      acao: 'Ver lançamentos',
+      rota: '/lancamentos',
+    }));
+    if (grupo.nivel === 'lar') {
+      alertas.push({
+        id: grupo.id,
+        cor: 'lar',
+        icone: TriangleAlert,
+        titulo: `${grupo.nome} está no limite`,
+        detalhe: desvio
+          ? `Restam ${brl(-desvio)} (${usado} usados).`
+          : `Usou todo o previsto de ${brl(previsto)}.`,
+        acao: 'Ver lançamentos',
+        rota: '/lancamentos',
+      });
+    }
+    return alertas;
+  }
+}
+
+function largura(valores: Valores): number {
+  return Math.min(100, Math.max(0, valores.percentualRealizado * 100));
+}
+
+function comMovimento<T extends ItemDoOrcamento>(itens: T[] | undefined): T[] {
+  return (itens ?? []).filter((i) => i.valores.previsto !== 0 || i.valores.realizado !== 0);
 }

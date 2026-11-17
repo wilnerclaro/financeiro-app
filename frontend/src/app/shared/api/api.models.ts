@@ -169,21 +169,55 @@ export interface PrevistoRealizado {
   saldo: Valores;
 }
 
+export interface MesDaLinha {
+  mes: number;
+  previsto: number;
+  realizado: number;
+  percentualRealizado: number;
+}
+
 export interface LinhaDoAno {
   categoriaId: string;
   nome: string;
   categoriaPaiId: string | null;
   tipo: TipoCategoria;
+  fonteReceita: FonteReceita | null;
   totalPrevisto: number;
   totalRealizado: number;
   mediaPrevisto: number;
   mediaRealizado: number;
-  meses: { mes: number; previsto: number; realizado: number }[];
+  meses: MesDaLinha[];
+}
+
+export interface IndicadoresDoAno {
+  entrou: number;
+  saiu: number;
+  guardou: number;
+  percentualGuardado: number;
+  mediaEntrou: number;
+  mediaSaiu: number;
+  previstoReceitas: number;
+  previstoDespesas: number;
+}
+
+export interface TotaisDoMes {
+  mes: number;
+  receitas: Valores;
+  receitasFonteAtiva: Valores;
+  receitasFontePassiva: Valores;
+  despesas: Valores;
+  guardou: number;
+  percentualGuardado: number;
+  evolucaoDespesas: number | null;
+  independenciometro: number;
 }
 
 export interface ResumoAnual {
   ano: number;
   linhas: LinhaDoAno[];
+  grupos: LinhaDoAno[];
+  indicadores: IndicadoresDoAno;
+  meses: TotaisDoMes[];
 }
 
 export interface CopiaDePrevisto {
