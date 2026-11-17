@@ -14,6 +14,7 @@ import {
 } from '../../../testing/dados-de-teste';
 import { ContaDialogo } from './components/conta-dialogo/conta-dialogo';
 import { FaturaDialogo } from './components/fatura-dialogo/fatura-dialogo';
+import { ImportacaoDeExtrato } from '../importar/state/importacao-de-extrato';
 import { Contas } from './pages/contas/contas';
 import { rotuloDoTipo } from './tipos-de-conta';
 
@@ -92,12 +93,25 @@ describe('Contas', () => {
       const tela = fixture.componentInstance;
       tela['novaConta']();
       expect(tela['modo']()).toBe('criar');
-      acoesDe(CONTAS[0])[0].command!({});
-      expect(tela['modo']()).toBe('editar');
       acoesDe(CONTAS[0])[1].command!({});
+      expect(tela['modo']()).toBe('editar');
+      acoesDe(CONTAS[0])[2].command!({});
       expect(tela['modo']()).toBe('saldo');
       tela['aoSalvar']();
       expect(tela['modo']()).toBeNull();
+      await recarregar();
+    });
+
+    it('importa o extrato da conta bancária e recarrega o saldo depois', async () => {
+      await abrir();
+      const importacao = TestBed.inject(ImportacaoDeExtrato);
+      const corrente = acoesDe(CONTAS[0]);
+      expect(corrente[0].label).toBe('Importar extrato');
+      corrente[0].command!({});
+      expect(importacao.aberta()).toBe(true);
+      expect(importacao.contaSugerida()).toBe(CONTAS[0].id);
+      expect(acoesDe(CONTAS[1]).map((a) => a.label)).not.toContain('Importar extrato');
+      importacao.registrarConclusao();
       await recarregar();
     });
 

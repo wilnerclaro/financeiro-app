@@ -9,6 +9,7 @@ import { Menu } from 'primeng/menu';
 import { Skeleton } from 'primeng/skeleton';
 import { ToggleSwitch } from 'primeng/toggleswitch';
 import { forkJoin } from 'rxjs';
+import { ImportacaoDeExtrato } from '../../../importar/state/importacao-de-extrato';
 import { Conta } from '../../../../shared/api/api.models';
 import { ContasApi } from '../../../../shared/api/contas-api';
 import { EstadoErro } from '../../../../shared/components/estado-erro/estado-erro';
@@ -45,6 +46,7 @@ export class Contas {
   private readonly contasApi = inject(ContasApi);
   private readonly confirmacao = inject(ConfirmationService);
   private readonly avisos = inject(Avisos);
+  private readonly importacao = inject(ImportacaoDeExtrato);
 
   protected readonly icones = { EllipsisVertical, Plus, Wallet };
   protected readonly brl = brl;
@@ -58,6 +60,7 @@ export class Contas {
   protected readonly cartaoDaFatura = signal<Conta | null>(null);
 
   protected readonly dados = rxResource({
+    params: () => this.importacao.concluidas(),
     stream: () => forkJoin({ contas: this.contasApi.listar(), resumo: this.contasApi.resumo() }),
   });
 
@@ -76,6 +79,9 @@ export class Contas {
   protected abrirAcoes(menu: Menu, evento: Event, conta: Conta): void {
     const itens: MenuItem[] = conta.ativa
       ? [
+          ...(conta.tipo === 'CONTA_CORRENTE' || conta.tipo === 'POUPANCA'
+            ? [{ label: 'Importar extrato', command: () => this.importacao.abrir(conta.id) }]
+            : []),
           { label: 'Editar', command: () => this.abrirDialogo('editar', conta) },
           { label: 'Corrigir saldo inicial', command: () => this.abrirDialogo('saldo', conta) },
           { label: 'Inativar', command: () => this.confirmarInativacao(conta) },

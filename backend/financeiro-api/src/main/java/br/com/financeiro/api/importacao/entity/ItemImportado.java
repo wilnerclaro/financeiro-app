@@ -1,7 +1,10 @@
 package br.com.financeiro.api.importacao.entity;
 
+import br.com.financeiro.api.importacao.enums.FormatoExtrato;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -24,7 +27,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 @AllArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Entity
-@Table(name = "itens_importados_ofx")
+@Table(name = "itens_importados")
 public class ItemImportado {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
@@ -39,6 +42,10 @@ public class ItemImportado {
 
   @Column(nullable = false, length = 64)
   private String identificador;
+
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 3)
+  private FormatoExtrato formato;
 
   @Column(name = "lancamento_id", nullable = false)
   private UUID lancamentoId;

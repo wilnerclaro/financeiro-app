@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, signal } f
 import { rxResource } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { ArrowLeftRight, EllipsisVertical, List, Plus, Search } from 'lucide';
+import { ArrowLeftRight, EllipsisVertical, List, Plus, Search, Upload } from 'lucide';
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { Button } from 'primeng/button';
 import { ConfirmDialog } from 'primeng/confirmdialog';
@@ -15,6 +15,7 @@ import { Menu } from 'primeng/menu';
 import { SelectButton } from 'primeng/selectbutton';
 import { Skeleton } from 'primeng/skeleton';
 import { forkJoin } from 'rxjs';
+import { ImportacaoDeExtrato } from '../../../importar/state/importacao-de-extrato';
 import { Lancamento, StatusLancamento, Transferencia } from '../../../../shared/api/api.models';
 import { LancamentosApi } from '../../../../shared/api/lancamentos-api';
 import { TransferenciasApi } from '../../../../shared/api/transferencias-api';
@@ -97,10 +98,11 @@ export class Lancamentos {
   private readonly avisos = inject(Avisos);
   private readonly router = inject(Router);
   private readonly agora = inject(AGORA);
+  protected readonly importacao = inject(ImportacaoDeExtrato);
 
   readonly filtro = input<FiltroDeLancamentos>();
 
-  protected readonly icones = { ArrowLeftRight, EllipsisVertical, List, Plus, Search };
+  protected readonly icones = { ArrowLeftRight, EllipsisVertical, List, Plus, Search, Upload };
   protected readonly filtros = FILTROS;
   protected readonly status = STATUS;
   protected readonly brl = brl;
@@ -122,15 +124,15 @@ export class Lancamentos {
   protected readonly nomeDoMes = computed(() => MESES_LONGOS[this.mes().mes - 1]);
 
   protected readonly movimentos = rxResource({
-    params: () => this.mes(),
-    stream: ({ params }) =>
+    params: () => ({ mes: this.mes(), importacoes: this.importacao.concluidas() }),
+    stream: ({ params: { mes } }) =>
       forkJoin({
         lancamentos: this.lancamentosApi.listar({
-          dataInicio: primeiroDia(params),
-          dataFim: ultimoDia(params),
+          dataInicio: primeiroDia(mes),
+          dataFim: ultimoDia(mes),
           size: 500,
         }),
-        transferencias: this.transferenciasApi.listar(primeiroDia(params), ultimoDia(params)),
+        transferencias: this.transferenciasApi.listar(primeiroDia(mes), ultimoDia(mes)),
       }),
   });
 

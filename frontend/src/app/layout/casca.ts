@@ -18,6 +18,8 @@ import { Button } from 'primeng/button';
 import { Tooltip } from 'primeng/tooltip';
 import { Sessao } from '../core/auth/sessao';
 import { Tema } from '../core/config/tema';
+import { ImportarExtrato } from '../features/importar/components/importar-extrato/importar-extrato';
+import { ImportacaoDeExtrato } from '../features/importar/state/importacao-de-extrato';
 import { Icone } from '../shared/components/icone/icone';
 
 interface ItemDoMenu {
@@ -36,7 +38,7 @@ const MENU: ItemDoMenu[] = [
 
 @Component({
   selector: 'app-casca',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Button, Tooltip, Icone],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Button, Tooltip, Icone, ImportarExtrato],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './casca.html',
   styleUrl: './casca.scss',
@@ -46,6 +48,7 @@ export class Casca {
   private readonly sessao = inject(Sessao);
   private readonly router = inject(Router);
   protected readonly tema = inject(Tema);
+  protected readonly importacao = inject(ImportacaoDeExtrato);
   protected readonly icones = { ChartLine, LogOut, Moon, Plus, Sun, Upload };
   protected readonly menu = MENU;
   protected readonly menuDoCelular: ItemDoMenu[] = [
@@ -62,7 +65,8 @@ export class Casca {
   }
 
   protected atalho(evento: KeyboardEvent): void {
-    if (evento.key.toLowerCase() !== 'n' || evento.ctrlKey || evento.metaKey || evento.altKey) {
+    const tecla = evento.key.toLowerCase();
+    if ((tecla !== 'n' && tecla !== 'i') || evento.ctrlKey || evento.metaKey || evento.altKey) {
       return;
     }
     const alvo = evento.target;
@@ -73,6 +77,10 @@ export class Casca {
       return;
     }
     evento.preventDefault();
-    void this.router.navigateByUrl('/lancar');
+    if (tecla === 'i') {
+      this.importacao.abrir();
+    } else {
+      void this.router.navigateByUrl('/lancar');
+    }
   }
 }

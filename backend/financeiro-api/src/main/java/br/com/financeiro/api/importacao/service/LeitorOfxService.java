@@ -1,7 +1,7 @@
 package br.com.financeiro.api.importacao.service;
 
 import br.com.financeiro.api.common.exception.BusinessException;
-import br.com.financeiro.api.importacao.dto.ItemOfxResponse;
+import br.com.financeiro.api.importacao.dto.TransacaoLida;
 import br.com.financeiro.api.lancamentofinanceiro.enums.TipoLancamentoFinanceiro;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -36,7 +36,7 @@ public class LeitorOfxService {
   private static final DateTimeFormatter DATA = DateTimeFormatter.BASIC_ISO_DATE;
   private final Clock clock;
 
-  public List<ItemOfxResponse> ler(byte[] arquivo) {
+  public List<TransacaoLida> ler(byte[] arquivo) {
     if (arquivo.length == 0 || arquivo.length > LIMITE_BYTES) {
       throw new BusinessException("Envie um arquivo OFX de até 2 MB.");
     }
@@ -50,7 +50,7 @@ public class LeitorOfxService {
     String conta = agregado(extrato, "BANKACCTFROM");
     String origem = campo(conta, "BANKID", true) + "\u0000" + campo(conta, "ACCTID", true);
     String transacoes = agregado(extrato, "BANKTRANLIST");
-    List<ItemOfxResponse> itens = lerTransacoes(transacoes, origem);
+    List<TransacaoLida> itens = lerTransacoes(transacoes, origem);
     if (itens.size() != ocorrencias(maiusculo, "<STMTTRN>")) {
       throw new BusinessException("O OFX contém transações fora do extrato ou incompletas.");
     }
@@ -91,9 +91,9 @@ public class LeitorOfxService {
     return texto.substring(inicio + abertura.length(), fim);
   }
 
-  private List<ItemOfxResponse> lerTransacoes(String texto, String origem) {
+  private List<TransacaoLida> lerTransacoes(String texto, String origem) {
     Matcher matcher = TRANSACAO.matcher(texto);
-    List<ItemOfxResponse> itens = new ArrayList<>();
+    List<TransacaoLida> itens = new ArrayList<>();
     Set<String> identificadores = new HashSet<>();
     while (matcher.find()) {
       if (itens.size() >= 1000) {
@@ -113,7 +113,7 @@ public class LeitorOfxService {
     return List.copyOf(itens);
   }
 
-  private ItemOfxResponse item(String bloco, String identificador) {
+  private TransacaoLida item(String bloco, String identificador) {
     String maiusculo = bloco.toUpperCase(Locale.ROOT);
     if (maiusculo.contains("<CORRECTFITID>") || maiusculo.contains("<CORRECTACTION>")) {
       throw new BusinessException("Correções e exclusões OFX precisam ser revisadas manualmente.");
@@ -125,14 +125,12 @@ public class LeitorOfxService {
     LocalDate data = data(campo(bloco, "DTPOSTED", true));
     BigDecimal valor = valor(campo(bloco, "TRNAMT", true));
     String motivo = motivo(bloco, data, valor);
-    return new ItemOfxResponse(
+    return new TransacaoLida(
         identificador,
         data,
         descricao(bloco),
         valor.abs(),
         valor.signum() < 0 ? TipoLancamentoFinanceiro.DESPESA : TipoLancamentoFinanceiro.RECEITA,
-        false,
-        motivo == null,
         motivo);
   }
 

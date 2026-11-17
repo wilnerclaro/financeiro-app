@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { autenticadoGuard, visitanteGuard } from './core/auth/autenticacao.guards';
+import { abrirImportacaoGuard } from './features/importar/state/importacao-de-extrato';
 
 export const routes: Routes = [
   {
@@ -23,12 +24,7 @@ export const routes: Routes = [
     canActivate: [autenticadoGuard],
     loadComponent: () => import('./layout/casca').then((m) => m.Casca),
     children: [
-      {
-        path: 'importar',
-        loadComponent: () =>
-          import('./features/importar/pages/importar/importar').then((m) => m.Importar),
-        title: 'Importar extrato · financeiro',
-      },
+      { path: 'importar', canActivate: [abrirImportacaoGuard], children: [] },
       {
         path: 'configuracao-inicial',
         loadComponent: () =>

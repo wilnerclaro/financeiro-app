@@ -6,11 +6,15 @@
     </div>
     <div class="acoes-cabecalho">
       <p-button
-        label="Importar extrato"
-        routerLink="/importar"
+        size="small"
         severity="secondary"
         [outlined]="true"
-      />
+        ariaLabel="Importar extrato"
+        (onClick)="importacao.abrir()"
+      >
+        <app-icone [icone]="icones.Upload" />
+        <span>Importar extrato</span>
+      </p-button>
       <app-seletor-mes [(mes)]="mes" />
     </div>
   </header>
@@ -58,11 +62,15 @@
     <app-estado-vazio
       [icone]="icones.List"
       [titulo]="'Nenhum lançamento em ' + nomeDoMes()"
-      texto="O que você lançar neste mês aparece aqui, agrupado por dia."
+      texto="Lance à mão ou traga o extrato do banco. O que entrar neste mês aparece aqui, agrupado por dia."
     >
       <p-button size="small" routerLink="/lancar">
         <app-icone [icone]="icones.Plus" />
         <span>Novo lançamento</span>
+      </p-button>
+      <p-button size="small" severity="secondary" [outlined]="true" (onClick)="importacao.abrir()">
+        <app-icone [icone]="icones.Upload" />
+        <span>Importar extrato</span>
       </p-button>
     </app-estado-vazio>
   } @else {

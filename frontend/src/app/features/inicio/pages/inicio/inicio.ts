@@ -19,6 +19,7 @@ import {
   Plus,
   Receipt,
   TrendingUp,
+  Upload,
 } from 'lucide';
 import { Button } from 'primeng/button';
 import { ProgressBar } from 'primeng/progressbar';
@@ -29,6 +30,7 @@ import {
   Inicio as ResumoInicio,
   Lancamento,
 } from '../../../../shared/api/api.models';
+import { ImportacaoDeExtrato } from '../../../importar/state/importacao-de-extrato';
 import { InicioApi } from '../../../../shared/api/inicio-api';
 import { ConfiguracaoInicialApi } from '../../../../shared/api/configuracao-inicial-api';
 import { LancamentosApi } from '../../../../shared/api/lancamentos-api';
@@ -108,6 +110,7 @@ export class Inicio {
   private readonly agora = inject(AGORA);
   private readonly router = inject(Router);
   private readonly configuracaoApi = inject(ConfiguracaoInicialApi);
+  protected readonly importacao = inject(ImportacaoDeExtrato);
 
   protected readonly configuracao = rxResource({ stream: () => this.configuracaoApi.buscar() });
   protected readonly primeirosPassos = computed(() => valorDe(this.configuracao));
@@ -121,7 +124,7 @@ export class Inicio {
     });
   }
 
-  protected readonly icones = { ChevronRight, Plus, Receipt };
+  protected readonly icones = { ChevronRight, Plus, Receipt, Upload };
   protected readonly brl = brl;
   protected readonly brlComSinal = brlComSinal;
   protected readonly dataCurta = dataCurta;
@@ -135,8 +138,8 @@ export class Inicio {
   protected readonly pagando = signal<string | null>(null);
 
   protected readonly resumo = rxResource({
-    params: () => this.mes(),
-    stream: ({ params }) => this.inicioApi.buscar(params.ano, params.mes),
+    params: () => ({ mes: this.mes(), importacoes: this.importacao.concluidas() }),
+    stream: ({ params: { mes } }) => this.inicioApi.buscar(mes.ano, mes.mes),
   });
 
   protected readonly dados = computed(() => valorDe(this.resumo));
