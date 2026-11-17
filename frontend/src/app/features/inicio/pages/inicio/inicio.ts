@@ -1,7 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -23,6 +30,7 @@ import {
   Lancamento,
 } from '../../../../shared/api/api.models';
 import { InicioApi } from '../../../../shared/api/inicio-api';
+import { ConfiguracaoInicialApi } from '../../../../shared/api/configuracao-inicial-api';
 import { LancamentosApi } from '../../../../shared/api/lancamentos-api';
 import { EstadoErro } from '../../../../shared/components/estado-erro/estado-erro';
 import { EstadoVazio } from '../../../../shared/components/estado-vazio/estado-vazio';
@@ -98,6 +106,20 @@ export class Inicio {
   private readonly lancamentosApi = inject(LancamentosApi);
   private readonly avisos = inject(Avisos);
   private readonly agora = inject(AGORA);
+  private readonly router = inject(Router);
+  private readonly configuracaoApi = inject(ConfiguracaoInicialApi);
+
+  protected readonly configuracao = rxResource({ stream: () => this.configuracaoApi.buscar() });
+  protected readonly primeirosPassos = computed(() => valorDe(this.configuracao));
+
+  constructor() {
+    effect(() => {
+      const configuracao = this.primeirosPassos();
+      if (configuracao && configuracao.etapa !== 'CONCLUIDO' && !configuracao.pausado) {
+        void this.router.navigateByUrl('/configuracao-inicial', { replaceUrl: true });
+      }
+    });
+  }
 
   protected readonly icones = { ChevronRight, Plus, Receipt };
   protected readonly brl = brl;

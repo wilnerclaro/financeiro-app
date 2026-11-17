@@ -34,6 +34,11 @@ No front: Entrar e Criar conta (com Google), casca do app, tema e as telas do
 protótipo (`docs/frontend/prototipo-primeng22.md`) ligadas à API: Início,
 Lançar, Lançamentos, Orçamento, Contas e Categorias.
 
+Configuração inicial em `/configuracao-inicial`: objetivo de renda passiva,
+orçamento, contas e primeiro lançamento, com pausa/retomada por usuário no
+banco (V16). A renda desejada é uma referência separada do Independenciômetro.
+Contrato e jornada em `docs/frontend/configuracao-inicial.md`.
+
 Não implementados: todo o lado de investimentos (carteira, trade, opções,
 custo de operações).
 

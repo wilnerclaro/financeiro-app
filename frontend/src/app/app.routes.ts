@@ -24,6 +24,20 @@ export const routes: Routes = [
     loadComponent: () => import('./layout/casca').then((m) => m.Casca),
     children: [
       {
+        path: 'importar',
+        loadComponent: () =>
+          import('./features/importar/pages/importar/importar').then((m) => m.Importar),
+        title: 'Importar extrato · financeiro',
+      },
+      {
+        path: 'configuracao-inicial',
+        loadComponent: () =>
+          import('./features/configuracao-inicial/pages/configuracao-inicial/configuracao-inicial').then(
+            (m) => m.ConfiguracaoInicialPagina,
+          ),
+        title: 'Primeiros passos · financeiro',
+      },
+      {
         path: '',
         loadComponent: () => import('./features/inicio/pages/inicio/inicio').then((m) => m.Inicio),
         title: 'Início · financeiro',

@@ -11,6 +11,7 @@ import {
   Plus,
   Sun,
   Tags,
+  Upload,
   Wallet,
 } from 'lucide';
 import { Button } from 'primeng/button';
@@ -45,7 +46,7 @@ export class Casca {
   private readonly sessao = inject(Sessao);
   private readonly router = inject(Router);
   protected readonly tema = inject(Tema);
-  protected readonly icones = { ChartLine, LogOut, Moon, Plus, Sun };
+  protected readonly icones = { ChartLine, LogOut, Moon, Plus, Sun, Upload };
   protected readonly menu = MENU;
   protected readonly menuDoCelular: ItemDoMenu[] = [
     MENU[0],

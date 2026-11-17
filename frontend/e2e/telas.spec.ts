@@ -54,6 +54,7 @@ for (const [rota, titulo] of [
   ['/orcamento/previsto', 'Editar previsto'],
   ['/contas', 'Contas'],
   ['/categorias', 'Categorias'],
+  ['/importar', 'Importar extrato'],
 ]) {
   test(`${rota} abre sem rolagem lateral`, async ({ page }) => {
     await simularApiDoApp(page);

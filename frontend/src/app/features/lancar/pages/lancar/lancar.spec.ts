@@ -81,6 +81,40 @@ describe('Lancar', () => {
     expect(texto()).toContain('Escolha uma categoria.');
   });
 
+  it('repete somente a conclusão quando o lançamento já foi salvo', async () => {
+    await carregarNovo();
+    fixture.componentRef.setInput('configuracaoInicial', 'true');
+    tela()['valor'].set(50);
+    tela()['categoriaId'].set('cat-mercado');
+    tela()['salvar'](false);
+    http.expectOne('/api/lancamentos-financeiros').flush(lancamento());
+    const configuracao = {
+      rendaPassivaDesejada: 6000,
+      etapa: 'LANCAMENTO',
+      pausado: false,
+      ano: 2026,
+      mes: 11,
+    };
+    http.expectOne('/api/configuracao-inicial').flush(configuracao);
+    http
+      .expectOne('/api/configuracao-inicial')
+      .flush({}, { status: 503, statusText: 'Unavailable' });
+    await fixture.whenStable();
+    expect(texto()).toContain('Seu lançamento foi registrado');
+    tela()['salvar'](false);
+    http.expectNone('/api/lancamentos-financeiros');
+    botao('Tentar concluir novamente').click();
+    http.expectOne('/api/configuracao-inicial').flush(configuracao);
+    const conclusao = http.expectOne('/api/configuracao-inicial');
+    expect(conclusao.request.method).toBe('PUT');
+    expect(conclusao.request.body.etapa).toBe('CONCLUIDO');
+    conclusao.flush({ ...configuracao, etapa: 'CONCLUIDO' });
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/configuracao-inicial', {
+      replaceUrl: true,
+    });
+    http.expectNone('/api/lancamentos-financeiros');
+  });
+
   it('cadastra a primeira conta sem perder o lançamento preenchido', async () => {
     criar();
     http.expectOne('/api/contas?ativa=true&size=200&sort=nome').flush(pagina([]));

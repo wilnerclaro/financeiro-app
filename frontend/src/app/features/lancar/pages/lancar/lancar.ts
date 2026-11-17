@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   computed,
   effect,
   inject,
@@ -8,7 +9,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { rxResource } from '@angular/core/rxjs-interop';
+import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ChevronDown, ChevronUp, CreditCard } from 'lucide';
@@ -21,7 +22,7 @@ import { SelectButton } from 'primeng/selectbutton';
 import { Skeleton } from 'primeng/skeleton';
 import { Textarea } from 'primeng/textarea';
 import { ToggleSwitch } from 'primeng/toggleswitch';
-import { Observable, catchError, forkJoin, map, of } from 'rxjs';
+import { Observable, catchError, forkJoin, map, of, switchMap } from 'rxjs';
 import {
   Categoria,
   Conta,
@@ -33,6 +34,7 @@ import {
 } from '../../../../shared/api/api.models';
 import { CategoriasApi } from '../../../../shared/api/categorias-api';
 import { ContasApi } from '../../../../shared/api/contas-api';
+import { ConfiguracaoInicialApi } from '../../../../shared/api/configuracao-inicial-api';
 import { InicioApi } from '../../../../shared/api/inicio-api';
 import { LancamentosApi } from '../../../../shared/api/lancamentos-api';
 import { TransferenciasApi } from '../../../../shared/api/transferencias-api';
@@ -96,8 +98,17 @@ export class Lancar {
   private readonly avisos = inject(Avisos);
   private readonly router = inject(Router);
   private readonly agora = inject(AGORA);
+  private readonly configuracaoApi = inject(ConfiguracaoInicialApi);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly id = input<string>();
+  readonly configuracaoInicial = input<string>();
+  protected readonly primeirosPassos = computed(
+    () => this.configuracaoInicial() === 'true' && !this.id(),
+  );
+  protected readonly lancamentoRegistrado = signal(false);
+  protected readonly concluindoConfiguracao = signal(false);
+  protected readonly erroNaConclusao = signal(false);
 
   protected readonly icones = { ChevronDown, ChevronUp, CreditCard };
   protected readonly tipos = TIPOS;
@@ -218,7 +229,7 @@ export class Lancar {
 
   protected salvar(fazerOutro: boolean): void {
     this.tentouSalvar.set(true);
-    if (!this.valido() || this.salvando()) {
+    if (!this.valido() || this.salvando() || this.lancamentoRegistrado()) {
       return;
     }
     this.salvando.set(true);
@@ -237,7 +248,10 @@ export class Lancar {
           this.editando() ? 'Lançamento atualizado' : 'Lançamento salvo',
           `${descricao} · ${brl(valor)}`,
         );
-        if (fazerOutro) {
+        if (this.primeirosPassos()) {
+          this.lancamentoRegistrado.set(true);
+          this.concluirConfiguracao();
+        } else if (fazerOutro) {
           this.limparParaOutro();
         } else {
           void this.router.navigateByUrl('/lancamentos');
@@ -248,6 +262,36 @@ export class Lancar {
         this.avisos.erro('Não foi possível salvar', erro);
       },
     });
+  }
+
+  protected concluirConfiguracao(): void {
+    if (!this.lancamentoRegistrado() || this.concluindoConfiguracao()) {
+      return;
+    }
+    this.concluindoConfiguracao.set(true);
+    this.erroNaConclusao.set(false);
+    this.configuracaoApi
+      .buscar()
+      .pipe(
+        switchMap((configuracao) =>
+          this.configuracaoApi.salvar({
+            ...configuracao,
+            etapa: 'CONCLUIDO',
+            pausado: false,
+          }),
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: () => {
+          this.concluindoConfiguracao.set(false);
+          void this.router.navigateByUrl('/configuracao-inicial', { replaceUrl: true });
+        },
+        error: () => {
+          this.concluindoConfiguracao.set(false);
+          this.erroNaConclusao.set(true);
+        },
+      });
   }
 
   private carregar(id: string | undefined): Observable<DadosDoFormulario> {
