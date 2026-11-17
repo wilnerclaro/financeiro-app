@@ -49,11 +49,15 @@
     <app-estado-vazio
       [icone]="icones.Receipt"
       [titulo]="'Nenhum lançamento em ' + nomeDoMes()"
-      texto="Lance a primeira receita ou despesa para começar o resumo do mês."
+      texto="Lance a primeira receita ou despesa, ou traga o extrato do banco, para começar o resumo do mês."
     >
       <p-button size="small" routerLink="/lancar">
         <app-icone [icone]="icones.Plus" />
         <span>Novo lançamento</span>
+      </p-button>
+      <p-button size="small" severity="secondary" [outlined]="true" (onClick)="importacao.abrir()">
+        <app-icone [icone]="icones.Upload" />
+        <span>Importar extrato</span>
       </p-button>
     </app-estado-vazio>
   } @else {

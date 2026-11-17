@@ -10,6 +10,7 @@ import {
   pagina,
   provedoresDeTeste,
 } from '../../../../../testing/dados-de-teste';
+import { ImportacaoDeExtrato } from '../../../importar/state/importacao-de-extrato';
 import { Lancamentos } from './lancamentos';
 
 const URL_LANCAMENTOS =
@@ -210,6 +211,20 @@ describe('Lancamentos', () => {
     tela()['confirmarCancelamentoDaTransferencia']({ ...TRANSFERENCIA, cancelada: true });
     http.expectOne('/api/transferencias/t1').flush(null, { status: 500, statusText: 'x' });
     expect(avisos).toHaveBeenCalledTimes(2);
+  });
+
+  it('abre a importação pelo cabeçalho e pelo vazio e recarrega depois de importar', async () => {
+    await responder([], []);
+    const importacao = TestBed.inject(ImportacaoDeExtrato);
+    const botoes = Array.from(el().querySelectorAll('button')).filter((b) =>
+      b.textContent?.includes('Importar extrato'),
+    );
+    expect(botoes).toHaveLength(2);
+    botoes[1].click();
+    expect(importacao.aberta()).toBe(true);
+    importacao.registrarConclusao();
+    await responder();
+    expect(texto()).toContain('Banco Azul → Carteira');
   });
 
   it('mostra vazio, erro e tenta de novo', async () => {

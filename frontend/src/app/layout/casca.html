@@ -17,14 +17,17 @@
   <div class="acoes">
     <p-button
       size="small"
-      routerLink="/importar"
       [outlined]="true"
       severity="secondary"
       class="importar-topo"
       ariaLabel="Importar extrato"
+      pTooltip="Importar extrato (I)"
+      tooltipPosition="bottom"
+      (onClick)="importacao.abrir()"
     >
       <app-icone [icone]="icones.Upload" />
-      <span>Importar extrato</span>
+      <span class="rotulo-importar">Importar extrato</span>
+      <kbd class="rotulo-importar" aria-hidden="true">I</kbd>
     </p-button>
     <p-button size="small" routerLink="/lancar" class="so-largo-topo">
       <app-icone [icone]="icones.Plus" />
@@ -51,6 +54,9 @@
 <main class="conteudo">
   <router-outlet />
 </main>
+@defer (when importacao.aberta(); prefetch on idle) {
+  <app-importar-extrato />
+}
 <nav class="barra-inferior" aria-label="Atalhos do celular">
   @for (item of menuDoCelular; track item.rota) {
     @if (item.rota === '/lancar') {

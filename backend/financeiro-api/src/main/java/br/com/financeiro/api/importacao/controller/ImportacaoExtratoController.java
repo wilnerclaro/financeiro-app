@@ -1,9 +1,9 @@
 package br.com.financeiro.api.importacao.controller;
 
-import br.com.financeiro.api.importacao.docs.ImportacaoOfxApiDoc;
-import br.com.financeiro.api.importacao.dto.ConfirmacaoOfxResponse;
-import br.com.financeiro.api.importacao.dto.RevisaoOfxResponse;
-import br.com.financeiro.api.importacao.service.ImportacaoOfxService;
+import br.com.financeiro.api.importacao.docs.ImportacaoExtratoApiDoc;
+import br.com.financeiro.api.importacao.dto.ConfirmacaoImportacaoResponse;
+import br.com.financeiro.api.importacao.dto.RevisaoExtratoResponse;
+import br.com.financeiro.api.importacao.service.ImportacaoExtratoService;
 import br.com.financeiro.api.security.UsuarioLogado;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -16,13 +16,13 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping("/api/importacoes/ofx")
+@RequestMapping("/api/importacoes")
 @RequiredArgsConstructor
-public class ImportacaoOfxController implements ImportacaoOfxApiDoc {
-  private final ImportacaoOfxService service;
+public class ImportacaoExtratoController implements ImportacaoExtratoApiDoc {
+  private final ImportacaoExtratoService service;
 
   @PostMapping(value = "/revisar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-  public ResponseEntity<RevisaoOfxResponse> revisar(
+  public ResponseEntity<RevisaoExtratoResponse> revisar(
       @UsuarioLogado UUID usuarioId,
       @RequestParam UUID contaId,
       @RequestParam MultipartFile arquivo) {
@@ -30,7 +30,7 @@ public class ImportacaoOfxController implements ImportacaoOfxApiDoc {
   }
 
   @PostMapping(value = "/confirmar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-  public ResponseEntity<ConfirmacaoOfxResponse> confirmar(
+  public ResponseEntity<ConfirmacaoImportacaoResponse> confirmar(
       @UsuarioLogado UUID usuarioId,
       @RequestParam UUID contaId,
       @RequestParam MultipartFile arquivo,
