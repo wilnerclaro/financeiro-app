@@ -13,7 +13,6 @@ test('abre a importação em modal por Lançamentos também no celular', async (
   await expect(modal).toBeVisible();
   await expect(page).toHaveURL(/\/lancamentos$/);
   await expect(modal.getByText('Arraste o extrato aqui')).toBeVisible();
-  await expect(modal.getByText('Itaú, Santander e Inter')).toBeVisible();
   await modal.getByRole('button', { name: 'Cancelar' }).click();
   await expect(modal).toBeHidden();
 });

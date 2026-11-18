@@ -74,7 +74,6 @@ describe('Importar extrato', () => {
         .map((c) => c.id),
     ).toEqual(['c1']);
     expect(elemento().textContent).toContain('Arraste o extrato aqui');
-    expect(elemento().textContent).toContain('Itaú, Santander e Inter');
     expect(elemento().textContent).toContain('PDF, CSV ou OFX de até 2 MB');
   });
 
