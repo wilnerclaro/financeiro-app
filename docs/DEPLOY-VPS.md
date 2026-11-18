@@ -120,17 +120,28 @@ ssh wilner@203.0.113.10
 sudo whoami     # deve responder root
 ```
 
-Só funcionou? Então **desligue o login por senha e o login do root**:
+Só funcionou? Então **desligue o login por senha e o login do root**. Rode
+`sudo -v` antes e digite a senha: assim o `sudo` não engole as linhas coladas.
 
 ```bash
 # Na VPS
-sudo tee /etc/ssh/sshd_config.d/99-seguranca.conf > /dev/null <<'EOF'
+sudo tee /etc/ssh/sshd_config.d/00-seguranca.conf > /dev/null <<'EOF'
 PasswordAuthentication no
 KbdInteractiveAuthentication no
 PermitRootLogin no
 EOF
 sudo systemctl restart ssh
+sudo sshd -T | grep -E '^(passwordauthentication|permitrootlogin)'
 ```
+
+A última linha precisa mostrar `passwordauthentication no` e
+`permitrootlogin no`. O arquivo começa com `00-` porque no SSH vale o primeiro
+valor lido, e provedores como a Hostinger deixam um `50-cloud-init.conf` que
+liga a senha. Antes de fechar o terminal, confira num terminal novo que
+`ssh wilner@IP` ainda entra.
+
+Ao colar vários comandos de uma vez, rode o `adduser` sozinho: as perguntas de
+senha engolem as linhas coladas depois dele.
 
 Atalho opcional no seu PC, para digitar só `ssh financeiro`:
 
@@ -151,12 +162,13 @@ EOF
 
 ```bash
 # Na VPS
-sudo apt update && sudo apt upgrade -y
+sudo DEBIAN_FRONTEND=noninteractive apt-get update
+sudo DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::=--force-confold upgrade
 sudo ufw allow OpenSSH
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 sudo ufw allow 443/udp
-sudo ufw enable           # responda y
+sudo ufw --force enable
 sudo ufw status
 ```
 
