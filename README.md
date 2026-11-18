@@ -132,6 +132,7 @@ PR com o check vermelho não deve ser mergeado.
 financeiro-app/
 ├── compose.yaml            banco de desenvolvimento (PostgreSQL 16)
 ├── .env.example            modelo das variáveis do banco
+├── deploy/                 produção: compose, Caddy (HTTPS) e backup diário
 ├── backend/financeiro-api/ API Spring Boot (pom.xml, mvnw, src/)
 ├── config/checkstyle/      regras do Checkstyle
 ├── docs/                   auditoria e qualidade de build
@@ -158,6 +159,11 @@ documentação completa fica no Swagger (`/swagger-ui.html`).
 | Orçamento | `GET/PUT /api/orcamentos/{ano}/{mes}`, `POST /api/orcamentos/repetir` (uma categoria em vários meses), `POST /api/orcamentos/{ano}/{mes}/copiar` (o mês inteiro para outros meses), `GET /api/orcamentos/{ano}` |
 | Metas | `/api/metas` (painel do ano) e `PUT /api/metas/{id}/movimentos/{ano}/{mes}` |
 | Contas e categorias | `/api/contas`, `GET /api/contas/resumo`, `/api/categorias` |
+
+## Publicar numa VPS
+
+Para colocar o app no ar com HTTPS e backup diário, siga
+[docs/DEPLOY-VPS.md](docs/DEPLOY-VPS.md).
 
 ## Problemas comuns
 
