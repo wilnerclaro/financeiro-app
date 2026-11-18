@@ -119,7 +119,7 @@ Substitui a direção "v3 em blocos" de 12/11/2026. Referência aprovada: o Iní
 - Tipografia: **Inter** em tudo, números com `tabular-nums`. Título de página 24/32 600; título de seção 14/20 600; indicador financeiro 28/36 600 (20/28 abaixo de 600px); corpo 14/20 400; label 12/16 500; texto auxiliar 13/18.
 - Topo de tela: título com o período, uma ação primária e no máximo uma secundária. A frase de celebração no topo ("Você já guardou 36%") saiu; a conquista aparece como contexto do indicador ("36% do que entrou · meta 30%").
 - Dashboards abrem com os indicadores do mês e, logo depois, "Precisa da sua atenção": cada pendência com uma ação que leva à tela que resolve.
-- Movimento discreto: entrada de até 200 ms, esqueleto no carregamento, nada de número contando. Respeite `prefers-reduced-motion`.
+- Movimento discreto: entrada de até 200 ms, esqueleto no carregamento com o formato do conteúdo, nada de número contando. Quando os dados chegam (pedido de 18/11/2026), barras e gráficos crescem a partir do zero e o anel se fecha em até 0,8 s; indicadores, linhas de lista e cartões surgem em sequência, 40 ms um depois do outro. Respeite `prefers-reduced-motion`.
 
 ### Cor com significado fixo (vale em todas as telas)
 

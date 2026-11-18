@@ -16,12 +16,22 @@
       (tentar)="base.reload()"
     />
   } @else if (base.isLoading()) {
-    <p-skeleton height="20rem" />
+    @for (bloco of [5, 2]; track $index) {
+      <div class="secao" aria-hidden="true">
+        <p-skeleton width="6rem" height=".9rem" />
+        <app-esqueleto-lista
+          [linhas]="bloco"
+          [detalhe]="false"
+          [recuadas]="[1, 2, 3, 4]"
+          larguraDaColuna="8rem"
+        />
+      </div>
+    }
   } @else {
     @for (bloco of blocos(); track bloco.tipo) {
       <section class="secao" [attr.aria-labelledby]="'prev-' + bloco.tipo">
         <h2 [id]="'prev-' + bloco.tipo" class="titulo-secao">{{ bloco.titulo }}</h2>
-        <ul class="linhas superficie">
+        <ul class="linhas superficie cascata">
           @for (l of bloco.linhas; track l.categoriaId) {
             <li [class.grupo]="l.grupo" [class.sub]="l.sub">
               <label [for]="'prev-' + l.categoriaId" class="nome" [class.forte]="l.grupo">{{

@@ -66,6 +66,11 @@ export class Categorias {
   protected readonly icones = { EllipsisVertical, Plus, Tags };
   protected readonly tipos = TIPOS;
   protected readonly fontes = FONTES;
+  protected readonly esqueletoDosGrupos = [
+    { titulo: '9rem', subcategorias: ['7rem', '5rem', '8rem'] },
+    { titulo: '7rem', subcategorias: ['6rem', '7rem'] },
+    { titulo: '10rem', subcategorias: ['5rem', '8rem', '6rem', '7rem'] },
+  ];
 
   protected readonly tipo = signal<TipoCategoria>('DESPESA');
   protected readonly mostrarInativas = signal(false);

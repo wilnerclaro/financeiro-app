@@ -207,6 +207,15 @@ Regras:
   `pi pi-*` no conteúdo.
 - Movimento discreto: entrada de até 200 ms (classe `.surgir`), esqueleto no
   carregamento, nada de número contando.
+- O esqueleto tem o formato do conteúdo que vai chegar, nunca um bloco liso:
+  gráfico com `app-esqueleto-grafico` (`barras`, `linhas` ou `anel`), lista e
+  tabela com `app-esqueleto-lista`, indicador e cartão com `p-skeleton` nas
+  medidas do texto. O brilho vem dos tokens `skeleton` do preset e para com
+  `prefers-reduced-motion`.
+- Quando os dados chegam: `.cascata` no contêiner faz os filhos surgirem em
+  sequência, `.crescer` faz a barra subir do zero, e toda `p-progressbar` se
+  enche sozinha (`styles.scss`). Gráfico Chart.js anima em 700 ms, desligado
+  com `prefers-reduced-motion`.
 - Receita sempre azul, despesa sempre vermelha; escala do orçamento verde,
   amarelo, laranja e vermelho, igual em todas as telas. Cor nunca é o único
   sinal.

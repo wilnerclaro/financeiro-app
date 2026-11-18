@@ -54,5 +54,11 @@ export const temaFinanceiro = definePreset(Aura, {
         shadow: 'none',
       },
     },
+    skeleton: {
+      root: {
+        background: 'light-dark(#e6e9e3, rgba(238, 243, 241, 0.07))',
+        animationBackground: 'light-dark(rgba(255, 255, 255, 0.9), rgba(238, 243, 241, 0.1))',
+      },
+    },
   },
 });

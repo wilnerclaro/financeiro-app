@@ -9,6 +9,7 @@ import { forkJoin, of, switchMap } from 'rxjs';
 import { Categoria, PrevistoRealizado, TipoCategoria } from '../../../../shared/api/api.models';
 import { CategoriasApi } from '../../../../shared/api/categorias-api';
 import { OrcamentoApi } from '../../../../shared/api/orcamento-api';
+import { EsqueletoLista } from '../../../../shared/components/esqueleto/esqueleto-lista';
 import { EstadoErro } from '../../../../shared/components/estado-erro/estado-erro';
 import { SeletorMes } from '../../../../shared/components/seletor-mes/seletor-mes';
 import { AGORA } from '../../../../shared/util/agora';
@@ -35,6 +36,7 @@ interface LinhaDoPrevisto {
     Checkbox,
     InputNumber,
     Skeleton,
+    EsqueletoLista,
     EstadoErro,
     SeletorMes,
     AbasOrcamento,

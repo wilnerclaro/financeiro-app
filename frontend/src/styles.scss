@@ -135,8 +135,25 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
-.surgir {
+.surgir,
+.cascata > * {
   animation: surgir 0.2s ease-out both;
+}
+
+@for $i from 2 through 12 {
+  .cascata > :nth-child(#{$i}) {
+    animation-delay: ($i - 1) * 40ms;
+  }
+}
+
+.crescer {
+  transform-origin: bottom;
+  animation: crescer 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.p-progressbar-value {
+  transform-origin: left;
+  animation: encher 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 @keyframes surgir {
@@ -150,8 +167,24 @@ button:focus-visible {
   }
 }
 
+@keyframes crescer {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes encher {
+  from {
+    transform: scaleX(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .surgir {
+  .surgir,
+  .cascata > *,
+  .crescer,
+  .p-progressbar-value,
+  :root .p-skeleton::after {
     animation: none;
   }
 }

@@ -41,9 +41,23 @@
       (tentar)="categorias.reload()"
     />
   } @else if (categorias.isLoading()) {
-    <p-skeleton height="16rem" />
+    <ul class="grupos superficie" aria-hidden="true">
+      @for (chips of esqueletoDosGrupos; track $index) {
+        <li>
+          <div class="linhas-esqueleto">
+            <p-skeleton [width]="chips.titulo" height=".9rem" />
+            <p-skeleton width="6rem" height=".75rem" />
+          </div>
+          <div class="chips">
+            @for (largura of chips.subcategorias; track $index) {
+              <p-skeleton [width]="largura" height="2rem" borderRadius="99px" />
+            }
+          </div>
+        </li>
+      }
+    </ul>
   } @else {
-    <ul class="grupos superficie">
+    <ul class="grupos superficie cascata">
       @for (g of grupos(); track g.categoria.id) {
         <li [class.inativa]="!g.categoria.ativa">
           <div class="linha">

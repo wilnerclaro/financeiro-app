@@ -5,15 +5,24 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.UUID;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 
 @DisplayName("Categorias")
 class CategoriaIntegracaoTest extends IntegracaoTest {
 
   private static final String URL = "/api/categorias";
+
+  @Autowired private JdbcTemplate jdbcTemplate;
+
+  @Autowired private DataSource dataSource;
 
   private Sessao usuario;
 
@@ -184,7 +193,7 @@ class CategoriaIntegracaoTest extends IntegracaoTest {
     mockMvc
         .perform(get(URL).header(HttpHeaders.AUTHORIZATION, novo.bearer()).param("size", "1"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.page.totalElements").value(100));
+        .andExpect(jsonPath("$.page.totalElements").value(105));
 
     consultar(URL + "/" + categoriaPadrao(novo, "Dividendos"), novo)
         .andExpect(jsonPath("$.tipo").value("RECEITA"))
@@ -193,6 +202,72 @@ class CategoriaIntegracaoTest extends IntegracaoTest {
         .andExpect(jsonPath("$.fonteReceita").value("ATIVA"));
     consultar(URL + "/" + categoriaPadrao(novo, "Supermercado"), novo)
         .andExpect(jsonPath("$.fonteReceita").value(org.hamcrest.Matchers.nullValue()));
+  }
+
+  @Test
+  @DisplayName("cadastro traz Passeios, Jogos, Cursos, Rendimento caixinha e Pix recebido")
+  void categoriasPadraoNovas() throws Exception {
+    Sessao novo = criarUsuario();
+
+    conferirSubcategoria(novo, "Passeios", "Lazer", "DESPESA", null);
+    conferirSubcategoria(novo, "Jogos", "Lazer", "DESPESA", null);
+    conferirSubcategoria(novo, "Cursos", "Educação", "DESPESA", null);
+    conferirSubcategoria(novo, "Eletrônicos", "Outros gastos", "DESPESA", null);
+    conferirSubcategoria(novo, "Rendimento caixinha", "Receitas passivas", "RECEITA", "PASSIVA");
+    conferirSubcategoria(novo, "Pix recebido", "Receitas ativas", "RECEITA", "ATIVA");
+  }
+
+  @Test
+  @DisplayName("V19 completa contas antigas sem duplicar nem recriar grupo renomeado")
+  void v19CompletaContasAntigas() throws Exception {
+    Sessao antigo = criarUsuario();
+    jdbcTemplate.update(
+        """
+        DELETE FROM categorias
+        WHERE usuario_id = ?
+          AND categoria_pai_id IS NOT NULL
+          AND nome IN ('Passeios', 'Jogos', 'Cursos', 'Rendimento caixinha',
+                       'Pix recebido', 'Eletrônicos')
+        """,
+        antigo.id());
+    criarCategoria(antigo, "jogos", "DESPESA", categoriaPadrao(antigo, "Lazer"));
+    atualizar(
+            antigo,
+            URL + "/" + categoriaPadrao(antigo, "Educação"),
+            corpo("Estudos", "DESPESA", null))
+        .andExpect(status().isOk());
+
+    executarV19();
+    executarV19();
+
+    mockMvc
+        .perform(get(URL).header(HttpHeaders.AUTHORIZATION, antigo.bearer()).param("size", "1"))
+        .andExpect(jsonPath("$.page.totalElements").value(104));
+    conferirSubcategoria(antigo, "Passeios", "Lazer", "DESPESA", null);
+    conferirSubcategoria(antigo, "jogos", "Lazer", "DESPESA", null);
+    conferirSubcategoria(antigo, "Eletrônicos", "Outros gastos", "DESPESA", null);
+    conferirSubcategoria(antigo, "Rendimento caixinha", "Receitas passivas", "RECEITA", "PASSIVA");
+    conferirSubcategoria(antigo, "Pix recebido", "Receitas ativas", "RECEITA", "ATIVA");
+    mockMvc
+        .perform(get(URL).header(HttpHeaders.AUTHORIZATION, antigo.bearer()).param("size", "200"))
+        .andExpect(jsonPath("$.content[?(@.nome == 'Cursos')]").isEmpty())
+        .andExpect(jsonPath("$.content[?(@.nome == 'Jogos')]").isEmpty());
+  }
+
+  private void conferirSubcategoria(
+      Sessao sessao, String nome, String grupo, String tipo, String fonte) throws Exception {
+    consultar(URL + "/" + categoriaPadrao(sessao, nome), sessao)
+        .andExpect(jsonPath("$.nomeCategoriaPai").value(grupo))
+        .andExpect(jsonPath("$.tipo").value(tipo))
+        .andExpect(jsonPath("$.fonteReceita").value(fonte))
+        .andExpect(jsonPath("$.ativa").value(true));
+  }
+
+  private void executarV19() {
+    new ResourceDatabasePopulator(
+            new ClassPathResource(
+                "db/migration/V19__adicionar_categorias_padrao_lazer_educacao_receitas.sql"))
+        .execute(dataSource);
   }
 
   @Test

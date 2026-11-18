@@ -68,3 +68,27 @@ for (const [rota, titulo] of [
     expect(larguras.pagina).toBeLessThanOrEqual(larguras.janela);
   });
 }
+
+for (const rota of ['/', '/orcamento', '/orcamento/ano', '/lancamentos', '/contas']) {
+  test(`${rota} mostra o esqueleto animado enquanto carrega, sem rolagem lateral`, async ({
+    page,
+  }) => {
+    await simularApiDoApp(page);
+    await entrar(page);
+    await page.route(/\/api\/(?!auth)/, () => undefined);
+    await page.goto(rota);
+
+    const esqueleto = page.locator('.p-skeleton').first();
+    await expect(esqueleto).toBeVisible();
+    const brilho = () => esqueleto.evaluate((el) => getComputedStyle(el, '::after').animationName);
+    expect(await brilho()).not.toBe('none');
+    const larguras = await page.evaluate(() => ({
+      pagina: document.documentElement.scrollWidth,
+      janela: window.innerWidth,
+    }));
+    expect(larguras.pagina).toBeLessThanOrEqual(larguras.janela);
+
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    expect(await brilho()).toBe('none');
+  });
+}

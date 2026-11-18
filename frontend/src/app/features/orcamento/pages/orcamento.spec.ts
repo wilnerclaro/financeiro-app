@@ -2,8 +2,10 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { UIChart } from 'primeng/chart';
 import {
   CATEGORIAS,
   RESUMO_ANUAL,
@@ -280,6 +282,23 @@ describe('Orçamento', () => {
       expect(celulas(linha(el, 'Guardou'))[0].className).toContain('ok');
       expect(celulas(linha(el, 'Guardou'))[4].className).toContain('vazio');
       expect(celulas(linha(el, 'Independenciômetro'))[10].textContent!.trim()).toBe('25%');
+    });
+
+    it('anima os gráficos, menos quando o sistema pede menos movimento', async () => {
+      const animacao = async () => {
+        const fixture = TestBed.createComponent(OrcamentoAno);
+        TestBed.tick();
+        http.expectOne('/api/orcamentos/2026').flush(RESUMO_ANUAL);
+        await fixture.whenStable();
+        const grafico = fixture.debugElement.query(By.directive(UIChart));
+        return (grafico.componentInstance as UIChart).options().animation;
+      };
+
+      expect(await animacao()).toEqual({ duration: 700, easing: 'easeOutQuart' });
+
+      vi.stubGlobal('matchMedia', (consulta: string) => ({ matches: consulta.includes('reduce') }));
+      expect(await animacao()).toBe(false);
+      vi.unstubAllGlobals();
     });
 
     it('abre e recolhe as subcategorias sem mostrar as zeradas', async () => {

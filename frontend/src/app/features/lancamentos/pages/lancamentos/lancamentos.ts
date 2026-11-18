@@ -19,6 +19,7 @@ import { ImportacaoDeExtrato } from '../../../importar/state/importacao-de-extra
 import { Lancamento, StatusLancamento, Transferencia } from '../../../../shared/api/api.models';
 import { LancamentosApi } from '../../../../shared/api/lancamentos-api';
 import { TransferenciasApi } from '../../../../shared/api/transferencias-api';
+import { EsqueletoLista } from '../../../../shared/components/esqueleto/esqueleto-lista';
 import { EstadoErro } from '../../../../shared/components/estado-erro/estado-erro';
 import { EstadoVazio } from '../../../../shared/components/estado-vazio/estado-vazio';
 import { Icone } from '../../../../shared/components/icone/icone';
@@ -81,6 +82,7 @@ interface DiaDeLancamentos {
     Menu,
     SelectButton,
     Skeleton,
+    EsqueletoLista,
     EstadoErro,
     EstadoVazio,
     Icone,

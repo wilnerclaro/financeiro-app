@@ -28,21 +28,35 @@
       (tentar)="tentarDeNovo()"
     />
   } @else if (relatorio.isLoading()) {
-    <div class="resumo superficie" aria-busy="true">
+    <div class="resumo superficie" aria-hidden="true">
       <div class="usado">
-        <p-skeleton shape="circle" size="120px" />
-        <div class="usado-txt">
+        <div class="anel"><app-esqueleto-grafico forma="anel" /></div>
+        <div class="usado-txt linhas-esqueleto">
           <p-skeleton width="7rem" height=".8rem" />
-          <p-skeleton width="11rem" height="2.2rem" />
-          <p-skeleton width="13rem" height=".9rem" />
+          <p-skeleton width="11rem" height="2.25rem" />
+          <p-skeleton width="9rem" height=".8rem" />
+          <p-skeleton width="12rem" height="1.25rem" />
         </div>
       </div>
       <div class="laterais">
-        <div class="kpi"><p-skeleton width="9rem" height="3.5rem" /></div>
-        <div class="kpi"><p-skeleton width="9rem" height="3.5rem" /></div>
+        @for (x of [1, 2]; track x) {
+          <div class="kpi linhas-esqueleto">
+            <p-skeleton width="5rem" height=".8rem" />
+            <p-skeleton width="8rem" height="1.6rem" />
+            <p-skeleton width="11rem" height=".8rem" />
+          </div>
+        }
+      </div>
+      <div class="legenda">
+        @for (x of [7, 7, 8, 7]; track $index) {
+          <p-skeleton [width]="x + 'rem'" height=".7rem" />
+        }
       </div>
     </div>
-    <p-skeleton height="16rem" />
+    <div class="secao" aria-hidden="true">
+      <p-skeleton width="10rem" height=".9rem" />
+      <app-esqueleto-lista [linhas]="4" [detalhe]="false" [cabecalho]="true" [colunas]="4" />
+    </div>
   } @else if (vazio()) {
     <app-estado-vazio
       [icone]="icones.ChartPie"
@@ -78,6 +92,7 @@
               <circle class="trilho" cx="60" cy="60" [attr.r]="raioDoAnel" />
               <circle
                 class="valor-anel"
+                [style.--volta]="voltaDoAnel"
                 cx="60"
                 cy="60"
                 [attr.r]="raioDoAnel"
@@ -89,7 +104,7 @@
               total.nivel ? percentual(total.valores.percentualRealizado) : '—'
             }}</span>
           </div>
-          <div class="usado-txt">
+          <div class="usado-txt surgir">
             <p class="rotulo">Despesas do mês</p>
             <p class="indicador num des">{{ brl(total.valores.realizado) }}</p>
             @if (total.nivel) {
@@ -108,7 +123,7 @@
           </div>
         </div>
       }
-      <div class="laterais">
+      <div class="laterais cascata">
         <div class="kpi">
           <p class="rotulo">Receitas</p>
           <p class="valor num rec">{{ brl(r.receitas.total.realizado) }}</p>
@@ -144,7 +159,7 @@
     <section class="secao" aria-labelledby="atencao-t">
       <h2 id="atencao-t" class="titulo-secao">Precisa da sua atenção</h2>
       @if (atencao().length) {
-        <ul class="lista superficie">
+        <ul class="lista superficie cascata">
           @for (a of atencao(); track a.id) {
             <li>
               <span class="ic-circ" [class]="a.cor"><app-icone [icone]="a.icone" /></span>
@@ -192,7 +207,7 @@
           <span class="n">Desvio</span>
           <span>Uso</span>
         </div>
-        <ul class="grupos">
+        <ul class="grupos cascata">
           @for (g of despesas(); track g.id) {
             <li>
               <app-linha-orcamento
@@ -202,7 +217,7 @@
                 (alternar)="alternar(g.id)"
               />
               @if (abertos().has(g.id)) {
-                <ul class="subitens" [attr.aria-label]="'Subitens de ' + g.nome">
+                <ul class="subitens cascata" [attr.aria-label]="'Subitens de ' + g.nome">
                   @for (s of g.subitens; track s.id) {
                     <li>
                       <app-linha-orcamento [linha]="s" tipo="subitem" />
@@ -224,7 +239,7 @@
     <section class="secao" aria-labelledby="rec-t">
       <h2 id="rec-t" class="titulo-secao">Receitas</h2>
       @if (receitas().length) {
-        <div class="receitas">
+        <div class="receitas cascata">
           @for (c of receitas(); track c.id) {
             <article class="receita superficie" [attr.aria-label]="c.nome">
               <div class="receita-cab">
