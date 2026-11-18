@@ -56,7 +56,7 @@ class IsolamentoEntreUsuariosIntegracaoTest extends IntegracaoTest {
                 .header(HttpHeaders.AUTHORIZATION, usuarioB.bearer())
                 .param("size", "200"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.page.totalElements").value(100))
+        .andExpect(jsonPath("$.page.totalElements").value(105))
         .andExpect(jsonPath("$.content[?(@.id == '" + categoriaA + "')]").isEmpty());
     mockMvc
         .perform(get("/api/metas").header(HttpHeaders.AUTHORIZATION, usuarioB.bearer()))

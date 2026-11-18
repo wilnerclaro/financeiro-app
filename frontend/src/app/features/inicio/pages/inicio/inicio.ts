@@ -34,6 +34,8 @@ import { ImportacaoDeExtrato } from '../../../importar/state/importacao-de-extra
 import { InicioApi } from '../../../../shared/api/inicio-api';
 import { ConfiguracaoInicialApi } from '../../../../shared/api/configuracao-inicial-api';
 import { LancamentosApi } from '../../../../shared/api/lancamentos-api';
+import { EsqueletoGrafico } from '../../../../shared/components/esqueleto/esqueleto-grafico';
+import { EsqueletoLista } from '../../../../shared/components/esqueleto/esqueleto-lista';
 import { EstadoErro } from '../../../../shared/components/estado-erro/estado-erro';
 import { EstadoVazio } from '../../../../shared/components/estado-vazio/estado-vazio';
 import { Icone } from '../../../../shared/components/icone/icone';
@@ -94,6 +96,8 @@ interface BarraDaSobra {
     ProgressBar,
     SelectButton,
     Skeleton,
+    EsqueletoGrafico,
+    EsqueletoLista,
     EstadoErro,
     EstadoVazio,
     Icone,

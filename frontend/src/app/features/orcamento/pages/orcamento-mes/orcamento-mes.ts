@@ -9,6 +9,8 @@ import { ProgressBar } from 'primeng/progressbar';
 import { Skeleton } from 'primeng/skeleton';
 import { FonteReceita, ItemDoOrcamento, Valores } from '../../../../shared/api/api.models';
 import { OrcamentoApi } from '../../../../shared/api/orcamento-api';
+import { EsqueletoGrafico } from '../../../../shared/components/esqueleto/esqueleto-grafico';
+import { EsqueletoLista } from '../../../../shared/components/esqueleto/esqueleto-lista';
 import { EstadoErro } from '../../../../shared/components/estado-erro/estado-erro';
 import { EstadoVazio } from '../../../../shared/components/estado-vazio/estado-vazio';
 import { Icone } from '../../../../shared/components/icone/icone';
@@ -54,6 +56,8 @@ const PESO_DO_ALERTA = { des: 0, lar: 1, '': 2 };
     ConfirmDialog,
     ProgressBar,
     Skeleton,
+    EsqueletoGrafico,
+    EsqueletoLista,
     EstadoErro,
     EstadoVazio,
     Icone,

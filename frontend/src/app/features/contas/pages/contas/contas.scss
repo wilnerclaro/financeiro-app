@@ -17,6 +17,12 @@ p {
   padding: var(--e4) var(--e6);
 }
 
+.linhas-esqueleto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+}
+
 .valor {
   font-size: 28px;
   line-height: 36px;

@@ -15,6 +15,8 @@ import {
   Valores,
 } from '../../../../shared/api/api.models';
 import { OrcamentoApi } from '../../../../shared/api/orcamento-api';
+import { EsqueletoGrafico } from '../../../../shared/components/esqueleto/esqueleto-grafico';
+import { EsqueletoLista } from '../../../../shared/components/esqueleto/esqueleto-lista';
 import { EstadoErro } from '../../../../shared/components/estado-erro/estado-erro';
 import { Icone } from '../../../../shared/components/icone/icone';
 import { AGORA } from '../../../../shared/util/agora';
@@ -51,7 +53,17 @@ interface Grafico {
 
 @Component({
   selector: 'app-orcamento-ano',
-  imports: [NgTemplateOutlet, Button, UIChart, Skeleton, EstadoErro, Icone, AbasOrcamento],
+  imports: [
+    NgTemplateOutlet,
+    Button,
+    UIChart,
+    Skeleton,
+    EsqueletoGrafico,
+    EsqueletoLista,
+    EstadoErro,
+    Icone,
+    AbasOrcamento,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './orcamento-ano.html',
   styleUrl: './orcamento-ano.scss',
@@ -156,7 +168,7 @@ export class OrcamentoAno {
     const cores = this.cores();
     return {
       maintainAspectRatio: false,
-      animation: false,
+      animation: this.menosMovimento() ? false : { duration: 700, easing: 'easeOutQuart' },
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: {
@@ -258,6 +270,10 @@ export class OrcamentoAno {
       abertos.add(id);
     }
     this.abertos.set(abertos);
+  }
+
+  private menosMovimento(): boolean {
+    return !!this.documento.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   }
 
   private cores() {

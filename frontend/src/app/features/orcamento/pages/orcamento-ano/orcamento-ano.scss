@@ -20,6 +20,11 @@
   padding: var(--e4) var(--e6) var(--e4);
 }
 
+.legenda-esqueleto {
+  display: flex;
+  gap: var(--e4);
+}
+
 .area {
   position: relative;
   height: 220px;

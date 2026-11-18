@@ -53,11 +53,20 @@
       (tentar)="tentarDeNovo()"
     />
   } @else if (movimentos.isLoading()) {
-    <div class="superficie carregando">
-      @for (x of [1, 2, 3, 4, 5]; track x) {
-        <p-skeleton height="2.5rem" />
+    <div class="totais superficie" aria-hidden="true">
+      @for (x of [1, 2, 3]; track x) {
+        <div class="carregando">
+          <p-skeleton width="4rem" height=".75rem" />
+          <p-skeleton width="7rem" height="1rem" />
+        </div>
       }
     </div>
+    @for (itens of [2, 3]; track $index) {
+      <div class="secao" aria-hidden="true">
+        <p-skeleton width="9rem" height=".75rem" />
+        <app-esqueleto-lista [linhas]="itens" [selo]="true" />
+      </div>
+    }
   } @else if (!lancamentos().length && !transferencias().length) {
     <app-estado-vazio
       [icone]="icones.List"
@@ -74,7 +83,7 @@
       </p-button>
     </app-estado-vazio>
   } @else {
-    <section class="totais superficie" aria-label="Totais do filtro">
+    <section class="totais superficie cascata" aria-label="Totais do filtro">
       <div>
         <p class="rotulo">Receitas</p>
         <p class="num forte rec">{{ brl(totais().receitas) }}</p>
@@ -92,7 +101,7 @@
     @for (dia of dias(); track dia.data) {
       <section class="secao" [attr.aria-label]="dia.rotulo">
         <h2 class="rotulo">{{ dia.rotulo }}</h2>
-        <ul class="lista superficie">
+        <ul class="lista superficie cascata">
           @for (l of dia.itens; track l.id) {
             <li [class.cancelado]="l.status === 'CANCELADO'">
               <div class="txt">
@@ -135,7 +144,7 @@
     @if (transferencias().length) {
       <section class="secao" aria-labelledby="transf-t">
         <h2 id="transf-t" class="titulo-secao">Transferências do mês</h2>
-        <ul class="lista superficie">
+        <ul class="lista superficie cascata">
           @for (t of transferencias(); track t.id) {
             <li [class.cancelado]="t.cancelada">
               <span class="ic-circ"><app-icone [icone]="icones.ArrowLeftRight" /></span>

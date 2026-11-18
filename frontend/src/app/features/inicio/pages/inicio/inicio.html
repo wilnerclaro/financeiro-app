@@ -37,6 +37,14 @@
         [outlined]="true"
       />
     </section>
+  } @else if (configuracao.isLoading()) {
+    <div class="superficie primeiros-passos" aria-hidden="true">
+      <div class="linhas-esqueleto">
+        <p-skeleton width="8rem" height=".9rem" />
+        <p-skeleton width="16rem" height=".8rem" />
+      </div>
+      <p-skeleton width="11rem" height="2.25rem" />
+    </div>
   }
 
   @if (resumo.error()) {
@@ -61,7 +69,7 @@
       </p-button>
     </app-estado-vazio>
   } @else {
-    <section class="kpis superficie" [attr.aria-label]="'Indicadores de ' + nomeDoMes()">
+    <section class="kpis superficie cascata" [attr.aria-label]="'Indicadores de ' + nomeDoMes()">
       @if (resumo.isLoading()) {
         @for (x of [1, 2, 3, 4]; track x) {
           <div class="kpi">
@@ -115,7 +123,7 @@
               }
             </ul>
           } @else if (atencao().length) {
-            <ul class="lista superficie">
+            <ul class="lista superficie cascata">
               @for (a of atencao(); track a.id) {
                 <li>
                   <span class="ic-circ" [class]="a.cor"><app-icone [icone]="a.icone" /></span>
@@ -167,7 +175,12 @@
             />
           </div>
           @if (resumo.isLoading()) {
-            <p-skeleton height="200px" />
+            <app-esqueleto-grafico forma="barras" [colunas]="6" [altura]="200" />
+            <div class="legenda" aria-hidden="true">
+              @for (x of [7, 7, 11]; track $index) {
+                <p-skeleton [width]="x + 'rem'" height=".75rem" />
+              }
+            </div>
           } @else if (vista() === 'Gráfico') {
             <div class="grafico" role="img" [attr.aria-label]="resumoDoGrafico()">
               @for (b of barras(); track b.rotuloLongo) {
@@ -175,7 +188,8 @@
                   <div class="trilho">
                     <span class="meta" [style.bottom.%]="b.alturaMeta"></span>
                     <span
-                      class="barra-sobra"
+                      class="barra-sobra crescer"
+                      [style.animation-delay.ms]="$index * 60"
                       [class.abaixo]="!b.atingiuMeta"
                       [style.height.%]="b.altura"
                     ></span>
@@ -226,11 +240,9 @@
             /></a>
           </div>
           @if (resumo.isLoading()) {
-            @for (x of [1, 2, 3]; track x) {
-              <p-skeleton height="1.6rem" />
-            }
+            <app-esqueleto-lista [linhas]="3" />
           } @else {
-            <ul class="lista superficie">
+            <ul class="lista superficie cascata">
               @for (l of dados()?.ultimosLancamentos; track l.id) {
                 <li>
                   <div class="txt">
@@ -262,9 +274,20 @@
             /></a>
           </div>
           @if (resumo.isLoading()) {
-            <p-skeleton height="6rem" />
+            <ul class="orcamento" aria-hidden="true">
+              @for (largura of ['40%', '55%', '32%']; track $index) {
+                <li>
+                  <div class="linha">
+                    <p-skeleton [width]="largura" height=".9rem" />
+                    <p-skeleton width="4rem" height="1.25rem" />
+                  </div>
+                  <p-skeleton height="6px" />
+                  <p-skeleton width="60%" height=".75rem" />
+                </li>
+              }
+            </ul>
           } @else {
-            <ul class="orcamento">
+            <ul class="orcamento cascata">
               @for (g of dados()?.orcamento?.gruposMaisUsados; track g.categoriaId) {
                 <li>
                   <div class="linha">
@@ -299,10 +322,14 @@
         <section class="secao o5" aria-labelledby="ind-t">
           <h2 id="ind-t" class="titulo-secao">Independência financeira</h2>
           @if (resumo.isLoading()) {
-            <p-skeleton width="6rem" height="2rem" />
-            <p-skeleton height="6px" />
+            <div class="linhas-esqueleto" aria-hidden="true">
+              <p-skeleton width="5rem" height="2.25rem" />
+              <p-skeleton height="6px" />
+              <p-skeleton width="90%" height=".8rem" />
+              <p-skeleton width="70%" height=".8rem" />
+            </div>
           } @else if (independencia(); as ind) {
-            <p class="valor num ok">{{ percentual(ind.indice) }}</p>
+            <p class="valor num ok surgir">{{ percentual(ind.indice) }}</p>
             @if (ind.proximoMarco) {
               <div class="marco">
                 <p-progressbar

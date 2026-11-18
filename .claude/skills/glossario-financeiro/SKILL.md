@@ -73,6 +73,16 @@ TOTAL GERAL         = ativa + passiva           [C24 = C23 + C16]
 > fonte. No cadastro o usuário recebe os grupos "Receitas ativas" e "Receitas
 > passivas" com os itens acima, copiados da tabela `categorias_padrao` (V14).
 
+> **Categorias fora da planilha (V19, pedido do Wilner em 18/11/2026).**
+> "Rendimento caixinha" entra em Receitas passivas: é juro de aplicação, renda
+> que não exige trabalho, e por isso conta no Independenciômetro. "Pix
+> recebido" entra em Receitas ativas: Pix é o meio, não a natureza da renda, e
+> classificá-lo como passivo inflaria o Independenciômetro. Pix vindo de conta
+> do próprio usuário é transferência, não receita. Também entram Lazer >
+> Passeios, Lazer > Jogos e Educação > Cursos. A V19 copia essas subcategorias,
+> e "Eletrônicos" (Outros gastos, já na V14), para as contas existentes que têm
+> o grupo ativo com o mesmo nome, sem duplicar nome que o usuário já tenha.
+
 ### Despesas — hierarquia de dois níveis
 
 Grupos, cada um somando seus subitens:

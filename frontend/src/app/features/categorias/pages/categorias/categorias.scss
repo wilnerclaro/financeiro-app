@@ -29,6 +29,12 @@ p {
   color: var(--p-text-muted-color);
 }
 
+.linhas-esqueleto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+}
+
 .linha {
   display: flex;
   align-items: center;

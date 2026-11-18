@@ -29,10 +29,24 @@
       (tentar)="dados.reload()"
     />
   } @else if (dados.isLoading()) {
-    <p-skeleton height="6rem" />
-    <div class="grade">
+    <div class="patrimonio superficie" aria-hidden="true">
+      <div class="linhas-esqueleto">
+        <p-skeleton width="5rem" height=".75rem" />
+        <p-skeleton width="10rem" height="2.25rem" />
+      </div>
+      <div class="linhas-esqueleto">
+        <p-skeleton width="6rem" height=".75rem" />
+        <p-skeleton width="5rem" height=".9rem" />
+      </div>
+    </div>
+    <div class="grade" aria-hidden="true">
       @for (x of [1, 2, 3]; track x) {
-        <p-skeleton height="8rem" />
+        <div class="cartao superficie">
+          <p-skeleton width="45%" height=".9rem" />
+          <p-skeleton width="30%" height=".75rem" />
+          <p-skeleton width="55%" height="1.6rem" />
+          <p-skeleton width="70%" height=".75rem" />
+        </div>
       }
     </div>
   } @else if (!todas().length) {
@@ -45,7 +59,7 @@
     </app-estado-vazio>
   } @else {
     @if (resumo(); as r) {
-      <section class="patrimonio superficie" aria-label="Patrimônio">
+      <section class="patrimonio superficie surgir" aria-label="Patrimônio">
         <div>
           <p class="rotulo">Patrimônio</p>
           <p class="valor num" [class.des]="r.patrimonio < 0">{{ brl(r.patrimonio) }}</p>
@@ -61,7 +75,7 @@
       </section>
     }
 
-    <ul class="grade">
+    <ul class="grade cascata">
       @for (c of visiveis(); track c.id) {
         <li class="cartao superficie" [class.inativa]="!c.ativa">
           <div class="linha">

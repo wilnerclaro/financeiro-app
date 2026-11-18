@@ -53,6 +53,19 @@ p {
   stroke: var(--p-text-muted-color);
   stroke-linecap: round;
   transition: stroke-dashoffset 0.2s ease-out;
+  animation: encher-anel 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes encher-anel {
+  from {
+    stroke-dashoffset: var(--volta);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anel .valor-anel {
+    animation: none;
+  }
 }
 
 .anel.ok .valor-anel {
@@ -95,6 +108,10 @@ p {
 .laterais .kpi + .kpi {
   border-left: 0;
   border-top: 1px solid var(--p-content-border-color);
+}
+
+.resumo .linhas-esqueleto {
+  gap: var(--e2);
 }
 
 .valor {

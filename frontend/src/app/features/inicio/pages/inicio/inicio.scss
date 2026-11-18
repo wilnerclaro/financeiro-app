@@ -144,6 +144,12 @@ h2 {
   border-top: 1px solid var(--p-content-border-color);
 }
 
+.linhas-esqueleto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e3);
+}
+
 .linha {
   display: flex;
   align-items: center;

@@ -45,15 +45,32 @@
         </div>
       }
     </section>
-    <div class="graficos">
-      <p-skeleton height="260px" />
-      <p-skeleton height="260px" />
+    <div class="graficos" aria-hidden="true">
+      @for (x of [1, 2]; track x) {
+        <div class="grafico superficie">
+          <p-skeleton width="12rem" height=".9rem" />
+          <app-esqueleto-grafico forma="linhas" [colunas]="12" [altura]="220" />
+          <div class="legenda-esqueleto">
+            <p-skeleton width="5rem" height=".75rem" />
+            <p-skeleton width="5rem" height=".75rem" />
+          </div>
+        </div>
+      }
     </div>
-    <p-skeleton height="18rem" />
+    <div class="secao" aria-hidden="true">
+      <p-skeleton width="10rem" height=".9rem" />
+      <app-esqueleto-lista
+        [linhas]="6"
+        [detalhe]="false"
+        [cabecalho]="true"
+        [colunas]="12"
+        larguraDaColuna="2.5rem"
+      />
+    </div>
   } @else if (vazio()) {
     <p class="aux">Nada previsto ou realizado em {{ ano() }}.</p>
   } @else {
-    <section class="kpis superficie" [attr.aria-label]="'Indicadores de ' + ano()">
+    <section class="kpis superficie cascata" [attr.aria-label]="'Indicadores de ' + ano()">
       @for (k of indicadores(); track k.rotulo) {
         <div class="kpi">
           <p class="rotulo">{{ k.rotulo }}</p>
@@ -63,7 +80,7 @@
       }
     </section>
 
-    <div class="graficos">
+    <div class="graficos cascata">
       @for (g of graficos(); track g.titulo) {
         <section class="grafico superficie" [attr.aria-labelledby]="'graf-' + g.titulo">
           <h2 [id]="'graf-' + g.titulo" class="titulo-secao">
@@ -85,7 +102,7 @@
           <span><span class="amostra futuro" aria-hidden="true"></span>Previsto, mês por vir</span>
         </p>
       </div>
-      <div class="superficie rolagem">
+      <div class="superficie rolagem surgir">
         <table class="tabela-ano">
           <caption class="sr-only">
             Realizado de cada mês de
