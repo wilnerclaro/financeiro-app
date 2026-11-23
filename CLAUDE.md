@@ -131,7 +131,7 @@ exigem escala maior — ver a skill `glossario-financeiro`.
 
 **Git**: conventional commits com descrição em português (`feat:`, `fix:`,
 `chore:`, `test:`, `docs:`). Branch `feature/<nome-em-portugues>` → PR →
-`develop`.
+`develop`. A produção (VPS) roda a `main`; publicar é PR de `develop` → `main`.
 
 ## Qualidade
 

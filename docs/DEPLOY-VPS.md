@@ -19,6 +19,10 @@ O que sobe na VPS (tudo em `deploy/compose.yaml`):
 Swagger e Actuator não ficam acessíveis pela internet: o Caddy só repassa
 `/api/*`, e o Swagger está desligado na produção.
 
+A VPS roda sempre a branch **`main`**. O dia a dia continua igual:
+`feature/*` → PR → `develop`. Publicar em produção é abrir um PR de `develop`
+para `main` e mesclar (passo 9).
+
 Tempo total estimado: 1 a 2 horas na primeira vez.
 
 ---
@@ -219,13 +223,13 @@ docker compose version
 
 ## 5. Baixar o código
 
-O código precisa estar em `develop` com a pasta `deploy/` (este roteiro).
+A VPS usa a branch `main`, que precisa ter a pasta `deploy/` (este roteiro).
 
 Se o repositório for **público**:
 
 ```bash
 # Na VPS
-git clone -b develop https://github.com/wilnerclaro/financeiro-app.git
+git clone -b main https://github.com/wilnerclaro/financeiro-app.git
 ```
 
 Se for **privado**, crie uma *deploy key* (só leitura, só este repositório):
@@ -245,7 +249,7 @@ cat >> ~/.ssh/config <<'EOF'
 Host github.com
   IdentityFile ~/.ssh/github_financeiro
 EOF
-git clone -b develop git@github.com:wilnerclaro/financeiro-app.git
+git clone -b main git@github.com:wilnerclaro/financeiro-app.git
 ```
 
 ---
@@ -333,7 +337,12 @@ nome e e-mail, a publicação não passa por verificação do Google.
 
 ## 9. Atualizar depois
 
-Sempre que houver código novo em `develop`:
+Só vai para a VPS o que estiver na `main`. Para publicar uma versão:
+
+1. No GitHub, abra um PR de **`develop` para `main`**
+   (*Pull requests → New pull request*, base `main`, compare `develop`).
+2. Espere o CI ficar verde e mescle.
+3. Na VPS:
 
 ```bash
 # Na VPS
@@ -346,6 +355,26 @@ docker image prune -f        # apaga imagens antigas para não encher o disco
 
 As migrations novas do Flyway rodam sozinhas quando a API sobe. Durante o
 rebuild o app fica fora do ar por 1 a 2 minutos.
+
+Confira de vez em quando que a VPS está na `main` com `git -C ~/financeiro-app
+branch --show-current`.
+
+**Se a sua VPS foi instalada a partir da `develop`**, troque uma vez para a
+`main`:
+
+```bash
+# Na VPS
+cd ~/financeiro-app
+git fetch origin
+git checkout main
+git pull
+cd deploy
+docker compose up -d --build
+```
+
+O `.env` e o `compose.override.yaml` não fazem parte do repositório, então
+continuam no lugar depois da troca. Depois disso, o `git pull` do dia a dia já
+segue a `main`.
 
 ---
 
@@ -411,6 +440,14 @@ Veja `docker compose logs web`. As causas comuns: o domínio ainda não aponta
 para o IP (`nslookup`), as portas 80 e 443 estão fechadas no `ufw` ou no
 firewall do painel, ou o `DOMINIO` do `.env` está com `https://` ou barra.
 Corrija e rode `docker compose up -d`.
+
+**`failed to bind host port 0.0.0.0:80/tcp: address already in use`**
+Outro programa ocupa a porta 80. Descubra qual com
+`sudo ss -ltnp | grep -E ':(80|443) '`. No template de Docker da Hostinger é um
+container `traefik-traefik-1`; desligue-o sem apagar com
+`docker update --restart=no traefik-traefik-1 && docker stop traefik-traefik-1`.
+Se for `apache2` ou `nginx`, use `sudo systemctl disable --now apache2` (ou
+`nginx`). Depois rode `docker compose up -d`.
 
 **O build para no meio com "Killed" ou a VPS congela**
 Faltou memória. Crie o swap do passo 4 e rode o `up -d --build` de novo.
