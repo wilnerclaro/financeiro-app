@@ -1,16 +1,16 @@
 package br.com.financeiro.api.dashboardfinanceiro.service;
 
-import br.com.financeiro.api.common.exception.BusinessException;
-import br.com.financeiro.api.common.exception.ResourceNotFoundException;
+import br.com.financeiro.api.common.util.Competencia;
+import br.com.financeiro.api.common.util.Dinheiro;
+import br.com.financeiro.api.common.util.Fracao;
 import br.com.financeiro.api.dashboardfinanceiro.dto.ResumoCategoriaFinanceiraResponse;
 import br.com.financeiro.api.dashboardfinanceiro.dto.ResumoMensalFinanceiroResponse;
 import br.com.financeiro.api.dashboardfinanceiro.projection.ResumoCategoriaFinanceiraProjection;
 import br.com.financeiro.api.dashboardfinanceiro.projection.ResumoMensalFinanceiroProjection;
 import br.com.financeiro.api.dashboardfinanceiro.repository.DashboardFinanceiroRepository;
 import br.com.financeiro.api.lancamentofinanceiro.enums.TipoLancamentoFinanceiro;
-import br.com.financeiro.api.usuario.repository.UsuarioRepository;
+import br.com.financeiro.api.usuario.service.UsuarioService;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
@@ -23,17 +23,14 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class DashboardFinanceiroService {
 
-  /** Percentual como fração de 0 a 1 com 4 casas (0.1234 = 12,34%). */
-  private static final int ESCALA_PERCENTUAL = 4;
-
   private final DashboardFinanceiroRepository dashboardFinanceiroRepository;
-  private final UsuarioRepository usuarioRepository;
+  private final UsuarioService usuarioService;
 
   @Transactional(readOnly = true)
   public ResumoMensalFinanceiroResponse buscarResumoMensal(
       UUID usuarioId, Integer ano, Integer mes) {
     validarUsuario(usuarioId);
-    YearMonth competencia = validarCompetencia(ano, mes);
+    YearMonth competencia = Competencia.de(ano, mes);
 
     LocalDate dataInicio = competencia.atDay(1);
     LocalDate dataFim = competencia.atEndOfMonth();
@@ -41,8 +38,8 @@ public class DashboardFinanceiroService {
     ResumoMensalFinanceiroProjection resumo =
         dashboardFinanceiroRepository.buscarResumoMensal(usuarioId, dataInicio, dataFim);
 
-    BigDecimal totalReceitas = valorOuZero(resumo.getTotalReceitas());
-    BigDecimal totalDespesas = valorOuZero(resumo.getTotalDespesas());
+    BigDecimal totalReceitas = Dinheiro.arredondar(resumo.getTotalReceitas());
+    BigDecimal totalDespesas = Dinheiro.arredondar(resumo.getTotalDespesas());
     Long quantidadeLancamentos = resumo.getQuantidadeLancamentos();
 
     List<ResumoCategoriaFinanceiraResponse> receitasPorCategoria =
@@ -80,47 +77,17 @@ public class DashboardFinanceiroService {
 
   private ResumoCategoriaFinanceiraResponse paraResponse(
       ResumoCategoriaFinanceiraProjection projection, BigDecimal totalPeriodo) {
-    BigDecimal total = valorOuZero(projection.getTotal());
+    BigDecimal total = Dinheiro.arredondar(projection.getTotal());
 
     return new ResumoCategoriaFinanceiraResponse(
         projection.getCategoriaId(),
         projection.getCategoriaNome(),
         total,
-        calcularPercentual(total, totalPeriodo),
+        Fracao.de(total, totalPeriodo),
         projection.getQuantidadeLancamentos());
   }
 
-  private BigDecimal calcularPercentual(BigDecimal valor, BigDecimal total) {
-    if (total == null || BigDecimal.ZERO.compareTo(total) == 0) {
-      return BigDecimal.ZERO;
-    }
-
-    return valor.divide(total, ESCALA_PERCENTUAL, RoundingMode.HALF_UP);
-  }
-
-  private BigDecimal valorOuZero(BigDecimal valor) {
-    return valor == null ? BigDecimal.ZERO : valor;
-  }
-
   private void validarUsuario(UUID usuarioId) {
-    if (!usuarioRepository.existsById(usuarioId)) {
-      throw new ResourceNotFoundException("Usuário não encontrado.");
-    }
-  }
-
-  private YearMonth validarCompetencia(Integer ano, Integer mes) {
-    if (ano == null || mes == null) {
-      throw new BusinessException("Ano e mês são obrigatórios.");
-    }
-
-    if (ano < 2000) {
-      throw new BusinessException("Ano deve ser maior ou igual a 2000.");
-    }
-
-    if (mes < 1 || mes > 12) {
-      throw new BusinessException("Mês deve estar entre 1 e 12.");
-    }
-
-    return YearMonth.of(ano, mes);
+    usuarioService.validarExistencia(usuarioId);
   }
 }

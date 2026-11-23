@@ -1,0 +1,100 @@
+.formulario {
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.corpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e6);
+  padding: var(--e6);
+}
+
+.tipos ::ng-deep .p-togglebutton {
+  flex: 1;
+}
+
+.tipos ::ng-deep .p-selectbutton {
+  display: flex;
+  width: 100%;
+}
+
+:host ::ng-deep input.valor {
+  font-size: 28px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.mais:focus-visible {
+  outline: 2px solid var(--p-primary-color);
+  outline-offset: 2px;
+}
+
+.duas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--e4);
+}
+
+.pago {
+  justify-content: flex-end;
+}
+
+.dica {
+  display: flex;
+  gap: var(--e2);
+}
+
+.mais {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: var(--e1);
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.detalhes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e4);
+}
+
+.erro {
+  color: var(--des);
+}
+
+.botoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--e2);
+}
+
+@media (max-width: 600px) {
+  .corpo {
+    padding: var(--e4);
+  }
+
+  .duas {
+    grid-template-columns: 1fr;
+  }
+
+  .botoes {
+    flex-direction: column-reverse;
+  }
+
+  .botoes p-button,
+  .botoes ::ng-deep .p-button {
+    width: 100%;
+  }
+}

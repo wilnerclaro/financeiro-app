@@ -2,10 +2,13 @@ package br.com.financeiro.api.lancamentofinanceiro.docs;
 
 import br.com.financeiro.api.lancamentofinanceiro.dto.AtualizarLancamentoFinanceiroRequest;
 import br.com.financeiro.api.lancamentofinanceiro.dto.CriarLancamentoFinanceiroRequest;
+import br.com.financeiro.api.lancamentofinanceiro.dto.FaturaCartaoResponse;
 import br.com.financeiro.api.lancamentofinanceiro.dto.LancamentoFinanceiroResponse;
+import br.com.financeiro.api.lancamentofinanceiro.dto.PagarFaturaRequest;
 import br.com.financeiro.api.lancamentofinanceiro.dto.PagarLancamentoFinanceiroRequest;
 import br.com.financeiro.api.lancamentofinanceiro.enums.StatusLancamentoFinanceiro;
 import br.com.financeiro.api.lancamentofinanceiro.enums.TipoLancamentoFinanceiro;
+import br.com.financeiro.api.security.UsuarioLogado;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,14 +28,17 @@ public interface LancamentoFinanceiroApiDoc {
 
   @Operation(
       summary = "Criar lançamento",
-      description = "Cria uma receita ou despesa. Lançamentos pagos movimentam o saldo da conta.")
+      description =
+          "Cria uma receita ou despesa. Lançamentos pagos movimentam o saldo da conta. Em "
+              + "cartão de crédito, dataCompetencia é a data da compra: a API calcula o "
+              + "vencimento da fatura e usa esse mês como competência.")
   @ApiResponse(responseCode = "201", description = "Lançamento criado com sucesso")
   @ApiResponse(
       responseCode = "400",
       description = "Requisição inválida ou regra de negócio violada")
   @ApiResponse(responseCode = "404", description = "Usuário, conta ou categoria não encontrada")
   ResponseEntity<LancamentoFinanceiroResponse> criar(
-      @Valid @RequestBody CriarLancamentoFinanceiroRequest request);
+      @UsuarioLogado UUID usuarioId, @Valid @RequestBody CriarLancamentoFinanceiroRequest request);
 
   @Operation(
       summary = "Listar lançamentos",
@@ -41,7 +47,7 @@ public interface LancamentoFinanceiroApiDoc {
   @ApiResponse(responseCode = "400", description = "Período inválido")
   @ApiResponse(responseCode = "404", description = "Usuário, conta ou categoria não encontrada")
   ResponseEntity<Page<LancamentoFinanceiroResponse>> listar(
-      @RequestParam UUID usuarioId,
+      @UsuarioLogado UUID usuarioId,
       @RequestParam(required = false) TipoLancamentoFinanceiro tipo,
       @RequestParam(required = false) StatusLancamentoFinanceiro status,
       @RequestParam(required = false) UUID contaId,
@@ -58,7 +64,7 @@ public interface LancamentoFinanceiroApiDoc {
   @ApiResponse(responseCode = "200", description = "Lançamento encontrado")
   @ApiResponse(responseCode = "404", description = "Lançamento não encontrado")
   ResponseEntity<LancamentoFinanceiroResponse> buscarPorId(
-      @PathVariable UUID id, @RequestParam UUID usuarioId);
+      @PathVariable UUID id, @UsuarioLogado UUID usuarioId);
 
   @Operation(
       summary = "Atualizar lançamento",
@@ -69,7 +75,9 @@ public interface LancamentoFinanceiroApiDoc {
       description = "Requisição inválida ou regra de negócio violada")
   @ApiResponse(responseCode = "404", description = "Lançamento, conta ou categoria não encontrada")
   ResponseEntity<LancamentoFinanceiroResponse> atualizar(
-      @PathVariable UUID id, @Valid @RequestBody AtualizarLancamentoFinanceiroRequest request);
+      @PathVariable UUID id,
+      @UsuarioLogado UUID usuarioId,
+      @Valid @RequestBody AtualizarLancamentoFinanceiroRequest request);
 
   @Operation(
       summary = "Pagar lançamento",
@@ -78,7 +86,9 @@ public interface LancamentoFinanceiroApiDoc {
   @ApiResponse(responseCode = "400", description = "Lançamento já pago, cancelado ou data inválida")
   @ApiResponse(responseCode = "404", description = "Lançamento não encontrado")
   ResponseEntity<LancamentoFinanceiroResponse> pagar(
-      @PathVariable UUID id, @Valid @RequestBody PagarLancamentoFinanceiroRequest request);
+      @PathVariable UUID id,
+      @UsuarioLogado UUID usuarioId,
+      @Valid @RequestBody PagarLancamentoFinanceiroRequest request);
 
   @Operation(
       summary = "Cancelar lançamento",
@@ -86,5 +96,37 @@ public interface LancamentoFinanceiroApiDoc {
   @ApiResponse(responseCode = "204", description = "Lançamento cancelado com sucesso")
   @ApiResponse(responseCode = "400", description = "Lançamento já cancelado")
   @ApiResponse(responseCode = "404", description = "Lançamento não encontrado")
-  ResponseEntity<Void> cancelar(@PathVariable UUID id, @RequestParam UUID usuarioId);
+  ResponseEntity<Void> cancelar(@PathVariable UUID id, @UsuarioLogado UUID usuarioId);
+
+  @Operation(
+      summary = "Fatura do cartão",
+      description =
+          "Lançamentos e total da fatura de um cartão de crédito que vence no mês informado. "
+              + "Para pagar, use PATCH /faturas/pagar.")
+  @ApiResponse(responseCode = "200", description = "Fatura encontrada")
+  @ApiResponse(
+      responseCode = "400",
+      description = "A conta não é cartão ou a competência é inválida")
+  @ApiResponse(responseCode = "404", description = "Conta não encontrada")
+  ResponseEntity<FaturaCartaoResponse> buscarFatura(
+      @UsuarioLogado UUID usuarioId,
+      @RequestParam UUID contaId,
+      @RequestParam Integer ano,
+      @RequestParam Integer mes);
+
+  @Operation(
+      summary = "Pagar fatura do cartão",
+      description =
+          "Paga de uma vez todas as compras pendentes da fatura que vence no mês informado. "
+              + "O valor pendente sai da conta de pagamento por uma transferência para o cartão, "
+              + "na mesma operação. Devolve a fatura atualizada.")
+  @ApiResponse(responseCode = "200", description = "Fatura paga")
+  @ApiResponse(
+      responseCode = "400",
+      description =
+          "A conta não é cartão, a fatura não tem compra pendente, a data é futura ou a conta "
+              + "de pagamento é o próprio cartão ou está inativa")
+  @ApiResponse(responseCode = "404", description = "Cartão ou conta de pagamento não encontrada")
+  ResponseEntity<FaturaCartaoResponse> pagarFatura(
+      @UsuarioLogado UUID usuarioId, @Valid @RequestBody PagarFaturaRequest request);
 }

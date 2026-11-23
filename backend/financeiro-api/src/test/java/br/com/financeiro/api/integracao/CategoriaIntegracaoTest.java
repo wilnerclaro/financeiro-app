@@ -5,28 +5,38 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.UUID;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 
 @DisplayName("Categorias")
 class CategoriaIntegracaoTest extends IntegracaoTest {
 
   private static final String URL = "/api/categorias";
 
-  private UUID usuarioId;
+  @Autowired private JdbcTemplate jdbcTemplate;
+
+  @Autowired private DataSource dataSource;
+
+  private Sessao usuario;
 
   @BeforeEach
-  void prepararDados() {
-    usuarioId = criarUsuario();
+  void prepararDados() throws Exception {
+    usuario = criarUsuario();
   }
 
   @Test
   @DisplayName("o nome é guardado como digitado (sem forçar maiúsculas)")
   void nomeComoDigitado() throws Exception {
-    UUID id = criarCategoria(usuarioId, "  Alimentação   fora ", "DESPESA", null);
+    UUID id = criarCategoria(usuario, "  Alimentação   fora ", "DESPESA", null);
 
-    consultar(URL + "/" + id, usuarioId)
+    consultar(URL + "/" + id, usuario)
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.nome").value("Alimentação fora"))
         .andExpect(jsonPath("$.ativa").value(true))
@@ -36,9 +46,9 @@ class CategoriaIntegracaoTest extends IntegracaoTest {
   @Test
   @DisplayName("nome duplicado é rejeitado sem diferenciar maiúsculas")
   void nomeDuplicado() throws Exception {
-    criarCategoria(usuarioId, "Transporte", "DESPESA", null);
+    criarCategoria(usuario, "Mobilidade", "DESPESA", null);
 
-    postar(URL, corpo("TRANSPORTE", "DESPESA", null))
+    postar(usuario, URL, corpo("TRANSPORTE", "DESPESA", null))
         .andExpect(status().isBadRequest())
         .andExpect(
             jsonPath("$.message")
@@ -48,20 +58,20 @@ class CategoriaIntegracaoTest extends IntegracaoTest {
   @Test
   @DisplayName("não permite um terceiro nível")
   void terceiroNivel() throws Exception {
-    UUID pai = criarCategoria(usuarioId, "Casa", "DESPESA", null);
-    UUID filha = criarCategoria(usuarioId, "Contas", "DESPESA", pai);
+    UUID pai = criarCategoria(usuario, "Casa", "DESPESA", null);
+    UUID filha = criarCategoria(usuario, "Contas", "DESPESA", pai);
 
-    postar(URL, corpo("Luz", "DESPESA", filha)).andExpect(status().isBadRequest());
+    postar(usuario, URL, corpo("Luz", "DESPESA", filha)).andExpect(status().isBadRequest());
   }
 
   @Test
   @DisplayName("categoria que já tem filhas não vira subcategoria pelo PUT")
   void categoriaComFilhasNaoViraSubcategoria() throws Exception {
-    UUID casa = criarCategoria(usuarioId, "Casa", "DESPESA", null);
-    criarCategoria(usuarioId, "Aluguel", "DESPESA", casa);
-    UUID moradia = criarCategoria(usuarioId, "Moradia", "DESPESA", null);
+    UUID casa = criarCategoria(usuario, "Casa", "DESPESA", null);
+    criarCategoria(usuario, "Aluguel", "DESPESA", casa);
+    UUID moradia = criarCategoria(usuario, "Residência", "DESPESA", null);
 
-    atualizar(URL + "/" + casa, corpo("Casa", "DESPESA", moradia))
+    atualizar(usuario, URL + "/" + casa, corpo("Casa", "DESPESA", moradia))
         .andExpect(status().isBadRequest())
         .andExpect(
             jsonPath("$.message")
@@ -73,20 +83,42 @@ class CategoriaIntegracaoTest extends IntegracaoTest {
   @Test
   @DisplayName("não troca o tipo de categoria que tem filhas, mesmo inativas")
   void trocaDeTipoComFilhas() throws Exception {
-    UUID casa = criarCategoria(usuarioId, "Casa", "DESPESA", null);
-    UUID aluguel = criarCategoria(usuarioId, "Aluguel", "DESPESA", casa);
-    remover(URL + "/" + aluguel, usuarioId).andExpect(status().isNoContent());
+    UUID casa = criarCategoria(usuario, "Casa", "DESPESA", null);
+    UUID aluguel = criarCategoria(usuario, "Aluguel", "DESPESA", casa);
+    remover(URL + "/" + aluguel, usuario).andExpect(status().isNoContent());
 
-    atualizar(URL + "/" + casa, corpo("Casa", "RECEITA", null)).andExpect(status().isBadRequest());
+    atualizar(usuario, URL + "/" + casa, corpo("Casa", "RECEITA", null))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  @DisplayName("categoria com lançamento ou previsto não troca de tipo")
+  void trocaDeTipoEmUso() throws Exception {
+    UUID viagens = criarCategoria(usuario, "Viagens", "DESPESA", null);
+    UUID conta = criarConta(usuario, "Banco", "100.00");
+    criarLancamento(usuario, conta, viagens, "DESPESA", "10.00", null, HOJE)
+        .andExpect(status().isCreated());
+
+    atualizar(usuario, URL + "/" + viagens, corpo("Viagens", "RECEITA", null))
+        .andExpect(status().isBadRequest())
+        .andExpect(
+            jsonPath("$.message")
+                .value(
+                    "Não é possível alterar o tipo de uma categoria que já tem lançamentos ou"
+                        + " previsto."));
+
+    UUID livre = criarCategoria(usuario, "Brindes", "DESPESA", null);
+    atualizar(usuario, URL + "/" + livre, corpo("Brindes", "RECEITA", null))
+        .andExpect(status().isOk());
   }
 
   @Test
   @DisplayName("PUT não mexe no status: categoria inativa continua inativa")
   void putNaoAlteraStatus() throws Exception {
-    UUID id = criarCategoria(usuarioId, "Viagem", "DESPESA", null);
-    remover(URL + "/" + id, usuarioId).andExpect(status().isNoContent());
+    UUID id = criarCategoria(usuario, "Viagem", "DESPESA", null);
+    remover(URL + "/" + id, usuario).andExpect(status().isNoContent());
 
-    atualizar(URL + "/" + id, corpo("Viagens", "DESPESA", null))
+    atualizar(usuario, URL + "/" + id, corpo("Viagens", "DESPESA", null))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.nome").value("Viagens"))
         .andExpect(jsonPath("$.ativa").value(false));
@@ -95,75 +127,204 @@ class CategoriaIntegracaoTest extends IntegracaoTest {
   @Test
   @DisplayName("não inativa pai com filha ativa nem reativa filha com pai inativo")
   void regrasDeInativacao() throws Exception {
-    UUID pai = criarCategoria(usuarioId, "Saúde", "DESPESA", null);
-    UUID filha = criarCategoria(usuarioId, "Farmácia", "DESPESA", pai);
+    UUID pai = criarCategoria(usuario, "Saúde", "DESPESA", null);
+    UUID filha = criarCategoria(usuario, "Farmácia", "DESPESA", pai);
 
-    remover(URL + "/" + pai, usuarioId).andExpect(status().isBadRequest());
+    remover(URL + "/" + pai, usuario).andExpect(status().isBadRequest());
 
-    remover(URL + "/" + filha, usuarioId).andExpect(status().isNoContent());
-    remover(URL + "/" + pai, usuarioId).andExpect(status().isNoContent());
+    remover(URL + "/" + filha, usuario).andExpect(status().isNoContent());
+    remover(URL + "/" + pai, usuario).andExpect(status().isNoContent());
 
-    ativar(URL + "/" + filha + "/ativar", usuarioId)
+    ativar(URL + "/" + filha + "/ativar", usuario)
         .andExpect(status().isBadRequest())
         .andExpect(
             jsonPath("$.message")
                 .value("Não é possível ativar uma subcategoria cuja categoria pai está inativa."));
 
-    ativar(URL + "/" + pai + "/ativar", usuarioId)
+    ativar(URL + "/" + pai + "/ativar", usuario)
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.ativa").value(true));
-    ativar(URL + "/" + filha + "/ativar", usuarioId).andExpect(status().isOk());
+    ativar(URL + "/" + filha + "/ativar", usuario).andExpect(status().isOk());
   }
 
   @Test
   @DisplayName("filha precisa ter o mesmo tipo do pai, e o pai não pode estar inativo")
   void regrasDoPai() throws Exception {
-    UUID pai = criarCategoria(usuarioId, "Renda", "RECEITA", null);
+    UUID pai = criarCategoria(usuario, "Renda", "RECEITA", null);
 
-    postar(URL, corpo("Mercado", "DESPESA", pai)).andExpect(status().isBadRequest());
+    postar(usuario, URL, corpo("Mercado", "DESPESA", pai)).andExpect(status().isBadRequest());
 
-    remover(URL + "/" + pai, usuarioId).andExpect(status().isNoContent());
-    postar(URL, corpo("Bônus", "RECEITA", pai)).andExpect(status().isBadRequest());
+    remover(URL + "/" + pai, usuario).andExpect(status().isNoContent());
+    postar(usuario, URL, corpo("Bônus", "RECEITA", pai)).andExpect(status().isBadRequest());
   }
 
   @Test
   @DisplayName("a categoria não pode ser pai dela mesma")
   void paiDelaMesma() throws Exception {
-    UUID id = criarCategoria(usuarioId, "Educação", "DESPESA", null);
+    UUID id = criarCategoria(usuario, "Cursos", "DESPESA", null);
 
-    atualizar(URL + "/" + id, corpo("Educação", "DESPESA", id)).andExpect(status().isBadRequest());
+    atualizar(usuario, URL + "/" + id, corpo("Cursos", "DESPESA", id))
+        .andExpect(status().isBadRequest());
   }
 
   @Test
   @DisplayName("listagem filtra por tipo e por status")
   void listarComFiltros() throws Exception {
-    criarCategoria(usuarioId, "Salário", "RECEITA", null);
-    UUID inativa = criarCategoria(usuarioId, "Antiga", "DESPESA", null);
-    criarCategoria(usuarioId, "Mercado", "DESPESA", null);
-    remover(URL + "/" + inativa, usuarioId).andExpect(status().isNoContent());
+    criarCategoria(usuario, "Salário", "RECEITA", null);
+    UUID inativa = criarCategoria(usuario, "Antiga", "DESPESA", null);
+    criarCategoria(usuario, "Mercado", "DESPESA", null);
+    remover(URL + "/" + inativa, usuario).andExpect(status().isNoContent());
 
     mockMvc
         .perform(
             get(URL)
-                .param("usuarioId", usuarioId.toString())
+                .header(HttpHeaders.AUTHORIZATION, usuario.bearer())
                 .param("tipo", "DESPESA")
-                .param("ativa", "true"))
+                .param("ativa", "false"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.page.totalElements").value(1))
-        .andExpect(jsonPath("$.content[0].nome").value("Mercado"));
+        .andExpect(jsonPath("$.content[0].nome").value("Antiga"));
   }
 
   @Test
-  @DisplayName("usuário inexistente devolve 404")
-  void usuarioInexistente() throws Exception {
-    consultar(URL, UUID.randomUUID()).andExpect(status().isNotFound());
+  @DisplayName("cadastro já cria as categorias da planilha, com receita ativa e passiva")
+  void categoriasPadrao() throws Exception {
+    Sessao novo = criarUsuario();
+    mockMvc
+        .perform(get(URL).header(HttpHeaders.AUTHORIZATION, novo.bearer()).param("size", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.page.totalElements").value(105));
+
+    consultar(URL + "/" + categoriaPadrao(novo, "Dividendos"), novo)
+        .andExpect(jsonPath("$.tipo").value("RECEITA"))
+        .andExpect(jsonPath("$.fonteReceita").value("PASSIVA"));
+    consultar(URL + "/" + categoriaPadrao(novo, "Salários"), novo)
+        .andExpect(jsonPath("$.fonteReceita").value("ATIVA"));
+    consultar(URL + "/" + categoriaPadrao(novo, "Supermercado"), novo)
+        .andExpect(jsonPath("$.fonteReceita").value(org.hamcrest.Matchers.nullValue()));
+  }
+
+  @Test
+  @DisplayName("cadastro traz Passeios, Jogos, Cursos, Rendimento caixinha e Pix recebido")
+  void categoriasPadraoNovas() throws Exception {
+    Sessao novo = criarUsuario();
+
+    conferirSubcategoria(novo, "Passeios", "Lazer", "DESPESA", null);
+    conferirSubcategoria(novo, "Jogos", "Lazer", "DESPESA", null);
+    conferirSubcategoria(novo, "Cursos", "Educação", "DESPESA", null);
+    conferirSubcategoria(novo, "Eletrônicos", "Outros gastos", "DESPESA", null);
+    conferirSubcategoria(novo, "Rendimento caixinha", "Receitas passivas", "RECEITA", "PASSIVA");
+    conferirSubcategoria(novo, "Pix recebido", "Receitas ativas", "RECEITA", "ATIVA");
+  }
+
+  @Test
+  @DisplayName("V19 completa contas antigas sem duplicar nem recriar grupo renomeado")
+  void v19CompletaContasAntigas() throws Exception {
+    Sessao antigo = criarUsuario();
+    jdbcTemplate.update(
+        """
+        DELETE FROM categorias
+        WHERE usuario_id = ?
+          AND categoria_pai_id IS NOT NULL
+          AND nome IN ('Passeios', 'Jogos', 'Cursos', 'Rendimento caixinha',
+                       'Pix recebido', 'Eletrônicos')
+        """,
+        antigo.id());
+    criarCategoria(antigo, "jogos", "DESPESA", categoriaPadrao(antigo, "Lazer"));
+    atualizar(
+            antigo,
+            URL + "/" + categoriaPadrao(antigo, "Educação"),
+            corpo("Estudos", "DESPESA", null))
+        .andExpect(status().isOk());
+
+    executarV19();
+    executarV19();
+
+    mockMvc
+        .perform(get(URL).header(HttpHeaders.AUTHORIZATION, antigo.bearer()).param("size", "1"))
+        .andExpect(jsonPath("$.page.totalElements").value(104));
+    conferirSubcategoria(antigo, "Passeios", "Lazer", "DESPESA", null);
+    conferirSubcategoria(antigo, "jogos", "Lazer", "DESPESA", null);
+    conferirSubcategoria(antigo, "Eletrônicos", "Outros gastos", "DESPESA", null);
+    conferirSubcategoria(antigo, "Rendimento caixinha", "Receitas passivas", "RECEITA", "PASSIVA");
+    conferirSubcategoria(antigo, "Pix recebido", "Receitas ativas", "RECEITA", "ATIVA");
+    mockMvc
+        .perform(get(URL).header(HttpHeaders.AUTHORIZATION, antigo.bearer()).param("size", "200"))
+        .andExpect(jsonPath("$.content[?(@.nome == 'Cursos')]").isEmpty())
+        .andExpect(jsonPath("$.content[?(@.nome == 'Jogos')]").isEmpty());
+  }
+
+  private void conferirSubcategoria(
+      Sessao sessao, String nome, String grupo, String tipo, String fonte) throws Exception {
+    consultar(URL + "/" + categoriaPadrao(sessao, nome), sessao)
+        .andExpect(jsonPath("$.nomeCategoriaPai").value(grupo))
+        .andExpect(jsonPath("$.tipo").value(tipo))
+        .andExpect(jsonPath("$.fonteReceita").value(fonte))
+        .andExpect(jsonPath("$.ativa").value(true));
+  }
+
+  private void executarV19() {
+    new ResourceDatabasePopulator(
+            new ClassPathResource(
+                "db/migration/V19__adicionar_categorias_padrao_lazer_educacao_receitas.sql"))
+        .execute(dataSource);
+  }
+
+  @Test
+  @DisplayName("receita sem fonte vira ATIVA, subcategoria herda a fonte e despesa não tem fonte")
+  void fonteDaReceita() throws Exception {
+    UUID pai =
+        idDe(
+            postar(
+                    usuario,
+                    URL,
+                    """
+                    {"nome":"Investimentos","tipo":"RECEITA","fonteReceita":"PASSIVA"}
+                    """)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.fonteReceita").value("PASSIVA")));
+
+    postar(
+            usuario,
+            URL,
+            """
+            {"nome":"Cupons","tipo":"RECEITA","fonteReceita":"ATIVA","categoriaPaiId":"%s"}
+            """
+                .formatted(pai))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.fonteReceita").value("PASSIVA"));
+
+    postar(usuario, URL, corpo("Bicos", "RECEITA", null))
+        .andExpect(jsonPath("$.fonteReceita").value("ATIVA"));
+
+    postar(
+            usuario,
+            URL,
+            """
+            {"nome":"Assinaturas","tipo":"DESPESA","fonteReceita":"PASSIVA"}
+            """)
+        .andExpect(jsonPath("$.fonteReceita").value(org.hamcrest.Matchers.nullValue()));
+
+    atualizar(
+            usuario,
+            URL + "/" + pai,
+            """
+            {"nome":"Investimentos","tipo":"RECEITA","fonteReceita":"ATIVA"}
+            """)
+        .andExpect(status().isOk());
+    consultar(URL + "/" + categoriaPadraoDe(usuario, "Cupons"), usuario)
+        .andExpect(jsonPath("$.fonteReceita").value("ATIVA"));
+  }
+
+  private UUID categoriaPadraoDe(Sessao sessao, String nome) throws Exception {
+    return categoriaPadrao(sessao, nome);
   }
 
   private String corpo(String nome, String tipo, UUID categoriaPaiId) {
     String pai = categoriaPaiId == null ? "null" : "\"" + categoriaPaiId + "\"";
     return """
-        {"usuarioId":"%s","nome":"%s","tipo":"%s","categoriaPaiId":%s}
+        {"nome":"%s","tipo":"%s","categoriaPaiId":%s}
         """
-        .formatted(usuarioId, nome, tipo, pai);
+        .formatted(nome, tipo, pai);
   }
 }

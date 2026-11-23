@@ -1,0 +1,364 @@
+<div class="pagina surgir">
+  <header class="cab">
+    <div>
+      <h1 class="titulo-pagina">Resumo de {{ nomeDoMes() }}</h1>
+      <p class="aux">O que entrou, o que saiu e o que pede atenção.</p>
+    </div>
+    <app-seletor-mes [(mes)]="mes" />
+  </header>
+
+  @if (configuracao.error()) {
+    <app-estado-erro
+      titulo="Não foi possível consultar seus primeiros passos."
+      mensagem="Tente novamente para continuar sua configuração."
+      (tentar)="configuracao.reload()"
+    />
+  } @else if (primeirosPassos(); as passos) {
+    <section class="superficie primeiros-passos" aria-label="Seu planejamento inicial">
+      <div>
+        <h2 class="titulo-secao">
+          {{ passos.etapa === 'CONCLUIDO' ? 'Seu objetivo' : 'Continue seus primeiros passos' }}
+        </h2>
+        <p class="aux">
+          @if (passos.rendaPassivaDesejada !== null) {
+            Renda passiva desejada: {{ brl(passos.rendaPassivaDesejada) }} por mês.
+          } @else {
+            Defina seu objetivo, planeje o orçamento e prepare suas contas.
+          }
+        </p>
+        @if (passos.etapa === 'CONCLUIDO') {
+          <p class="aux">Essa referência não altera o cálculo do Independenciômetro.</p>
+        }
+      </div>
+      <p-button
+        [label]="passos.etapa === 'CONCLUIDO' ? 'Revisar configuração' : 'Retomar configuração'"
+        routerLink="/configuracao-inicial"
+        severity="secondary"
+        [outlined]="true"
+      />
+    </section>
+  } @else if (configuracao.isLoading()) {
+    <div class="superficie primeiros-passos" aria-hidden="true">
+      <div class="linhas-esqueleto">
+        <p-skeleton width="8rem" height=".9rem" />
+        <p-skeleton width="16rem" height=".8rem" />
+      </div>
+      <p-skeleton width="11rem" height="2.25rem" />
+    </div>
+  }
+
+  @if (resumo.error()) {
+    <app-estado-erro
+      [titulo]="'Não foi possível carregar o resumo de ' + nomeDoMes() + '.'"
+      mensagem="Verifique a conexão e tente de novo. Seus lançamentos não foram afetados."
+      (tentar)="tentarDeNovo()"
+    />
+  } @else if (vazio()) {
+    <app-estado-vazio
+      [icone]="icones.Receipt"
+      [titulo]="'Nenhum lançamento em ' + nomeDoMes()"
+      texto="Lance a primeira receita ou despesa, ou traga o extrato do banco, para começar o resumo do mês."
+    >
+      <p-button size="small" routerLink="/lancar">
+        <app-icone [icone]="icones.Plus" />
+        <span>Novo lançamento</span>
+      </p-button>
+      <p-button size="small" severity="secondary" [outlined]="true" (onClick)="importacao.abrir()">
+        <app-icone [icone]="icones.Upload" />
+        <span>Importar extrato</span>
+      </p-button>
+    </app-estado-vazio>
+  } @else {
+    <section class="kpis superficie cascata" [attr.aria-label]="'Indicadores de ' + nomeDoMes()">
+      @if (resumo.isLoading()) {
+        @for (x of [1, 2, 3, 4]; track x) {
+          <div class="kpi">
+            <p-skeleton width="6rem" height=".8rem" />
+            <p-skeleton width="9rem" height="2rem" />
+            <p-skeleton width="11rem" height=".9rem" />
+          </div>
+        }
+      } @else {
+        @for (k of indicadores(); track k.rotulo) {
+          <div class="kpi">
+            <p class="rotulo">{{ k.rotulo }}</p>
+            <p class="valor num" [class]="k.cor">{{ k.valor }}</p>
+            @if (k.barra) {
+              <p-progressbar
+                [value]="k.barra.valor"
+                [showValue]="false"
+                [class]="'barra ' + k.barra.nivel"
+                [attr.aria-label]="'Orçamento usado: ' + k.valor"
+              />
+            }
+            <p class="delta" [class]="k.corDelta">
+              @if (k.seta) {
+                <app-icone [icone]="k.seta" [tamanho]="14" />
+              }
+              <span>{{ k.delta }}</span>
+            </p>
+          </div>
+        }
+      }
+    </section>
+
+    <div class="colunas">
+      <div class="col-principal">
+        <section class="secao o1" aria-labelledby="atencao-t">
+          <div class="sec-cab">
+            <h2 id="atencao-t" class="titulo-secao">
+              Precisa da sua atenção
+              @if (!resumo.isLoading() && atencao().length) {
+                <span class="contagem">{{ atencao().length }}</span>
+              }
+            </h2>
+          </div>
+          @if (resumo.isLoading()) {
+            <ul class="lista superficie">
+              @for (x of [1, 2]; track x) {
+                <li>
+                  <p-skeleton shape="circle" size="2rem" />
+                  <div class="txt"><p-skeleton width="60%" /><p-skeleton width="40%" /></div>
+                </li>
+              }
+            </ul>
+          } @else if (atencao().length) {
+            <ul class="lista superficie cascata">
+              @for (a of atencao(); track a.id) {
+                <li>
+                  <span class="ic-circ" [class]="a.cor"><app-icone [icone]="a.icone" /></span>
+                  <div class="txt">
+                    <p class="medio">{{ a.titulo }}</p>
+                    <p class="aux">{{ a.detalhe }}</p>
+                  </div>
+                  @if (a.lancamento; as lancamento) {
+                    <p-button
+                      size="small"
+                      severity="secondary"
+                      [outlined]="true"
+                      [loading]="pagando() === lancamento.id"
+                      [ariaLabel]="'Pagar ' + lancamento.descricao + ' hoje'"
+                      (onClick)="pagar(lancamento)"
+                      >Pagar</p-button
+                    >
+                  } @else {
+                    <p-button
+                      size="small"
+                      severity="secondary"
+                      [outlined]="true"
+                      [routerLink]="a.rota"
+                      [ariaLabel]="a.acao + ': ' + a.titulo"
+                      >{{ a.acao }}</p-button
+                    >
+                  }
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="aux tudo-certo">Nada atrasado nem passando do previsto. Tudo em dia.</p>
+          }
+        </section>
+
+        <section class="secao o3" aria-labelledby="sobra-t">
+          <div class="sec-cab">
+            <div>
+              <h2 id="sobra-t" class="titulo-secao">Sobra por mês</h2>
+              <p class="aux">Últimos 6 meses, com a meta de guardar 30% do que entrou</p>
+            </div>
+            <p-selectbutton
+              [options]="vistas"
+              [ngModel]="vista()"
+              (ngModelChange)="vista.set($event)"
+              [allowEmpty]="false"
+              size="small"
+              ariaLabelledBy="sobra-t"
+            />
+          </div>
+          @if (resumo.isLoading()) {
+            <app-esqueleto-grafico forma="barras" [colunas]="6" [altura]="200" />
+            <div class="legenda" aria-hidden="true">
+              @for (x of [7, 7, 11]; track $index) {
+                <p-skeleton [width]="x + 'rem'" height=".75rem" />
+              }
+            </div>
+          } @else if (vista() === 'Gráfico') {
+            <div class="grafico" role="img" [attr.aria-label]="resumoDoGrafico()">
+              @for (b of barras(); track b.rotuloLongo) {
+                <div class="coluna" [title]="b.rotuloLongo + ': ' + brl(b.sobrou)">
+                  <div class="trilho">
+                    <span class="meta" [style.bottom.%]="b.alturaMeta"></span>
+                    <span
+                      class="barra-sobra crescer"
+                      [style.animation-delay.ms]="$index * 60"
+                      [class.abaixo]="!b.atingiuMeta"
+                      [style.height.%]="b.altura"
+                    ></span>
+                  </div>
+                  <span class="aux">{{ b.rotulo }}</span>
+                </div>
+              }
+            </div>
+            <p class="legenda aux">
+              <span class="ponto bom"></span>Atingiu a meta <span class="ponto abaixo"></span>Abaixo
+              da meta <span class="tracejado"></span>Meta: 30% do que entrou
+            </p>
+          } @else {
+            <div class="rolagem">
+              <table class="tabela-simples">
+                <thead>
+                  <tr>
+                    <th scope="col">Mês</th>
+                    <th scope="col" class="n">Receita</th>
+                    <th scope="col" class="n">Despesa</th>
+                    <th scope="col" class="n">Sobra</th>
+                    <th scope="col" class="n">Guardado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (b of barras(); track b.rotuloLongo) {
+                    <tr>
+                      <td>{{ b.rotuloLongo }}</td>
+                      <td class="n num">{{ brl(b.entrou) }}</td>
+                      <td class="n num">{{ brl(b.saiu) }}</td>
+                      <td class="n num">{{ brl(b.sobrou) }}</td>
+                      <td class="n num" [class.des]="!b.atingiuMeta">
+                        {{ percentual(b.percentualGuardado) }}{{ b.atingiuMeta ? '' : ' · abaixo' }}
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
+
+        <section class="secao o4" aria-labelledby="ultimos-t">
+          <div class="sec-cab">
+            <h2 id="ultimos-t" class="titulo-secao">Últimos lançamentos</h2>
+            <a routerLink="/lancamentos" class="link"
+              >Ver todos <app-icone [icone]="icones.ChevronRight" [tamanho]="14"
+            /></a>
+          </div>
+          @if (resumo.isLoading()) {
+            <app-esqueleto-lista [linhas]="3" />
+          } @else {
+            <ul class="lista superficie cascata">
+              @for (l of dados()?.ultimosLancamentos; track l.id) {
+                <li>
+                  <div class="txt">
+                    <p class="medio">{{ l.descricao }}</p>
+                    <p class="aux">
+                      {{ dataCurta(l.dataPagamento ?? l.dataCompetencia) }} ·
+                      {{ l.nomeCategoria }} · {{ l.nomeConta }}
+                    </p>
+                  </div>
+                  <span class="num forte" [class]="l.tipo === 'RECEITA' ? 'rec' : 'des'">
+                    <span class="sr-only">{{ l.tipo === 'RECEITA' ? 'Receita' : 'Despesa' }}</span>
+                    {{ brlComSinal(l.valor, l.tipo) }}
+                  </span>
+                </li>
+              } @empty {
+                <li class="aux">Nenhum lançamento ainda.</li>
+              }
+            </ul>
+          }
+        </section>
+      </div>
+
+      <aside class="col-lateral">
+        <section class="secao o2" aria-labelledby="orc-t">
+          <div class="sec-cab">
+            <h2 id="orc-t" class="titulo-secao">Orçamento de {{ nomeDoMes() }}</h2>
+            <a routerLink="/orcamento" class="link"
+              >Abrir <app-icone [icone]="icones.ChevronRight" [tamanho]="14"
+            /></a>
+          </div>
+          @if (resumo.isLoading()) {
+            <ul class="orcamento" aria-hidden="true">
+              @for (largura of ['40%', '55%', '32%']; track $index) {
+                <li>
+                  <div class="linha">
+                    <p-skeleton [width]="largura" height=".9rem" />
+                    <p-skeleton width="4rem" height="1.25rem" />
+                  </div>
+                  <p-skeleton height="6px" />
+                  <p-skeleton width="60%" height=".75rem" />
+                </li>
+              }
+            </ul>
+          } @else {
+            <ul class="orcamento cascata">
+              @for (g of dados()?.orcamento?.gruposMaisUsados; track g.categoriaId) {
+                <li>
+                  <div class="linha">
+                    <span class="medio">{{ g.nome }}</span>
+                    <span class="selo" [class]="nivel(g.percentualRealizado)">{{
+                      statusDoOrcamento(g.percentualRealizado)
+                    }}</span>
+                  </div>
+                  <p-progressbar
+                    [value]="g.percentualRealizado * 100 > 100 ? 100 : g.percentualRealizado * 100"
+                    [showValue]="false"
+                    [class]="'barra ' + nivel(g.percentualRealizado)"
+                    [attr.aria-label]="
+                      g.nome + ': ' + percentual(g.percentualRealizado) + ' do previsto'
+                    "
+                  />
+                  <p class="aux num">
+                    {{ brl(g.realizado) }} de {{ brl(g.previsto) }} ·
+                    {{ percentual(g.percentualRealizado) }}
+                  </p>
+                </li>
+              } @empty {
+                <li class="aux">
+                  Sem previsto para {{ nomeDoMes() }}.
+                  <a routerLink="/orcamento/previsto" class="link">Definir previsto</a>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+
+        <section class="secao o5" aria-labelledby="ind-t">
+          <h2 id="ind-t" class="titulo-secao">Independência financeira</h2>
+          @if (resumo.isLoading()) {
+            <div class="linhas-esqueleto" aria-hidden="true">
+              <p-skeleton width="5rem" height="2.25rem" />
+              <p-skeleton height="6px" />
+              <p-skeleton width="90%" height=".8rem" />
+              <p-skeleton width="70%" height=".8rem" />
+            </div>
+          } @else if (independencia(); as ind) {
+            <p class="valor num ok surgir">{{ percentual(ind.indice) }}</p>
+            @if (ind.proximoMarco) {
+              <div class="marco">
+                <p-progressbar
+                  [value]="ind.progresso"
+                  [showValue]="false"
+                  class="barra ok"
+                  [attr.aria-label]="
+                    percentual(ind.indice) +
+                    ' de ' +
+                    percentual(ind.proximoMarco) +
+                    ', próximo marco'
+                  "
+                />
+                <span class="aux">meta {{ percentual(ind.proximoMarco) }}</span>
+              </div>
+              <p>
+                A renda passiva cobre {{ percentual(ind.indice) }} das despesas do mês. Faltam
+                {{ brl(ind.faltaParaProximoMarco) }} por mês para chegar a
+                {{ percentual(ind.proximoMarco) }}.
+              </p>
+            } @else {
+              <p>A renda passiva já cobre todas as despesas do mês.</p>
+            }
+            <p class="delta" [class.ok]="ind.subiu" [class.aux]="!ind.subiu">
+              {{ ind.comparacao }}
+            </p>
+          }
+        </section>
+      </aside>
+    </div>
+  }
+</div>

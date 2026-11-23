@@ -3,10 +3,8 @@ package br.com.financeiro.api.conta.dto;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
-import java.util.UUID;
 
 public record CorrigirSaldoInicialContaRequest(
-    @NotNull(message = "O usuário é obrigatório.") UUID usuarioId,
     @NotNull(message = "O saldo inicial é obrigatório.")
         @Digits(
             integer = 17,

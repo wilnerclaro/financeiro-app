@@ -1,0 +1,347 @@
+<p-dialog
+  header="Importar extrato"
+  [visible]="importacao.aberta()"
+  (visibleChange)="$event ? null : fechar()"
+  (onHide)="aoFechar()"
+  [modal]="true"
+  [draggable]="false"
+  [closable]="!ocupado()"
+  [closeOnEscape]="!ocupado()"
+  [style]="{ width: largura() }"
+  [breakpoints]="{ '700px': '100vw' }"
+  styleClass="dialogo-importacao"
+>
+  <ng-template #content>
+    <div class="corpo">
+      <ol class="passos" aria-label="Etapas da importação">
+        @for (passo of etapas; track passo.valor; let i = $index) {
+          <li
+            [class.atual]="etapa() === passo.valor"
+            [attr.aria-current]="etapa() === passo.valor ? 'step' : null"
+          >
+            <span class="marcador" aria-hidden="true">{{ i + 1 }}</span>{{ passo.rotulo }}
+          </li>
+        }
+      </ol>
+
+      @if (dados.error()) {
+        <app-estado-erro
+          titulo="Não foi possível carregar suas contas e categorias."
+          mensagem="Tente novamente antes de enviar o extrato."
+          (tentar)="dados.reload()"
+        />
+      } @else if (dados.isLoading()) {
+        <p-skeleton height="15rem" />
+      } @else if (etapa() === 'enviar') {
+        @if (contas().length) {
+          <div class="enviar">
+            <div class="principal">
+              @if (arquivo(); as escolhido) {
+                <div class="arquivo">
+                  <span class="formato" aria-hidden="true"
+                    ><app-icone [icone]="icones.FileText" [tamanho]="20"
+                  /></span>
+                  <div class="txt">
+                    <p class="medio">{{ escolhido.name }}</p>
+                    <p class="aux">Arquivo pronto para leitura</p>
+                  </div>
+                  <p-button
+                    label="Trocar"
+                    size="small"
+                    severity="secondary"
+                    [outlined]="true"
+                    [disabled]="ocupado()"
+                    (onClick)="trocarArquivo()"
+                  />
+                </div>
+              } @else {
+                <label
+                  class="soltar"
+                  [class.arrastando]="arrastando()"
+                  (dragover)="arrastar($event)"
+                  (dragleave)="arrastando.set(false)"
+                  (drop)="soltar($event)"
+                >
+                  <input
+                    class="sr-only"
+                    type="file"
+                    accept=".pdf,.csv,.ofx,application/pdf,text/csv,application/x-ofx"
+                    aria-label="Arquivo do extrato"
+                    [disabled]="ocupado()"
+                    (change)="escolherArquivo($event)"
+                  />
+                  <span class="icone-soltar"
+                    ><app-icone [icone]="icones.Upload" [tamanho]="22"
+                  /></span>
+                  <span class="medio">Arraste o extrato aqui</span>
+                  <span class="aux">ou clique para escolher · PDF, CSV ou OFX de até 2 MB</span>
+                </label>
+              }
+              @if (erro()) {
+                <p class="erro" role="alert">{{ erro() }}</p>
+              }
+              <div class="campo">
+                <label for="conta-importacao" class="rotulo-campo">Conta de destino</label>
+                <p-select
+                  inputId="conta-importacao"
+                  ariaLabel="Conta de destino"
+                  [options]="opcoesContas()"
+                  [ngModel]="contaId()"
+                  (ngModelChange)="contaId.set($event)"
+                  [disabled]="ocupado()"
+                  placeholder="Escolha a conta"
+                  appendTo="body"
+                  fluid
+                />
+                <p class="aux">
+                  Conta corrente ou poupança. Nada é lançado antes da sua confirmação.
+                </p>
+              </div>
+            </div>
+            <aside class="ajuda" aria-label="Ajuda para importar">
+              <section>
+                <h3 class="titulo-secao">Como baixar do banco</h3>
+                <ol class="como">
+                  <li>No app ou site do banco, abra o extrato da conta e escolha o período.</li>
+                  <li>Salve em PDF. No celular, toque em Compartilhar e salve em Arquivos.</li>
+                  <li>Envie aqui, revise e confirme o que entra.</li>
+                </ol>
+              </section>
+              <section>
+                <h3 class="titulo-secao">Formatos</h3>
+                <ul class="formatos">
+                  <li>
+                    <span class="selo ok">PDF</span>
+                    <span class="selo ok">CSV</span>
+                    <span class="selo ok">OFX</span>
+                  </li>
+                </ul>
+                <p class="aux">Outro banco? Envie o OFX, se o banco oferecer.</p>
+              </section>
+            </aside>
+          </div>
+        } @else {
+          <div class="revisao">
+            <p class="medio">Cadastre uma conta corrente ou poupança para receber o extrato.</p>
+            <p class="aux">O extrato entra numa conta bancária. Cartão de crédito ainda não.</p>
+          </div>
+        }
+      } @else if (etapa() === 'revisar') {
+        <section class="revisao" aria-labelledby="revisar-titulo">
+          <div>
+            <h3 id="revisar-titulo" class="titulo-secao">Revise antes de importar</h3>
+            <p class="aux">
+              {{ arquivo()?.name }}{{ banco() ? ' · ' + banco() : '' }} · {{ nomeConta() }} ·
+              {{ linhas().length }} transação(ões)
+            </p>
+          </div>
+          <p class="aux">
+            Desmarque o que não deseja importar. O que parece já lançado nesta conta vem desmarcado:
+            marque só se for outra transação.
+          </p>
+          @for (secao of secoes(); track secao.tipo) {
+            <section class="secao" [attr.aria-labelledby]="'secao-' + secao.tipo">
+              <button
+                type="button"
+                class="cab-secao"
+                [id]="'secao-' + secao.tipo"
+                [attr.aria-expanded]="!recolhidas().has(secao.tipo)"
+                [attr.aria-controls]="'lista-' + secao.tipo"
+                (click)="alternarSecao(secao.tipo)"
+              >
+                <app-icone
+                  class="seta"
+                  [class.recolhida]="recolhidas().has(secao.tipo)"
+                  [icone]="icones.ChevronDown"
+                  [tamanho]="18"
+                />
+                <span class="titulo">
+                  <span class="medio">{{ secao.titulo }}</span>
+                  <span class="aux">{{ secao.linhas.length }} transação(ões)</span>
+                </span>
+                @if (secao.semCategoria) {
+                  <span class="selo amb">{{ secao.semCategoria }} sem categoria</span>
+                }
+                <strong
+                  class="num valor"
+                  [class.rec]="secao.tipo === 'RECEITA'"
+                  [class.des]="secao.tipo === 'DESPESA'"
+                  >{{ secao.sinal }} {{ brl(secao.total) }}</strong
+                >
+              </button>
+              @if (!recolhidas().has(secao.tipo)) {
+                <ul class="superficie transacoes" [id]="'lista-' + secao.tipo">
+                  @for (linha of secao.linhas; track linha.identificador; let i = $index) {
+                    <li
+                      class="transacao"
+                      [class.bloqueada]="linha.jaImportado || !linha.importavel"
+                    >
+                      <label class="selecionar"
+                        ><input
+                          type="checkbox"
+                          [ngModel]="linha.selecionado"
+                          [disabled]="ocupado() || linha.jaImportado || !linha.importavel"
+                          (ngModelChange)="selecionar(linha.identificador, $event)"
+                          [attr.aria-label]="'Importar ' + linha.descricao"
+                      /></label>
+                      <div class="descricao">
+                        <h4>{{ linha.descricao }}</h4>
+                        <p class="aux">
+                          {{ dataCurta(linha.data) }}
+                          @if (linha.jaImportado) {
+                            · <span class="selo">Já importada</span>
+                          } @else if (!linha.importavel) {
+                            · <span class="selo">Não importável</span>
+                          } @else if (linha.possivelDuplicado) {
+                            · <span class="selo amb">Parece já lançada</span>
+                          } @else if (!linha.selecionado) {
+                            · <span class="selo">Ignorada</span>
+                          }
+                        </p>
+                        @if (linha.motivo) {
+                          <p class="aux">{{ linha.motivo }}</p>
+                        } @else if (linha.possivelDuplicado && !linha.jaImportado) {
+                          <p class="aux">Já existe um lançamento com o mesmo valor nesta data.</p>
+                        }
+                      </div>
+                      <strong
+                        class="num valor"
+                        [class.rec]="linha.tipo === 'RECEITA'"
+                        [class.des]="linha.tipo === 'DESPESA'"
+                        >{{ linha.tipo === 'RECEITA' ? '+' : '−' }} {{ brl(linha.valor) }}</strong
+                      >
+                      @if (linha.importavel && !linha.jaImportado) {
+                        <div class="campo categoria">
+                          <label [for]="'categoria-' + secao.tipo + '-' + i" class="sr-only"
+                            >Categoria</label
+                          ><p-select
+                            #seletor
+                            [inputId]="'categoria-' + secao.tipo + '-' + i"
+                            [ariaLabel]="'Categoria de ' + linha.descricao"
+                            [options]="categoriasPorTipo()[linha.tipo]"
+                            [ngModel]="linha.categoriaId"
+                            (ngModelChange)="categorizar(linha.identificador, $event)"
+                            [disabled]="ocupado() || !linha.selecionado"
+                            [filter]="true"
+                            filterBy="label"
+                            [showClear]="true"
+                            [invalid]="linha.selecionado && !linha.categoriaId"
+                            placeholder="Escolha a categoria"
+                            emptyMessage="Nenhuma categoria compatível"
+                            emptyFilterMessage="Nenhuma categoria com esse nome"
+                            [resetFilterOnHide]="true"
+                            (onFilter)="filtroDaCategoria.set($event.filter)"
+                            (onHide)="filtroDaCategoria.set('')"
+                            appendTo="body"
+                            fluid
+                          >
+                            <ng-template #footer>
+                              <button
+                                type="button"
+                                class="cadastrar-na-lista"
+                                (click)="cadastrarCategoria(linha, seletor)"
+                              >
+                                <app-icone [icone]="icones.Plus" [tamanho]="16" />
+                                {{
+                                  filtroDaCategoria().trim()
+                                    ? 'Cadastrar “' + filtroDaCategoria().trim() + '”'
+                                    : 'Cadastrar categoria'
+                                }}
+                              </button>
+                            </ng-template>
+                          </p-select>
+                        </div>
+                      }
+                    </li>
+                  }
+                </ul>
+              }
+            </section>
+          } @empty {
+            <p class="superficie transacao">O arquivo não contém transações para revisar.</p>
+          }
+        </section>
+      } @else {
+        <div class="pronto" aria-live="polite">
+          <span class="sucesso"><app-icone [icone]="icones.Check" [tamanho]="24" /></span>
+          <h3 class="titulo-secao">Importação concluída</h3>
+          <p>{{ resultado()?.importados }} lançamento(s) importado(s) em {{ nomeConta() }}.</p>
+          <p class="aux">
+            {{ resultado()?.ignorados }} item(ns) ignorado(s). O saldo da conta já considera o que
+            entrou.
+          </p>
+        </div>
+      }
+    </div>
+  </ng-template>
+
+  <ng-template #footer>
+    @if (dados.hasValue()) {
+      @if (etapa() === 'enviar') {
+        <p-button
+          label="Cancelar"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="ocupado()"
+          (onClick)="fechar()"
+        />
+        @if (contas().length) {
+          <p-button
+            label="Ler extrato e revisar"
+            [loading]="ocupado()"
+            [disabled]="!arquivo() || !contaId()"
+            (onClick)="revisar()"
+          />
+        } @else {
+          <p-button label="Cadastrar conta" (onClick)="irPara('/contas')" />
+        }
+      } @else if (etapa() === 'revisar') {
+        <div class="rodape">
+          <div class="resumo">
+            <p class="medio">{{ selecionadas().length }} transação(ões) selecionada(s)</p>
+            <p class="aux num">
+              <span class="rec">Receitas {{ brl(totalReceitas()) }}</span> ·
+              <span class="des">Despesas {{ brl(totalDespesas()) }}</span>
+            </p>
+            @if (faltamCategorias()) {
+              <p class="erro">Falta escolher a categoria de {{ faltamCategorias() }} item(ns).</p>
+            }
+            @if (erro()) {
+              <p class="erro" role="alert">{{ erro() }}</p>
+            }
+          </div>
+          <div class="botoes">
+            <p-button
+              label="Voltar"
+              severity="secondary"
+              [outlined]="true"
+              [disabled]="ocupado()"
+              (onClick)="recomecar()"
+            />
+            <p-button
+              label="Confirmar importação"
+              [loading]="ocupado()"
+              [disabled]="!podeConfirmar()"
+              (onClick)="confirmar()"
+            />
+          </div>
+        </div>
+      } @else {
+        <p-button
+          label="Importar outro"
+          severity="secondary"
+          [outlined]="true"
+          (onClick)="recomecar()"
+        />
+        <p-button label="Ver lançamentos" (onClick)="irPara('/lancamentos')" />
+      }
+    }
+  </ng-template>
+</p-dialog>
+
+<app-categoria-dialogo
+  [pedido]="novaCategoria()"
+  [grupos]="gruposParaNovaCategoria()"
+  (fechar)="fecharNovaCategoria()"
+  (salva)="categoriaCriada($event)"
+/>

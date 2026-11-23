@@ -1,13 +1,19 @@
 package br.com.financeiro.api.common.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -15,11 +21,28 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @Slf4j
 @RestControllerAdvice
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
+
+  private final Clock clock;
+
+  @ExceptionHandler(MissingServletRequestPartException.class)
+  public ResponseEntity<ApiErrorResponse> tratarArquivoAusente(
+      MissingServletRequestPartException exception, HttpServletRequest request) {
+    return responder(HttpStatus.BAD_REQUEST, "Envie o arquivo obrigatório para importar.", request);
+  }
+
+  @ExceptionHandler(MaxUploadSizeExceededException.class)
+  public ResponseEntity<ApiErrorResponse> tratarArquivoGrande(
+      MaxUploadSizeExceededException exception, HttpServletRequest request) {
+    return responder(HttpStatus.PAYLOAD_TOO_LARGE, "O arquivo deve ter no máximo 2 MB.", request);
+  }
 
   @ExceptionHandler(ResourceNotFoundException.class)
   public ResponseEntity<ApiErrorResponse> tratarRecursoNaoEncontrado(
@@ -33,10 +56,41 @@ public class GlobalExceptionHandler {
     return responder(HttpStatus.NOT_FOUND, "Recurso não encontrado.", request);
   }
 
+  @ExceptionHandler(NaoAutenticadoException.class)
+  public ResponseEntity<ApiErrorResponse> tratarCredenciaisInvalidas(
+      NaoAutenticadoException exception, HttpServletRequest request) {
+    return responder(HttpStatus.UNAUTHORIZED, exception.getMessage(), request);
+  }
+
+  @ExceptionHandler(AuthenticationException.class)
+  public ResponseEntity<ApiErrorResponse> tratarNaoAutenticado(
+      AuthenticationException exception, HttpServletRequest request) {
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+        .header("WWW-Authenticate", "Bearer")
+        .body(
+            criarRespostaDeErro(
+                HttpStatus.UNAUTHORIZED,
+                "Token de acesso ausente, inválido ou expirado.",
+                request,
+                List.of()));
+  }
+
+  @ExceptionHandler(AccessDeniedException.class)
+  public ResponseEntity<ApiErrorResponse> tratarAcessoNegado(
+      AccessDeniedException exception, HttpServletRequest request) {
+    return responder(HttpStatus.FORBIDDEN, "Acesso negado.", request);
+  }
+
   @ExceptionHandler(BusinessException.class)
   public ResponseEntity<ApiErrorResponse> tratarExcecaoDeNegocio(
       BusinessException exception, HttpServletRequest request) {
     return responder(HttpStatus.BAD_REQUEST, exception.getMessage(), request);
+  }
+
+  @ExceptionHandler(ConflitoException.class)
+  public ResponseEntity<ApiErrorResponse> tratarConflito(
+      ConflitoException exception, HttpServletRequest request) {
+    return responder(HttpStatus.CONFLICT, exception.getMessage(), request);
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -89,6 +143,26 @@ public class GlobalExceptionHandler {
         HttpStatus.METHOD_NOT_ALLOWED, "Método HTTP não suportado para este recurso.", request);
   }
 
+  @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+  public ResponseEntity<ApiErrorResponse> tratarConflitoDeConcorrencia(
+      ObjectOptimisticLockingFailureException exception, HttpServletRequest request) {
+    log.info("Conflito de concorrência em {}: {}", request.getRequestURI(), exception.getMessage());
+    return responder(
+        HttpStatus.CONFLICT,
+        "Os dados foram alterados por outra operação ao mesmo tempo. Tente novamente.",
+        request);
+  }
+
+  @ExceptionHandler(PessimisticLockingFailureException.class)
+  public ResponseEntity<ApiErrorResponse> tratarFalhaDeTrava(
+      PessimisticLockingFailureException exception, HttpServletRequest request) {
+    log.warn("Falha de trava em {}: {}", request.getRequestURI(), exception.getMessage());
+    return responder(
+        HttpStatus.CONFLICT,
+        "Os dados foram alterados por outra operação ao mesmo tempo. Tente novamente.",
+        request);
+  }
+
   @ExceptionHandler(DataIntegrityViolationException.class)
   public ResponseEntity<ApiErrorResponse> tratarViolacaoDeIntegridade(
       DataIntegrityViolationException exception, HttpServletRequest request) {
@@ -121,7 +195,7 @@ public class GlobalExceptionHandler {
       HttpServletRequest request,
       List<FieldErrorResponse> fieldErrors) {
     return new ApiErrorResponse(
-        OffsetDateTime.now(),
+        OffsetDateTime.now(clock),
         status.value(),
         status.getReasonPhrase(),
         message,

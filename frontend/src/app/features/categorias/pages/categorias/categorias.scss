@@ -1,0 +1,84 @@
+p {
+  margin: 0;
+}
+
+.alternar {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e2);
+}
+
+.grupos {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.grupos > li {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  padding: var(--e3) var(--e4);
+}
+
+.grupos > li + li {
+  border-top: 1px solid var(--p-content-border-color);
+}
+
+.grupos > li.inativa .medio {
+  color: var(--p-text-muted-color);
+}
+
+.linhas-esqueleto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+}
+
+.linha {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e2);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  min-height: 32px;
+  padding: 0 var(--e3);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 99px;
+  background: transparent;
+  color: var(--p-text-color);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.chip.inativa {
+  border-style: dashed;
+  color: var(--p-text-muted-color);
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--p-primary-color);
+  outline-offset: 2px;
+}
+
+.dialogo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e4);
+}
+
+.erro {
+  color: var(--des);
+}

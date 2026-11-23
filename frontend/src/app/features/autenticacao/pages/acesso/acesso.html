@@ -1,0 +1,209 @@
+<div class="tela">
+  <main class="lado-form">
+    <div class="barra-topo">
+      <a routerLink="/login" class="marca">
+        <span class="logo"
+          ><app-icone [icone]="icones.ChartLine" [tamanho]="18" [traco]="2"
+        /></span>
+        financeiro
+      </a>
+      <p-button
+        [text]="true"
+        severity="secondary"
+        size="small"
+        [ariaLabel]="tema.escuro() ? 'Usar tema claro' : 'Usar tema escuro'"
+        (onClick)="tema.alternar()"
+      >
+        <app-icone [icone]="tema.escuro() ? icones.Sun : icones.Moon" />
+      </p-button>
+    </div>
+
+    <section class="form-caixa" aria-labelledby="titulo-acesso">
+      <header>
+        <h1 id="titulo-acesso">{{ criar() ? 'Crie sua conta' : 'Bem-vindo de volta' }}</h1>
+        <p class="aux">
+          {{
+            criar()
+              ? 'Leva menos de um minuto. Depois é só lançar o primeiro gasto.'
+              : 'Entre para ver como está o seu mês.'
+          }}
+        </p>
+      </header>
+
+      @if (googleClientId() !== null) {
+        <div class="google-caixa">
+          <button
+            type="button"
+            class="google"
+            [disabled]="ocupado() || googleClientId() === undefined"
+            (click)="googleIndisponivel()"
+          >
+            @if (envio() === 'google') {
+              <span class="giro" aria-hidden="true"></span>
+              <span>Abrindo o Google…</span>
+            } @else {
+              <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+                <path
+                  fill="#FFC107"
+                  d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"
+                />
+                <path
+                  fill="#FF3D00"
+                  d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"
+                />
+                <path
+                  fill="#4CAF50"
+                  d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"
+                />
+                <path
+                  fill="#1976D2"
+                  d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"
+                />
+              </svg>
+              <span>{{ criar() ? 'Criar conta com Google' : 'Entrar com Google' }}</span>
+            }
+          </button>
+          <div
+            #caixaGoogle
+            class="google-oficial"
+            [class.visivel]="googleDesenhado() && !ocupado()"
+          ></div>
+        </div>
+        <div class="ou" role="separator"><span>ou com e-mail</span></div>
+      }
+
+      <form [formGroup]="formulario" (ngSubmit)="enviar()" novalidate>
+        @if (erro(); as erro) {
+          <p-message severity="error" role="alert">
+            <span class="mensagem-erro">
+              <app-icone [icone]="icones.CircleAlert" />
+              @switch (erro.tipo) {
+                @case ('credenciais') {
+                  <span>E-mail ou senha não conferem. Confira e tente de novo.</span>
+                }
+                @case ('emailUsado') {
+                  <span>
+                    Já existe uma conta com este e-mail.
+                    <a routerLink="/login" [queryParams]="{ voltar: voltar() }" class="link"
+                      >Entrar</a
+                    >
+                    ou use outro e-mail.
+                  </span>
+                }
+                @case ('mensagem') {
+                  <span>{{ erro.texto }}</span>
+                }
+              }
+            </span>
+          </p-message>
+        }
+
+        @if (criar()) {
+          <div class="campo">
+            <label for="nome">Como podemos te chamar?</label>
+            <input
+              pInputText
+              id="nome"
+              formControlName="nome"
+              autocomplete="given-name"
+              placeholder="Seu nome"
+              [invalid]="campoInvalido('nome')"
+              [attr.aria-describedby]="mensagemDoCampo('nome') ? 'nome-erro' : null"
+              fluid
+            />
+            @if (mensagemDoCampo('nome'); as mensagem) {
+              <p-message id="nome-erro" severity="error" size="small" variant="simple">
+                {{ mensagem }}
+              </p-message>
+            }
+          </div>
+        }
+
+        <div class="campo">
+          <label for="email">E-mail</label>
+          <input
+            pInputText
+            id="email"
+            type="email"
+            formControlName="email"
+            autocomplete="email"
+            placeholder="voce@email.com"
+            [invalid]="campoInvalido('email')"
+            [attr.aria-describedby]="mensagemDoCampo('email') ? 'email-erro' : null"
+            fluid
+          />
+          @if (mensagemDoCampo('email'); as mensagem) {
+            <p-message id="email-erro" severity="error" size="small" variant="simple">
+              {{ mensagem }}
+            </p-message>
+          }
+        </div>
+
+        <div class="campo">
+          <label for="senha">{{ criar() ? 'Crie uma senha' : 'Senha' }}</label>
+          <p-password
+            inputId="senha"
+            formControlName="senha"
+            [autocomplete]="criar() ? 'new-password' : 'current-password'"
+            [feedback]="false"
+            [toggleMask]="true"
+            [invalid]="campoInvalido('senha')"
+            fluid
+          />
+          @if (mensagemDoCampo('senha'); as mensagem) {
+            <p-message severity="error" size="small" variant="simple">{{ mensagem }}</p-message>
+          }
+          @if (criar()) {
+            <ul class="regras" aria-live="polite" aria-label="Regras da senha">
+              @for (regra of regras(); track regra.texto) {
+                <li [class.ok]="regra.ok">
+                  <app-icone
+                    [icone]="regra.ok ? icones.Check : icones.Circle"
+                    [tamanho]="14"
+                    [traco]="2"
+                  />
+                  <span>{{ regra.texto }}</span>
+                  <span class="so-leitor">{{ regra.ok ? '(atendida)' : '(pendente)' }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+
+        <p-button
+          type="submit"
+          styleClass="acao-principal"
+          [fluid]="true"
+          [loading]="envio() === 'enviando'"
+          [disabled]="ocupado()"
+        >
+          @if (envio() === 'enviando') {
+            <span>{{ criar() ? 'Criando sua conta…' : 'Entrando…' }}</span>
+          } @else {
+            <span>{{ criar() ? 'Criar conta' : 'Entrar' }}</span>
+            <app-icone [icone]="icones.ArrowRight" />
+          }
+        </p-button>
+      </form>
+
+      <p class="trocar">
+        @if (criar()) {
+          Já tem conta?
+          <a routerLink="/login" [queryParams]="{ voltar: voltar() }" class="link">Entrar</a>
+        } @else {
+          Ainda não tem conta?
+          <a routerLink="/criar-conta" [queryParams]="{ voltar: voltar() }" class="link">
+            Criar conta
+          </a>
+        }
+      </p>
+    </section>
+
+    <p class="rodape aux">
+      <app-icone [icone]="icones.ShieldCheck" [tamanho]="14" />
+      Seus dados ficam só com você e sua família. Nada é vendido ou compartilhado.
+    </p>
+  </main>
+
+  <app-painel-acesso class="lado-visual" />
+</div>

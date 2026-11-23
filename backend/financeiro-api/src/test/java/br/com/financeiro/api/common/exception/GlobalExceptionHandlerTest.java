@@ -7,13 +7,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import java.time.Clock;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,7 +35,7 @@ class GlobalExceptionHandlerTest {
   void configurar() {
     mockMvc =
         MockMvcBuilders.standaloneSetup(new ControllerDeTeste())
-            .setControllerAdvice(new GlobalExceptionHandler())
+            .setControllerAdvice(new GlobalExceptionHandler(Clock.systemUTC()))
             .build();
   }
 
@@ -48,6 +51,19 @@ class GlobalExceptionHandlerTest {
         .andExpect(jsonPath("$.path").value("/teste/nao-encontrado"))
         .andExpect(jsonPath("$.timestamp").exists())
         .andExpect(jsonPath("$.fieldErrors").isEmpty());
+  }
+
+  @Test
+  @DisplayName("conflito de versão (@Version) vira 409 com mensagem para tentar de novo")
+  void conflitoDeConcorrencia() throws Exception {
+    mockMvc
+        .perform(get("/teste/concorrencia"))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.status").value(409))
+        .andExpect(
+            jsonPath("$.message")
+                .value(
+                    "Os dados foram alterados por outra operação ao mesmo tempo. Tente novamente."));
   }
 
   @Test
@@ -121,6 +137,18 @@ class GlobalExceptionHandlerTest {
   }
 
   @Test
+  @DisplayName("falha de trava no banco (deadlock ou espera esgotada) vira 409")
+  void falhaDeTrava() throws Exception {
+    mockMvc
+        .perform(get("/teste/trava"))
+        .andExpect(status().isConflict())
+        .andExpect(
+            jsonPath("$.message")
+                .value(
+                    "Os dados foram alterados por outra operação ao mesmo tempo. Tente novamente."));
+  }
+
+  @Test
   @DisplayName("violação de integridade do banco vira 409")
   void violacaoDeIntegridade() throws Exception {
     mockMvc
@@ -162,6 +190,16 @@ class GlobalExceptionHandlerTest {
     @GetMapping("/teste/integridade")
     void integridade() {
       throw new DataIntegrityViolationException("uk_contas_usuario_nome");
+    }
+
+    @GetMapping("/teste/concorrencia")
+    void concorrencia() {
+      throw new ObjectOptimisticLockingFailureException("Conta", UUID.randomUUID());
+    }
+
+    @GetMapping("/teste/trava")
+    void trava() {
+      throw new CannotAcquireLockException("deadlock detected");
     }
 
     @GetMapping("/teste/rota")

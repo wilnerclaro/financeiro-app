@@ -1,0 +1,136 @@
+<div class="pagina surgir">
+  <header class="cab">
+    <div>
+      <h1 class="titulo-pagina">Contas</h1>
+      <p class="aux">Onde seu dinheiro está e quanto há em cada lugar.</p>
+    </div>
+    <div class="acoes">
+      @if (temInativas()) {
+        <span class="alternar aux">
+          <p-toggleswitch
+            inputId="mostrar-inativas"
+            [ngModel]="mostrarInativas()"
+            (ngModelChange)="mostrarInativas.set($event)"
+          />
+          <label for="mostrar-inativas">Mostrar inativas</label>
+        </span>
+      }
+      <p-button size="small" (onClick)="novaConta()">
+        <app-icone [icone]="icones.Plus" />
+        <span>Nova conta</span>
+      </p-button>
+    </div>
+  </header>
+
+  @if (dados.error()) {
+    <app-estado-erro
+      titulo="Não foi possível carregar as contas."
+      mensagem="Verifique a conexão e tente de novo."
+      (tentar)="dados.reload()"
+    />
+  } @else if (dados.isLoading()) {
+    <div class="patrimonio superficie" aria-hidden="true">
+      <div class="linhas-esqueleto">
+        <p-skeleton width="5rem" height=".75rem" />
+        <p-skeleton width="10rem" height="2.25rem" />
+      </div>
+      <div class="linhas-esqueleto">
+        <p-skeleton width="6rem" height=".75rem" />
+        <p-skeleton width="5rem" height=".9rem" />
+      </div>
+    </div>
+    <div class="grade" aria-hidden="true">
+      @for (x of [1, 2, 3]; track x) {
+        <div class="cartao superficie">
+          <p-skeleton width="45%" height=".9rem" />
+          <p-skeleton width="30%" height=".75rem" />
+          <p-skeleton width="55%" height="1.6rem" />
+          <p-skeleton width="70%" height=".75rem" />
+        </div>
+      }
+    </div>
+  } @else if (!todas().length) {
+    <app-estado-vazio
+      [icone]="icones.Wallet"
+      titulo="Nenhuma conta cadastrada"
+      texto="Cadastre sua conta do banco, a carteira e os cartões para começar a lançar."
+    >
+      <p-button size="small" label="Nova conta" (onClick)="novaConta()" />
+    </app-estado-vazio>
+  } @else {
+    @if (resumo(); as r) {
+      <section class="patrimonio superficie surgir" aria-label="Patrimônio">
+        <div>
+          <p class="rotulo">Patrimônio</p>
+          <p class="valor num" [class.des]="r.patrimonio < 0">{{ brl(r.patrimonio) }}</p>
+        </div>
+        <ul class="por-tipo">
+          @for (t of r.porTipo; track t.tipo) {
+            <li>
+              <span class="aux">{{ rotuloDoTipo(t.tipo) }}</span>
+              <span class="num medio" [class.des]="t.total < 0">{{ brl(t.total) }}</span>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    <ul class="grade cascata">
+      @for (c of visiveis(); track c.id) {
+        <li class="cartao superficie" [class.inativa]="!c.ativa">
+          <div class="linha">
+            <div>
+              <p class="medio">{{ c.nome }}</p>
+              <p class="aux">
+                {{ rotuloDoTipo(c.tipo) }}
+                @if (!c.ativa) {
+                  · inativa
+                }
+              </p>
+            </div>
+            <p-button
+              [text]="true"
+              severity="secondary"
+              size="small"
+              [ariaLabel]="'Ações de ' + c.nome"
+              (onClick)="abrirAcoes(menu, $event, c)"
+            >
+              <app-icone [icone]="icones.EllipsisVertical" />
+            </p-button>
+          </div>
+          <p class="saldo num" [class.des]="c.saldoAtual < 0">{{ brl(c.saldoAtual) }}</p>
+          <p class="aux num">{{ variacao(c.variacaoDesdeSaldoInicial) }} desde o saldo inicial</p>
+          @if (c.tipo === 'CARTAO_CREDITO') {
+            <div class="linha">
+              <span class="aux"
+                >Fecha dia {{ c.diaFechamento }} · vence dia {{ c.diaVencimento }}</span
+              >
+              <p-button
+                size="small"
+                severity="secondary"
+                [outlined]="true"
+                label="Ver fatura"
+                (onClick)="cartaoDaFatura.set(c)"
+              />
+            </div>
+          }
+        </li>
+      }
+    </ul>
+  }
+</div>
+
+<p-menu #menu [model]="acoes()" [popup]="true" appendTo="body" />
+<p-confirmdialog [style]="{ width: 'min(420px, 92vw)' }" />
+<app-conta-dialogo
+  [modo]="modo()"
+  [conta]="emEdicao()"
+  (fechar)="fecharDialogo()"
+  (salvo)="aoSalvar()"
+/>
+<app-fatura-dialogo
+  [cartao]="cartaoDaFatura()"
+  [contas]="todas()"
+  (fechar)="cartaoDaFatura.set(null)"
+  (paga)="dados.reload()"
+/>

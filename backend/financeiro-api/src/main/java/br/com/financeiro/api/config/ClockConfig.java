@@ -5,11 +5,6 @@ import java.time.ZoneId;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * Relógio da aplicação. As regras de "hoje" (status atrasado, pagamento no futuro) usam o fuso do
- * Brasil, independentemente do fuso do servidor. Nos testes, este bean pode ser substituído por um
- * {@link Clock#fixed} para controlar a data.
- */
 @Configuration
 public class ClockConfig {
 

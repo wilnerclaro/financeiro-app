@@ -14,10 +14,14 @@ public interface ContaMapper {
   @Mapping(target = "nome", ignore = true)
   @Mapping(target = "saldoAtual", ignore = true)
   @Mapping(target = "ativa", ignore = true)
+  @Mapping(target = "versao", ignore = true)
   @Mapping(target = "criadoEm", ignore = true)
   @Mapping(target = "atualizadoEm", ignore = true)
   Conta paraEntity(CriarContaRequest request);
 
   @Mapping(target = "usuarioId", source = "usuario.id")
+  @Mapping(
+      target = "variacaoDesdeSaldoInicial",
+      expression = "java(conta.getSaldoAtual().subtract(conta.getSaldoInicial()))")
   ContaResponse paraResponse(Conta conta);
 }

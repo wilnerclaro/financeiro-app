@@ -25,16 +25,15 @@ possível aqui, e há implicação de LGPD.
 
 ## Situação atual
 
-Leia `docs/AUDITORIA-INICIAL.md`, itens 1 e 4.
+Autenticação JWT stateless implementada na fase 4: token de acesso de 15 min e
+refresh de 7 dias (claim `tipo` separa os dois), HMAC-SHA256 com `JWT_SECRET`
+do `.env`, senha em BCrypt, e-mail único sem diferenciar maiúsculas. O usuário
+vem só do token (`@UsuarioLogado`). Só cadastro, login, refresh, Swagger e
+health são públicos.
 
-Resumo: `SecurityConfig` termina em `.anyRequest().permitAll()` e o
-`usuarioId` chega do cliente. A API está aberta e qualquer chamador acessa
-dados de qualquer usuário. Direção decidida: **JWT stateless**.
-
-Seu trabalho imediato é desenhar essa autenticação: emissão, validação,
-expiração, refresh, armazenamento do hash de senha, e como o principal passa a
-alimentar o `usuarioId` em toda a aplicação. A **sequência do refactor** entre
-os módulos é do `arquiteto`; o desenho do mecanismo é seu.
+Pendente para a publicação (fase 8): perfis dev/prod, Swagger fechado em
+produção, sem senha padrão no `application.yaml`, limite de tentativas no
+login e logs com id de correlação.
 
 ## O que verificar sempre
 
@@ -44,8 +43,8 @@ os módulos é do `arquiteto`; o desenho do mecanismo é seu.
 - **Autorização por recurso**, não só autenticação. Estar logado não dá acesso
   ao dado de outro.
 - **Exposição em resposta**: campo sensível que vaza em DTO, log ou mensagem de
-  erro. Note que hoje o `GlobalExceptionHandler` não loga nada — quando
-  logging entrar, ele não pode registrar dado pessoal ou financeiro.
+  erro. O `GlobalExceptionHandler` loga 409 e 500; esses logs não podem
+  registrar dado pessoal ou financeiro.
 - **Segredos**: `.env` está corretamente no `.gitignore`. Verifique que nenhum
   segredo entrou em código, migration, teste ou configuração versionada.
 - **Validação de entrada** em toda fronteira pública.

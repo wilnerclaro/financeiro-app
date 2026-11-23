@@ -1,11 +1,11 @@
 spring:
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 3MB
   application:
     name: financeiro-api
 
-  # Le o .env da raiz do repositorio (o mesmo do docker compose), assim a API usa a
-  # mesma senha do banco sem exportar variavel no terminal. Variavel de ambiente
-  # definida tem precedencia. Os dois caminhos cobrem rodar a partir da raiz ou de
-  # backend/financeiro-api.
   config:
     import:
       - optional:file:.env[.properties]
@@ -31,6 +31,18 @@ spring:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: false
+
+app:
+  jwt:
+    segredo: ${JWT_SECRET:}
+    emissor: financeiro-api
+    duracao-acesso: 15m
+    duracao-refresh: 7d
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:}
+    url-chaves: https://www.googleapis.com/oauth2/v3/certs
+  cors:
+    origens-permitidas: ${CORS_ORIGENS:http://localhost:4200}
 
 server:
   port: 8080

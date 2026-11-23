@@ -39,12 +39,16 @@ terminal do WSL.
 
 Todos os comandos partem da raiz do repositório.
 
-**1. Criar o `.env`** com a senha do banco. O `.env` não vai para o git.
+**1. Criar o `.env`** com a senha do banco e o segredo dos tokens. O `.env`
+não vai para o git.
 
 ```bash
 cp .env.example .env
-nano .env        # troque POSTGRES_PASSWORD
+nano .env        # troque POSTGRES_PASSWORD e JWT_SECRET
 ```
+
+Para gerar um `JWT_SECRET` (mínimo 32 caracteres): `openssl rand -base64 48`.
+Sem ele a API não sobe e avisa no log.
 
 **2. Subir o banco** (PostgreSQL 16, porta 5432):
 
@@ -69,23 +73,28 @@ primeira vez o Flyway cria as tabelas (migrations V1 a V7). Quando aparecer
 - Saúde: <http://localhost:8080/actuator/health> deve responder `{"status":"UP"}`
 - Swagger (documentação e testes dos endpoints): <http://localhost:8080/swagger-ui.html>
 
-**5. Criar um usuário de teste.** Ainda não há cadastro nem login (está no
-plano). Por enquanto, todo endpoint recebe o `usuarioId`, e o usuário é criado
-direto no banco:
+**5. Criar o seu usuário e entrar.** Todo endpoint, fora o cadastro e o login,
+exige um token. O cadastro já devolve o token:
 
 ```bash
-docker compose exec postgres psql -U financeiro_user -d financeiro_db \
-  -c "INSERT INTO usuarios (nome, email, senha_hash) VALUES ('Wilner', 'wilner@local.dev', 'sem-login-ainda') RETURNING id;"
+curl -X POST localhost:8080/api/auth/cadastro \
+  -H 'Content-Type: application/json' \
+  -d '{"nome":"Wilner","email":"wilner@local.dev","senha":"uma-senha-forte"}'
 ```
 
-Use o `id` devolvido como `usuarioId` no Swagger. Exemplo de criação de
-categoria:
+Copie o `accessToken` da resposta e use no header `Authorization`:
 
 ```bash
 curl -X POST localhost:8080/api/categorias \
+  -H 'Authorization: Bearer <accessToken>' \
   -H 'Content-Type: application/json' \
-  -d '{"usuarioId":"<id>","nome":"Moradia","tipo":"DESPESA"}'
+  -d '{"nome":"Moradia","tipo":"DESPESA"}'
 ```
+
+No Swagger, chame `POST /api/auth/login`, copie o `accessToken`, clique em
+**Authorize** e cole. O token de acesso vale 15 minutos; para renovar sem
+digitar a senha, chame `POST /api/auth/refresh` com o `refreshToken` (vale 7
+dias).
 
 ## Testes e build
 
@@ -123,6 +132,7 @@ PR com o check vermelho não deve ser mergeado.
 financeiro-app/
 ├── compose.yaml            banco de desenvolvimento (PostgreSQL 16)
 ├── .env.example            modelo das variáveis do banco
+├── deploy/                 produção: compose, Caddy (HTTPS) e backup diário
 ├── backend/financeiro-api/ API Spring Boot (pom.xml, mvnw, src/)
 ├── config/checkstyle/      regras do Checkstyle
 ├── docs/                   auditoria e qualidade de build
@@ -130,10 +140,30 @@ financeiro-app/
 └── .claude/                agentes e skill do glossário financeiro
 ```
 
-A API é organizada por módulo de negócio (`categoria`, `conta`,
-`lancamentofinanceiro`, `dashboardfinanceiro`), cada um com `controller`,
-`service`, `repository`, `entity`, `dto` e `mapper`. Convenções em
-[CLAUDE.md](CLAUDE.md).
+A API é organizada por módulo de negócio (`autenticacao`, `categoria`, `conta`,
+`lancamentofinanceiro`, `transferencia`, `orcamento`, `meta`,
+`dashboardfinanceiro`), cada um com `controller`, `service`, `repository`,
+`entity`, `dto` e `mapper`. Convenções em [CLAUDE.md](CLAUDE.md).
+
+### Endpoints principais
+
+Todos exigem `Authorization: Bearer <token>`, menos `/api/auth/**`. A
+documentação completa fica no Swagger (`/swagger-ui.html`).
+
+| Tela | Endpoint |
+|---|---|
+| Início | `GET /api/dashboard-financeiro/inicio?ano&mes` (sem parâmetros: mês atual) |
+| Lançamentos | `/api/lancamentos-financeiros` (filtros por tipo, status, conta, categoria e período) |
+| Fatura do cartão | `GET /api/lancamentos-financeiros/faturas?contaId&ano&mes` |
+| Transferências | `/api/transferencias` |
+| Orçamento | `GET/PUT /api/orcamentos/{ano}/{mes}`, `POST /api/orcamentos/repetir` (uma categoria em vários meses), `POST /api/orcamentos/{ano}/{mes}/copiar` (o mês inteiro para outros meses), `GET /api/orcamentos/{ano}` |
+| Metas | `/api/metas` (painel do ano) e `PUT /api/metas/{id}/movimentos/{ano}/{mes}` |
+| Contas e categorias | `/api/contas`, `GET /api/contas/resumo`, `/api/categorias` |
+
+## Publicar numa VPS
+
+Para colocar o app no ar com HTTPS e backup diário, siga
+[docs/DEPLOY-VPS.md](docs/DEPLOY-VPS.md).
 
 ## Problemas comuns
 

@@ -1,0 +1,291 @@
+<div class="pagina surgir">
+  <header class="cab">
+    <div>
+      <h1 class="titulo-pagina">Orçamento de {{ nomeDoMes() }}</h1>
+      <p class="aux">Quanto você planejou, quanto já usou e o que pede atenção.</p>
+    </div>
+    <div class="acoes">
+      <app-seletor-mes [(mes)]="mes" />
+      <p-button
+        size="small"
+        severity="secondary"
+        [outlined]="true"
+        [loading]="copiando()"
+        (onClick)="confirmarCopia()"
+      >
+        <app-icone [icone]="icones.Copy" />
+        <span>Copiar mês anterior</span>
+      </p-button>
+    </div>
+  </header>
+
+  <app-abas-orcamento />
+
+  @if (relatorio.error()) {
+    <app-estado-erro
+      [titulo]="'Não foi possível carregar o orçamento de ' + nomeDoMes() + '.'"
+      mensagem="Verifique a conexão e tente de novo."
+      (tentar)="tentarDeNovo()"
+    />
+  } @else if (relatorio.isLoading()) {
+    <div class="resumo superficie" aria-hidden="true">
+      <div class="usado">
+        <div class="anel"><app-esqueleto-grafico forma="anel" /></div>
+        <div class="usado-txt linhas-esqueleto">
+          <p-skeleton width="7rem" height=".8rem" />
+          <p-skeleton width="11rem" height="2.25rem" />
+          <p-skeleton width="9rem" height=".8rem" />
+          <p-skeleton width="12rem" height="1.25rem" />
+        </div>
+      </div>
+      <div class="laterais">
+        @for (x of [1, 2]; track x) {
+          <div class="kpi linhas-esqueleto">
+            <p-skeleton width="5rem" height=".8rem" />
+            <p-skeleton width="8rem" height="1.6rem" />
+            <p-skeleton width="11rem" height=".8rem" />
+          </div>
+        }
+      </div>
+      <div class="legenda">
+        @for (x of [7, 7, 8, 7]; track $index) {
+          <p-skeleton [width]="x + 'rem'" height=".7rem" />
+        }
+      </div>
+    </div>
+    <div class="secao" aria-hidden="true">
+      <p-skeleton width="10rem" height=".9rem" />
+      <app-esqueleto-lista [linhas]="4" [detalhe]="false" [cabecalho]="true" [colunas]="4" />
+    </div>
+  } @else if (vazio()) {
+    <app-estado-vazio
+      [icone]="icones.ChartPie"
+      [titulo]="'Sem orçamento em ' + nomeDoMes()"
+      texto="Defina quanto pretende gastar em cada categoria, ou copie o previsto do mês anterior."
+    >
+      <p-button size="small" routerLink="/orcamento/previsto" label="Definir previsto" />
+      <p-button
+        size="small"
+        severity="secondary"
+        [outlined]="true"
+        label="Copiar mês anterior"
+        (onClick)="confirmarCopia()"
+      />
+    </app-estado-vazio>
+  } @else if (relatorio.value(); as r) {
+    <section class="resumo superficie" [attr.aria-label]="'Resumo do orçamento de ' + nomeDoMes()">
+      @if (totalDeDespesas(); as total) {
+        <div class="usado">
+          <div class="anel" [class]="total.nivel ?? 'neutro'">
+            <svg
+              viewBox="0 0 120 120"
+              role="img"
+              [attr.aria-label]="
+                total.nivel
+                  ? 'Orçamento usado: ' +
+                    percentual(total.valores.percentualRealizado) +
+                    ', ' +
+                    total.status
+                  : 'Sem previsto de despesas'
+              "
+            >
+              <circle class="trilho" cx="60" cy="60" [attr.r]="raioDoAnel" />
+              <circle
+                class="valor-anel"
+                [style.--volta]="voltaDoAnel"
+                cx="60"
+                cy="60"
+                [attr.r]="raioDoAnel"
+                [attr.stroke-dasharray]="voltaDoAnel"
+                [attr.stroke-dashoffset]="anel()"
+              />
+            </svg>
+            <span class="pct num" aria-hidden="true">{{
+              total.nivel ? percentual(total.valores.percentualRealizado) : '—'
+            }}</span>
+          </div>
+          <div class="usado-txt surgir">
+            <p class="rotulo">Despesas do mês</p>
+            <p class="indicador num des">{{ brl(total.valores.realizado) }}</p>
+            @if (total.nivel) {
+              <p class="aux num">de {{ brl(total.valores.previsto) }} previstos</p>
+              <p class="delta">
+                <span class="selo" [class]="total.nivel">{{ total.status }}</span>
+                @if (total.valores.desvio > 0) {
+                  <span class="des num">{{ brl(total.valores.desvio) }} acima do previsto</span>
+                } @else {
+                  <span class="ok num">Restam {{ brl(-total.valores.desvio) }}</span>
+                }
+              </p>
+            } @else {
+              <p class="aux">Sem previsto de despesas neste mês.</p>
+            }
+          </div>
+        </div>
+      }
+      <div class="laterais cascata">
+        <div class="kpi">
+          <p class="rotulo">Receitas</p>
+          <p class="valor num rec">{{ brl(r.receitas.total.realizado) }}</p>
+          <p class="aux num">
+            @if (r.receitas.total.previsto > 0) {
+              {{ percentual(r.receitas.total.percentualRealizado) }} de
+              {{ brl(r.receitas.total.previsto) }} previstos
+            } @else {
+              Sem previsto de receitas
+            }
+          </p>
+        </div>
+        <div class="kpi">
+          <p class="rotulo">Saldo do mês</p>
+          <p
+            class="valor num"
+            [class.ok]="r.saldo.realizado > 0"
+            [class.des]="r.saldo.realizado < 0"
+          >
+            {{ brl(r.saldo.realizado) }}
+          </p>
+          <p class="aux num">Previsto {{ brl(r.saldo.previsto) }}</p>
+        </div>
+      </div>
+      <p class="legenda aux">
+        <span><span class="ponto ok" aria-hidden="true"></span>No ritmo até 70%</span>
+        <span><span class="ponto amb" aria-hidden="true"></span>Atenção até 90%</span>
+        <span><span class="ponto lar" aria-hidden="true"></span>No limite até 100%</span>
+        <span><span class="ponto des" aria-hidden="true"></span>Acima do previsto</span>
+      </p>
+    </section>
+
+    <section class="secao" aria-labelledby="atencao-t">
+      <h2 id="atencao-t" class="titulo-secao">Precisa da sua atenção</h2>
+      @if (atencao().length) {
+        <ul class="lista superficie cascata">
+          @for (a of atencao(); track a.id) {
+            <li>
+              <span class="ic-circ" [class]="a.cor"><app-icone [icone]="a.icone" /></span>
+              <div class="txt">
+                <p class="medio">{{ a.titulo }}</p>
+                <p class="aux">{{ a.detalhe }}</p>
+              </div>
+              <p-button
+                size="small"
+                severity="secondary"
+                [outlined]="true"
+                [routerLink]="a.rota"
+                [ariaLabel]="a.acao + ': ' + a.titulo"
+                >{{ a.acao }}</p-button
+              >
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="tudo-certo aux">
+          <app-icone class="ok" [icone]="icones.CircleCheck" />
+          Nenhum grupo passou de 90% do previsto. Tudo no ritmo.
+        </p>
+      }
+    </section>
+
+    <section class="secao" aria-labelledby="desp-t">
+      <div class="sec-cab">
+        <h2 id="desp-t" class="titulo-secao">Despesas por grupo</h2>
+        @if (expansiveis().length) {
+          <p-button
+            size="small"
+            [text]="true"
+            severity="secondary"
+            [label]="tudoAberto() ? 'Recolher tudo' : 'Abrir tudo'"
+            (onClick)="alternarTodos()"
+          />
+        }
+      </div>
+      <div class="tabela-orc superficie">
+        <div class="linha-orc cabecalho" aria-hidden="true">
+          <span>Categoria</span>
+          <span class="n">Previsto</span>
+          <span class="n">Realizado</span>
+          <span class="n">Desvio</span>
+          <span>Uso</span>
+        </div>
+        <ul class="grupos cascata">
+          @for (g of despesas(); track g.id) {
+            <li>
+              <app-linha-orcamento
+                [linha]="g"
+                tipo="grupo"
+                [aberto]="abertos().has(g.id)"
+                (alternar)="alternar(g.id)"
+              />
+              @if (abertos().has(g.id)) {
+                <ul class="subitens cascata" [attr.aria-label]="'Subitens de ' + g.nome">
+                  @for (s of g.subitens; track s.id) {
+                    <li>
+                      <app-linha-orcamento [linha]="s" tipo="subitem" />
+                    </li>
+                  }
+                </ul>
+              }
+            </li>
+          } @empty {
+            <li class="aux sem-itens">Nenhuma despesa prevista ou realizada.</li>
+          }
+        </ul>
+        @if (totalDeDespesas(); as total) {
+          <app-linha-orcamento class="total" [linha]="total" tipo="total" />
+        }
+      </div>
+    </section>
+
+    <section class="secao" aria-labelledby="rec-t">
+      <h2 id="rec-t" class="titulo-secao">Receitas</h2>
+      @if (receitas().length) {
+        <div class="receitas cascata">
+          @for (c of receitas(); track c.id) {
+            <article class="receita superficie" [attr.aria-label]="c.nome">
+              <div class="receita-cab">
+                <p class="medio">{{ c.nome }}</p>
+                @if (c.fonte) {
+                  <span class="selo">{{ c.fonte }}</span>
+                }
+              </div>
+              <p class="valor num rec">{{ brl(c.valores.realizado) }}</p>
+              @if (c.valores.previsto > 0) {
+                <p-progressbar
+                  [value]="c.largura"
+                  [showValue]="false"
+                  class="barra rec"
+                  [attr.aria-label]="
+                    c.nome + ': ' + percentual(c.valores.percentualRealizado) + ' recebido'
+                  "
+                />
+                <p class="aux num">
+                  {{ percentual(c.valores.percentualRealizado) }} de
+                  {{ brl(c.valores.previsto) }} previstos
+                  @if (c.valores.desvio > 0) {
+                    · <span class="ok">{{ brl(c.valores.desvio) }} a mais</span>
+                  }
+                </p>
+              } @else {
+                <p class="aux">Sem previsto</p>
+              }
+              @if (c.subitens.length) {
+                <ul class="receita-itens">
+                  @for (s of c.subitens; track s.categoriaId) {
+                    <li>
+                      <span>{{ s.nome }}</span>
+                      <span class="num">{{ brl(s.valores.realizado) }}</span>
+                    </li>
+                  }
+                </ul>
+              }
+            </article>
+          }
+        </div>
+      } @else {
+        <p class="aux">Nenhuma receita prevista ou recebida.</p>
+      }
+    </section>
+  }
+</div>
+
+<p-confirmdialog [style]="{ width: 'min(420px, 92vw)' }" />

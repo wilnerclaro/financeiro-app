@@ -3,11 +3,14 @@ package br.com.financeiro.api.lancamentofinanceiro.controller;
 import br.com.financeiro.api.lancamentofinanceiro.docs.LancamentoFinanceiroApiDoc;
 import br.com.financeiro.api.lancamentofinanceiro.dto.AtualizarLancamentoFinanceiroRequest;
 import br.com.financeiro.api.lancamentofinanceiro.dto.CriarLancamentoFinanceiroRequest;
+import br.com.financeiro.api.lancamentofinanceiro.dto.FaturaCartaoResponse;
 import br.com.financeiro.api.lancamentofinanceiro.dto.LancamentoFinanceiroResponse;
+import br.com.financeiro.api.lancamentofinanceiro.dto.PagarFaturaRequest;
 import br.com.financeiro.api.lancamentofinanceiro.dto.PagarLancamentoFinanceiroRequest;
 import br.com.financeiro.api.lancamentofinanceiro.enums.StatusLancamentoFinanceiro;
 import br.com.financeiro.api.lancamentofinanceiro.enums.TipoLancamentoFinanceiro;
 import br.com.financeiro.api.lancamentofinanceiro.service.LancamentoFinanceiroService;
+import br.com.financeiro.api.security.UsuarioLogado;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.time.LocalDate;
@@ -39,8 +42,8 @@ public class LancamentoFinanceiroController implements LancamentoFinanceiroApiDo
 
   @PostMapping
   public ResponseEntity<LancamentoFinanceiroResponse> criar(
-      @Valid @RequestBody CriarLancamentoFinanceiroRequest request) {
-    LancamentoFinanceiroResponse response = lancamentoFinanceiroService.criar(request);
+      @UsuarioLogado UUID usuarioId, @Valid @RequestBody CriarLancamentoFinanceiroRequest request) {
+    LancamentoFinanceiroResponse response = lancamentoFinanceiroService.criar(usuarioId, request);
     URI location = URI.create("/api/lancamentos-financeiros/" + response.id());
 
     return ResponseEntity.created(location).body(response);
@@ -48,7 +51,7 @@ public class LancamentoFinanceiroController implements LancamentoFinanceiroApiDo
 
   @GetMapping
   public ResponseEntity<Page<LancamentoFinanceiroResponse>> listar(
-      @RequestParam UUID usuarioId,
+      @UsuarioLogado UUID usuarioId,
       @RequestParam(required = false) TipoLancamentoFinanceiro tipo,
       @RequestParam(required = false) StatusLancamentoFinanceiro status,
       @RequestParam(required = false) UUID contaId,
@@ -66,29 +69,51 @@ public class LancamentoFinanceiroController implements LancamentoFinanceiroApiDo
     return ResponseEntity.ok(response);
   }
 
+  @GetMapping("/faturas")
+  public ResponseEntity<FaturaCartaoResponse> buscarFatura(
+      @UsuarioLogado UUID usuarioId,
+      @RequestParam UUID contaId,
+      @RequestParam Integer ano,
+      @RequestParam Integer mes) {
+    return ResponseEntity.ok(
+        lancamentoFinanceiroService.buscarFatura(usuarioId, contaId, ano, mes));
+  }
+
+  @PatchMapping("/faturas/pagar")
+  public ResponseEntity<FaturaCartaoResponse> pagarFatura(
+      @UsuarioLogado UUID usuarioId, @Valid @RequestBody PagarFaturaRequest request) {
+    return ResponseEntity.ok(lancamentoFinanceiroService.pagarFatura(usuarioId, request));
+  }
+
   @GetMapping("/{id}")
   public ResponseEntity<LancamentoFinanceiroResponse> buscarPorId(
-      @PathVariable UUID id, @RequestParam UUID usuarioId) {
+      @PathVariable UUID id, @UsuarioLogado UUID usuarioId) {
     LancamentoFinanceiroResponse response = lancamentoFinanceiroService.buscarPorId(id, usuarioId);
     return ResponseEntity.ok(response);
   }
 
   @PutMapping("/{id}")
   public ResponseEntity<LancamentoFinanceiroResponse> atualizar(
-      @PathVariable UUID id, @Valid @RequestBody AtualizarLancamentoFinanceiroRequest request) {
-    LancamentoFinanceiroResponse response = lancamentoFinanceiroService.atualizar(id, request);
+      @PathVariable UUID id,
+      @UsuarioLogado UUID usuarioId,
+      @Valid @RequestBody AtualizarLancamentoFinanceiroRequest request) {
+    LancamentoFinanceiroResponse response =
+        lancamentoFinanceiroService.atualizar(id, usuarioId, request);
     return ResponseEntity.ok(response);
   }
 
   @PatchMapping("/{id}/pagar")
   public ResponseEntity<LancamentoFinanceiroResponse> pagar(
-      @PathVariable UUID id, @Valid @RequestBody PagarLancamentoFinanceiroRequest request) {
-    LancamentoFinanceiroResponse response = lancamentoFinanceiroService.pagar(id, request);
+      @PathVariable UUID id,
+      @UsuarioLogado UUID usuarioId,
+      @Valid @RequestBody PagarLancamentoFinanceiroRequest request) {
+    LancamentoFinanceiroResponse response =
+        lancamentoFinanceiroService.pagar(id, usuarioId, request);
     return ResponseEntity.ok(response);
   }
 
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> cancelar(@PathVariable UUID id, @RequestParam UUID usuarioId) {
+  public ResponseEntity<Void> cancelar(@PathVariable UUID id, @UsuarioLogado UUID usuarioId) {
     lancamentoFinanceiroService.cancelar(id, usuarioId);
     return ResponseEntity.noContent().build();
   }

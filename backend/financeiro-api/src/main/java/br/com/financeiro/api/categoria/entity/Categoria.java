@@ -1,5 +1,6 @@
 package br.com.financeiro.api.categoria.entity;
 
+import br.com.financeiro.api.categoria.enums.FonteReceita;
 import br.com.financeiro.api.categoria.enums.TipoCategoria;
 import br.com.financeiro.api.usuario.entity.Usuario;
 import jakarta.persistence.Column;
@@ -53,6 +54,10 @@ public class Categoria {
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 20)
   private TipoCategoria tipo;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "fonte_receita", length = 10)
+  private FonteReceita fonteReceita;
 
   @Column(nullable = false)
   private Boolean ativa;

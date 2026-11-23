@@ -6,6 +6,7 @@ import br.com.financeiro.api.categoria.dto.CategoriaResponse;
 import br.com.financeiro.api.categoria.dto.CriarCategoriaRequest;
 import br.com.financeiro.api.categoria.enums.TipoCategoria;
 import br.com.financeiro.api.categoria.service.CategoriaService;
+import br.com.financeiro.api.security.UsuarioLogado;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.UUID;
@@ -35,8 +36,8 @@ public class CategoriaController implements CategoriaApiDoc {
 
   @PostMapping
   public ResponseEntity<CategoriaResponse> criar(
-      @Valid @RequestBody CriarCategoriaRequest request) {
-    CategoriaResponse response = categoriaService.criar(request);
+      @UsuarioLogado UUID usuarioId, @Valid @RequestBody CriarCategoriaRequest request) {
+    CategoriaResponse response = categoriaService.criar(usuarioId, request);
     URI location = URI.create("/api/categorias/" + response.id());
 
     return ResponseEntity.created(location).body(response);
@@ -44,7 +45,7 @@ public class CategoriaController implements CategoriaApiDoc {
 
   @GetMapping
   public ResponseEntity<Page<CategoriaResponse>> listar(
-      @RequestParam UUID usuarioId,
+      @UsuarioLogado UUID usuarioId,
       @RequestParam(required = false) TipoCategoria tipo,
       @RequestParam(required = false) Boolean ativa,
       @PageableDefault(size = 20, sort = "nome", direction = Sort.Direction.ASC)
@@ -56,27 +57,29 @@ public class CategoriaController implements CategoriaApiDoc {
 
   @GetMapping("/{id}")
   public ResponseEntity<CategoriaResponse> buscarPorId(
-      @PathVariable UUID id, @RequestParam UUID usuarioId) {
+      @PathVariable UUID id, @UsuarioLogado UUID usuarioId) {
     CategoriaResponse response = categoriaService.buscarPorId(id, usuarioId);
     return ResponseEntity.ok(response);
   }
 
   @PutMapping("/{id}")
   public ResponseEntity<CategoriaResponse> atualizar(
-      @PathVariable UUID id, @Valid @RequestBody AtualizarCategoriaRequest request) {
-    CategoriaResponse response = categoriaService.atualizar(id, request);
+      @PathVariable UUID id,
+      @UsuarioLogado UUID usuarioId,
+      @Valid @RequestBody AtualizarCategoriaRequest request) {
+    CategoriaResponse response = categoriaService.atualizar(id, usuarioId, request);
     return ResponseEntity.ok(response);
   }
 
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> inativar(@PathVariable UUID id, @RequestParam UUID usuarioId) {
+  public ResponseEntity<Void> inativar(@PathVariable UUID id, @UsuarioLogado UUID usuarioId) {
     categoriaService.inativar(id, usuarioId);
     return ResponseEntity.noContent().build();
   }
 
   @PatchMapping("/{id}/ativar")
   public ResponseEntity<CategoriaResponse> ativar(
-      @PathVariable UUID id, @RequestParam UUID usuarioId) {
+      @PathVariable UUID id, @UsuarioLogado UUID usuarioId) {
     CategoriaResponse response = categoriaService.ativar(id, usuarioId);
     return ResponseEntity.ok(response);
   }

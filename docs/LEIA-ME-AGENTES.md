@@ -16,13 +16,14 @@ estão documentadas em `docs/QUALIDADE-BUILD.md` para você colar.
 financeiro-app/
 ├── CLAUDE.md                                    contexto de todas as sessões
 ├── .claude/
-│   ├── agents/                                  os 7 agentes
+│   ├── agents/                                  os 8 agentes
 │   │   ├── arquiteto.md
 │   │   ├── dominio-financeiro.md
 │   │   ├── seguranca.md
 │   │   ├── qa-e-revisao.md
 │   │   ├── java-backend.md
 │   │   ├── angular-frontend.md
+│   │   ├── ux-ui.md
 │   │   └── documentacao.md
 │   └── skills/glossario-financeiro/SKILL.md     fórmulas da planilha
 ├── docs/
@@ -79,9 +80,9 @@ outro, edite a `description` — é ajuste normal, não sinal de erro.
 
 Você pode sempre invocar explicitamente: *"use o dominio-financeiro para..."*.
 
-## Os cinco agentes que ficaram de fora
+## Os quatro agentes que ficaram de fora
 
-`mobile`, `po-requisitos`, `ux-ui`, `devops` e `integracao` foram adiados de
+`mobile`, `po-requisitos`, `devops` e `integracao` foram adiados de
 propósito — cada um custa um arquivo para voltar. A ideia é decidir sobre eles
 depois do controle financeiro fechado, quando você tiver visto na prática
 quais dos sete são realmente usados.

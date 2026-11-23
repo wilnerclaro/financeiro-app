@@ -1,0 +1,217 @@
+<div class="pagina surgir">
+  <header class="cab">
+    <div>
+      <h1 class="titulo-pagina">Lançamentos</h1>
+      <p class="aux">Receitas e despesas de {{ nomeDoMes() }}, por competência.</p>
+    </div>
+    <div class="acoes-cabecalho">
+      <p-button
+        size="small"
+        severity="secondary"
+        [outlined]="true"
+        ariaLabel="Importar extrato"
+        (onClick)="importacao.abrir()"
+      >
+        <app-icone [icone]="icones.Upload" />
+        <span>Importar extrato</span>
+      </p-button>
+      <app-seletor-mes [(mes)]="mes" />
+    </div>
+  </header>
+
+  <div class="filtros">
+    <p-selectbutton
+      [options]="filtros"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="filtroAtual()"
+      (ngModelChange)="escolherFiltro($event)"
+      [allowEmpty]="false"
+      size="small"
+      ariaLabelledBy="rotulo-filtro"
+      class="rolagem-x"
+    />
+    <span id="rotulo-filtro" class="sr-only">Filtrar lançamentos</span>
+    <p-iconfield iconPosition="left" class="busca">
+      <p-inputicon><app-icone [icone]="icones.Search" /></p-inputicon>
+      <input
+        pInputText
+        type="search"
+        size="small"
+        placeholder="Buscar descrição, categoria ou conta"
+        aria-label="Buscar lançamentos"
+        [ngModel]="busca()"
+        (ngModelChange)="busca.set($event)"
+      />
+    </p-iconfield>
+  </div>
+
+  @if (movimentos.error()) {
+    <app-estado-erro
+      [titulo]="'Não foi possível carregar os lançamentos de ' + nomeDoMes() + '.'"
+      mensagem="Verifique a conexão e tente de novo."
+      (tentar)="tentarDeNovo()"
+    />
+  } @else if (movimentos.isLoading()) {
+    <div class="totais superficie" aria-hidden="true">
+      @for (x of [1, 2, 3]; track x) {
+        <div class="carregando">
+          <p-skeleton width="4rem" height=".75rem" />
+          <p-skeleton width="7rem" height="1rem" />
+        </div>
+      }
+    </div>
+    @for (itens of [2, 3]; track $index) {
+      <div class="secao" aria-hidden="true">
+        <p-skeleton width="9rem" height=".75rem" />
+        <app-esqueleto-lista [linhas]="itens" [selo]="true" />
+      </div>
+    }
+  } @else if (!lancamentos().length && !transferencias().length) {
+    <app-estado-vazio
+      [icone]="icones.List"
+      [titulo]="'Nenhum lançamento em ' + nomeDoMes()"
+      texto="Lance à mão ou traga o extrato do banco. O que entrar neste mês aparece aqui, agrupado por dia."
+    >
+      <p-button size="small" routerLink="/lancar">
+        <app-icone [icone]="icones.Plus" />
+        <span>Novo lançamento</span>
+      </p-button>
+      <p-button size="small" severity="secondary" [outlined]="true" (onClick)="importacao.abrir()">
+        <app-icone [icone]="icones.Upload" />
+        <span>Importar extrato</span>
+      </p-button>
+    </app-estado-vazio>
+  } @else {
+    <section class="totais superficie cascata" aria-label="Totais do filtro">
+      <div>
+        <p class="rotulo">Receitas</p>
+        <p class="num forte rec">{{ brl(totais().receitas) }}</p>
+      </div>
+      <div>
+        <p class="rotulo">Despesas</p>
+        <p class="num forte des">{{ brl(totais().despesas) }}</p>
+      </div>
+      <div>
+        <p class="rotulo">Saldo</p>
+        <p class="num forte" [class.des]="totais().saldo < 0">{{ brl(totais().saldo) }}</p>
+      </div>
+    </section>
+
+    @for (dia of dias(); track dia.data) {
+      <section class="secao" [attr.aria-label]="dia.rotulo">
+        <h2 class="rotulo">{{ dia.rotulo }}</h2>
+        <ul class="lista superficie cascata">
+          @for (l of dia.itens; track l.id) {
+            <li [class.cancelado]="l.status === 'CANCELADO'">
+              <div class="txt">
+                <p class="medio">{{ l.descricao }}</p>
+                <p class="aux">
+                  {{ l.nomeCategoria }} · {{ l.nomeConta }}
+                  @if (l.dataCompra) {
+                    · compra em {{ dataCurta(l.dataCompra) }}
+                  }
+                </p>
+              </div>
+              <span class="selo" [class]="status[l.status].cor">{{ status[l.status].rotulo }}</span>
+              <span class="num forte valor" [class]="l.tipo === 'RECEITA' ? 'rec' : 'des'">
+                <span class="sr-only">{{ l.tipo === 'RECEITA' ? 'Receita' : 'Despesa' }}</span>
+                {{ brlComSinal(l.valor, l.tipo) }}
+              </span>
+              @if (l.status !== 'CANCELADO') {
+                <p-button
+                  [text]="true"
+                  severity="secondary"
+                  size="small"
+                  [ariaLabel]="'Ações de ' + l.descricao"
+                  (onClick)="abrirAcoes(menu, $event, l)"
+                >
+                  <app-icone [icone]="icones.EllipsisVertical" />
+                </p-button>
+              } @else {
+                <span class="espaco"></span>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+    } @empty {
+      @if (lancamentos().length) {
+        <p class="aux nada">Nenhum lançamento com esse filtro.</p>
+      }
+    }
+
+    @if (transferencias().length) {
+      <section class="secao" aria-labelledby="transf-t">
+        <h2 id="transf-t" class="titulo-secao">Transferências do mês</h2>
+        <ul class="lista superficie cascata">
+          @for (t of transferencias(); track t.id) {
+            <li [class.cancelado]="t.cancelada">
+              <span class="ic-circ"><app-icone [icone]="icones.ArrowLeftRight" /></span>
+              <div class="txt">
+                <p class="medio">{{ t.nomeContaOrigem }} → {{ t.nomeContaDestino }}</p>
+                <p class="aux">
+                  {{ dataDaTransferencia(t) }}{{ t.descricao ? ' · ' + t.descricao : '' }}
+                </p>
+              </div>
+              @if (t.cancelada) {
+                <span class="selo">Cancelada</span>
+              }
+              <span class="num forte valor">{{ brl(t.valor) }}</span>
+              @if (!t.cancelada) {
+                <p-button
+                  [text]="true"
+                  severity="secondary"
+                  size="small"
+                  label="Cancelar"
+                  [ariaLabel]="'Cancelar transferência de ' + brl(t.valor)"
+                  (onClick)="confirmarCancelamentoDaTransferencia(t)"
+                />
+              }
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  }
+</div>
+
+<p-menu #menu [model]="acoes()" [popup]="true" appendTo="body" />
+<p-confirmdialog [style]="{ width: 'min(420px, 92vw)' }" />
+
+<p-dialog
+  header="Pagar lançamento"
+  [visible]="!!aPagar()"
+  (visibleChange)="$event ? null : fecharPagamento()"
+  [modal]="true"
+  [style]="{ width: 'min(420px, 92vw)' }"
+  [draggable]="false"
+>
+  @if (aPagar(); as l) {
+    <div class="dialogo">
+      <p>
+        <span class="medio">{{ l.descricao }}</span> ·
+        <span class="num">{{ brl(l.valor) }}</span>
+      </p>
+      <div class="campo">
+        <label for="data-pagamento" class="rotulo-campo">Data do pagamento</label>
+        <p-datepicker
+          inputId="data-pagamento"
+          [ngModel]="dataDoPagamento()"
+          (ngModelChange)="dataDoPagamento.set($event ?? dataDoPagamento())"
+          [maxDate]="hoje"
+          [showOnFocus]="false"
+          [showIcon]="true"
+          iconDisplay="input"
+          dateFormat="dd/mm/yy"
+          appendTo="body"
+          fluid
+        />
+      </div>
+    </div>
+  }
+  <ng-template #footer>
+    <p-button label="Voltar" severity="secondary" [outlined]="true" (onClick)="fecharPagamento()" />
+    <p-button label="Confirmar pagamento" [loading]="pagando()" (onClick)="confirmarPagamento()" />
+  </ng-template>
+</p-dialog>

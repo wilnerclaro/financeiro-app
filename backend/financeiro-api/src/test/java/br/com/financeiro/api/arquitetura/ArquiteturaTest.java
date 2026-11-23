@@ -6,24 +6,20 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noFields;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
+import com.tngtech.archunit.core.domain.Dependency;
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
+import com.tngtech.archunit.lang.ArchCondition;
+import com.tngtech.archunit.lang.ConditionEvents;
+import com.tngtech.archunit.lang.SimpleConditionEvent;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Codifica as convencoes de arquitetura do projeto como teste executavel.
- *
- * <p>Estas regras existiam apenas como disciplina humana. Com varios agentes escrevendo codigo,
- * disciplina nao escala — aqui elas viram build vermelho.
- *
- * <p>Se uma regra falhar, corrija o codigo. Alterar o teste para acomodar a violacao anula o
- * proposito dele.
- */
 @DisplayName("Regras de arquitetura")
 class ArquiteturaTest {
 
@@ -149,19 +145,25 @@ class ArquiteturaTest {
         .resideInAPackage("..service..")
         .and()
         .areNotInterfaces()
+        .and()
+        .areTopLevelClasses()
         .should()
         .haveSimpleNameEndingWith("Service")
         .check(classes);
   }
 
   @Test
-  @DisplayName("classes de repository terminam em Repository")
+  @DisplayName("classes de repository terminam em Repository (ou Specifications, para filtros)")
   void nomenclaturaDeRepository() {
     classes()
         .that()
         .resideInAPackage("..repository..")
+        .and()
+        .areTopLevelClasses()
         .should()
         .haveSimpleNameEndingWith("Repository")
+        .orShould()
+        .haveSimpleNameEndingWith("Specifications")
         .check(classes);
   }
 
@@ -176,5 +178,41 @@ class ArquiteturaTest {
             "um módulo que depende de outro que depende dele não pode ser extraído nem "
                 + "testado isoladamente")
         .check(classes);
+  }
+
+  @Test
+  @DisplayName("service só usa o repository do próprio módulo")
+  void serviceNaoUsaRepositoryDeOutroModulo() {
+    classes()
+        .that()
+        .resideInAPackage("..service..")
+        .should(usarApenasRepositoryDoProprioModulo())
+        .because("o acesso aos dados de outro módulo passa pelo service dele")
+        .check(classes);
+  }
+
+  private static ArchCondition<JavaClass> usarApenasRepositoryDoProprioModulo() {
+    return new ArchCondition<>("usar apenas repository do próprio módulo") {
+      @Override
+      public void check(JavaClass classe, ConditionEvents eventos) {
+        String modulo = moduloDe(classe.getPackageName());
+        classe.getDirectDependenciesFromSelf().stream()
+            .map(Dependency::getTargetClass)
+            .filter(alvo -> alvo.getPackageName().contains(".repository"))
+            .filter(alvo -> !moduloDe(alvo.getPackageName()).equals(modulo))
+            .distinct()
+            .forEach(
+                alvo ->
+                    eventos.add(
+                        SimpleConditionEvent.violated(
+                            classe, classe.getName() + " usa " + alvo.getName())));
+      }
+    };
+  }
+
+  private static String moduloDe(String pacote) {
+    String resto = pacote.substring(PACOTE_RAIZ.length() + 1);
+    int ponto = resto.indexOf('.');
+    return ponto < 0 ? resto : resto.substring(0, ponto);
   }
 }

@@ -1,0 +1,184 @@
+<div class="pagina surgir">
+  <header class="cab">
+    <div>
+      <h1 class="titulo-pagina">Orçamento de {{ ano() }}</h1>
+      <p class="aux">{{ subtitulo() }}</p>
+    </div>
+    <div class="seletor" role="group" aria-label="Ano de referência">
+      <p-button
+        [text]="true"
+        severity="secondary"
+        size="small"
+        [ariaLabel]="'Ir para ' + (ano() - 1)"
+        (onClick)="mudarAno(-1)"
+      >
+        <app-icone [icone]="icones.ChevronLeft" />
+      </p-button>
+      <span class="medio" aria-live="polite">{{ ano() }}</span>
+      <p-button
+        [text]="true"
+        severity="secondary"
+        size="small"
+        [ariaLabel]="'Ir para ' + (ano() + 1)"
+        (onClick)="mudarAno(1)"
+      >
+        <app-icone [icone]="icones.ChevronRight" />
+      </p-button>
+    </div>
+  </header>
+
+  <app-abas-orcamento />
+
+  @if (resumo.error()) {
+    <app-estado-erro
+      [titulo]="'Não foi possível carregar o orçamento de ' + ano() + '.'"
+      mensagem="Verifique a conexão e tente de novo."
+      (tentar)="resumo.reload()"
+    />
+  } @else if (resumo.isLoading()) {
+    <section class="kpis superficie" aria-busy="true">
+      @for (x of [1, 2, 3, 4]; track x) {
+        <div class="kpi">
+          <p-skeleton width="6rem" height=".8rem" />
+          <p-skeleton width="9rem" height="2rem" />
+          <p-skeleton width="11rem" height=".9rem" />
+        </div>
+      }
+    </section>
+    <div class="graficos" aria-hidden="true">
+      @for (x of [1, 2]; track x) {
+        <div class="grafico superficie">
+          <p-skeleton width="12rem" height=".9rem" />
+          <app-esqueleto-grafico forma="linhas" [colunas]="12" [altura]="220" />
+          <div class="legenda-esqueleto">
+            <p-skeleton width="5rem" height=".75rem" />
+            <p-skeleton width="5rem" height=".75rem" />
+          </div>
+        </div>
+      }
+    </div>
+    <div class="secao" aria-hidden="true">
+      <p-skeleton width="10rem" height=".9rem" />
+      <app-esqueleto-lista
+        [linhas]="6"
+        [detalhe]="false"
+        [cabecalho]="true"
+        [colunas]="12"
+        larguraDaColuna="2.5rem"
+      />
+    </div>
+  } @else if (vazio()) {
+    <p class="aux">Nada previsto ou realizado em {{ ano() }}.</p>
+  } @else {
+    <section class="kpis superficie cascata" [attr.aria-label]="'Indicadores de ' + ano()">
+      @for (k of indicadores(); track k.rotulo) {
+        <div class="kpi">
+          <p class="rotulo">{{ k.rotulo }}</p>
+          <p class="indicador num" [class]="k.cor">{{ k.valor }}</p>
+          <p class="delta" [class]="k.corDetalhe || 'aux'">{{ k.detalhe }}</p>
+        </div>
+      }
+    </section>
+
+    <div class="graficos cascata">
+      @for (g of graficos(); track g.titulo) {
+        <section class="grafico superficie" [attr.aria-labelledby]="'graf-' + g.titulo">
+          <h2 [id]="'graf-' + g.titulo" class="titulo-secao">
+            {{ g.titulo }} <span class="aux">· realizado x previsto</span>
+          </h2>
+          <div class="area" role="img" [attr.aria-label]="g.resumo">
+            <p-chart type="line" [data]="g.dados" [options]="opcoesDoGrafico()" height="220px" />
+          </div>
+        </section>
+      }
+    </div>
+
+    <section class="secao" aria-labelledby="tabela-t">
+      <div class="sec-cab">
+        <h2 id="tabela-t" class="titulo-secao">Realizado mês a mês</h2>
+        <p class="legenda aux">
+          <span><span class="amostra estourou" aria-hidden="true"></span>Passou do previsto</span>
+          <span><span class="amostra limite" aria-hidden="true"></span>De 90% a 100%</span>
+          <span><span class="amostra futuro" aria-hidden="true"></span>Previsto, mês por vir</span>
+        </p>
+      </div>
+      <div class="superficie rolagem surgir">
+        <table class="tabela-ano">
+          <caption class="sr-only">
+            Realizado de cada mês de
+            {{
+              ano()
+            }}, com total, média e previsto do ano
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col" class="col-nome">Em R$</th>
+              @for (m of meses; track m; let i = $index) {
+                <th scope="col" class="n" [class.atual]="i + 1 === mesAtual() && mesAtual() < 12">
+                  {{ m }}
+                </th>
+              }
+              <th scope="col" class="n">Total</th>
+              <th scope="col" class="n">Média</th>
+              <th scope="col" class="n">Previsto</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="secao-linha">
+              <th scope="rowgroup" colspan="16">Receitas</th>
+            </tr>
+            @for (l of receitas(); track l.id) {
+              <ng-container *ngTemplateOutlet="linhaTpl; context: { $implicit: l }" />
+            }
+            <tr class="secao-linha">
+              <th scope="rowgroup" colspan="16">Despesas</th>
+            </tr>
+            @for (l of despesas(); track l.id) {
+              <ng-container *ngTemplateOutlet="linhaTpl; context: { $implicit: l }" />
+              @if (abertos().has(l.id)) {
+                @for (s of l.subitens; track s.id) {
+                  <ng-container *ngTemplateOutlet="linhaTpl; context: { $implicit: s }" />
+                }
+              }
+            }
+            <tr class="secao-linha">
+              <th scope="rowgroup" colspan="16">Resultado</th>
+            </tr>
+            @for (l of resultado(); track l.id) {
+              <ng-container *ngTemplateOutlet="linhaTpl; context: { $implicit: l }" />
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</div>
+
+<ng-template #linhaTpl let-l>
+  <tr [class]="l.classe">
+    <th scope="row" class="col-nome">
+      @if (l.subitens.length) {
+        <button
+          type="button"
+          class="alternar"
+          [attr.aria-expanded]="abertos().has(l.id)"
+          (click)="alternar(l.id)"
+        >
+          <app-icone
+            [icone]="abertos().has(l.id) ? icones.ChevronDown : icones.ChevronRight"
+            [tamanho]="14"
+          />
+          <span>{{ l.nome }}</span>
+        </button>
+      } @else {
+        <span class="nome">{{ l.nome }}</span>
+      }
+    </th>
+    @for (c of l.celulas; track $index) {
+      <td class="n num" [class]="c.classe" [attr.title]="c.dica || null">{{ c.texto }}</td>
+    }
+    <td class="n num forte">{{ l.total }}</td>
+    <td class="n num">{{ l.media }}</td>
+    <td class="n num aux">{{ l.previsto }}</td>
+  </tr>
+</ng-template>

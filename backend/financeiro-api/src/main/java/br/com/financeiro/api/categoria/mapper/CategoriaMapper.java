@@ -18,6 +18,7 @@ public interface CategoriaMapper {
   @Mapping(target = "usuario", ignore = true)
   @Mapping(target = "categoriaPai", ignore = true)
   @Mapping(target = "ativa", ignore = true)
+  @Mapping(target = "fonteReceita", ignore = true)
   @Mapping(target = "criadoEm", ignore = true)
   @Mapping(target = "atualizadoEm", ignore = true)
   Categoria paraEntity(CriarCategoriaRequest request);

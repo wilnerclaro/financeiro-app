@@ -4,6 +4,7 @@ import br.com.financeiro.api.categoria.dto.AtualizarCategoriaRequest;
 import br.com.financeiro.api.categoria.dto.CategoriaResponse;
 import br.com.financeiro.api.categoria.dto.CriarCategoriaRequest;
 import br.com.financeiro.api.categoria.entity.Categoria;
+import br.com.financeiro.api.categoria.enums.FonteReceita;
 import br.com.financeiro.api.categoria.enums.TipoCategoria;
 import br.com.financeiro.api.categoria.mapper.CategoriaMapper;
 import br.com.financeiro.api.categoria.repository.CategoriaRepository;
@@ -11,7 +12,8 @@ import br.com.financeiro.api.common.exception.BusinessException;
 import br.com.financeiro.api.common.exception.ResourceNotFoundException;
 import br.com.financeiro.api.common.util.NormalizadorTexto;
 import br.com.financeiro.api.usuario.entity.Usuario;
-import br.com.financeiro.api.usuario.repository.UsuarioRepository;
+import br.com.financeiro.api.usuario.service.UsuarioService;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -24,25 +26,25 @@ import org.springframework.transaction.annotation.Transactional;
 public class CategoriaService {
 
   private final CategoriaRepository categoriaRepository;
-  private final UsuarioRepository usuarioRepository;
+  private final UsuarioService usuarioService;
   private final CategoriaMapper categoriaMapper;
 
   @Transactional
-  public CategoriaResponse criar(CriarCategoriaRequest request) {
-    Usuario usuario = buscarUsuario(request.usuarioId());
+  public CategoriaResponse criar(UUID usuarioId, CriarCategoriaRequest request) {
+    Usuario usuario = usuarioService.buscar(usuarioId);
     String nomeNormalizado = NormalizadorTexto.normalizarNome(request.nome());
 
     Categoria categoriaPai =
-        buscarCategoriaPai(request.usuarioId(), request.categoriaPaiId(), request.tipo());
+        buscarCategoriaPai(usuarioId, request.categoriaPaiId(), request.tipo());
 
-    validarDuplicidade(
-        request.usuarioId(), nomeNormalizado, request.tipo(), request.categoriaPaiId(), null);
+    validarDuplicidade(usuarioId, nomeNormalizado, request.tipo(), request.categoriaPaiId(), null);
 
     Categoria categoria = categoriaMapper.paraEntity(request);
     categoria.setUsuario(usuario);
     categoria.setCategoriaPai(categoriaPai);
     categoria.setNome(nomeNormalizado);
     categoria.setAtiva(true);
+    categoria.setFonteReceita(definirFonte(request.tipo(), categoriaPai, request.fonteReceita()));
 
     Categoria categoriaSalva = categoriaRepository.saveAndFlush(categoria);
     return categoriaMapper.paraResponse(categoriaSalva);
@@ -51,7 +53,7 @@ public class CategoriaService {
   @Transactional(readOnly = true)
   public Page<CategoriaResponse> listar(
       UUID usuarioId, TipoCategoria tipo, Boolean ativa, Pageable pageable) {
-    buscarUsuario(usuarioId);
+    usuarioService.buscar(usuarioId);
 
     return categoriaRepository
         .buscarPorFiltros(usuarioId, tipo, ativa, pageable)
@@ -65,8 +67,8 @@ public class CategoriaService {
   }
 
   @Transactional
-  public CategoriaResponse atualizar(UUID id, AtualizarCategoriaRequest request) {
-    Categoria categoria = buscarCategoriaDoUsuario(id, request.usuarioId());
+  public CategoriaResponse atualizar(UUID id, UUID usuarioId, AtualizarCategoriaRequest request) {
+    Categoria categoria = buscarCategoriaDoUsuario(id, usuarioId);
     String nomeNormalizado = NormalizadorTexto.normalizarNome(request.nome());
 
     if (request.categoriaPaiId() != null && request.categoriaPaiId().equals(id)) {
@@ -75,9 +77,8 @@ public class CategoriaService {
 
     boolean possuiSubcategorias = categoriaRepository.existeSubcategoria(id);
 
-    if (!categoria.getTipo().equals(request.tipo()) && possuiSubcategorias) {
-      throw new BusinessException(
-          "Não é possível alterar o tipo de uma categoria que possui subcategorias.");
+    if (!categoria.getTipo().equals(request.tipo())) {
+      validarMudancaDeTipo(categoria, possuiSubcategorias);
     }
 
     if (request.categoriaPaiId() != null && possuiSubcategorias) {
@@ -87,15 +88,19 @@ public class CategoriaService {
     }
 
     Categoria categoriaPai =
-        buscarCategoriaPai(request.usuarioId(), request.categoriaPaiId(), request.tipo());
+        buscarCategoriaPai(usuarioId, request.categoriaPaiId(), request.tipo());
 
-    validarDuplicidade(
-        request.usuarioId(), nomeNormalizado, request.tipo(), request.categoriaPaiId(), id);
+    validarDuplicidade(usuarioId, nomeNormalizado, request.tipo(), request.categoriaPaiId(), id);
 
     categoria.setCategoriaPai(categoriaPai);
     categoria.setNome(nomeNormalizado);
     categoria.setTipo(request.tipo());
+    categoria.setFonteReceita(definirFonte(request.tipo(), categoriaPai, request.fonteReceita()));
     categoriaRepository.flush();
+
+    if (possuiSubcategorias) {
+      categoriaRepository.atualizarFonteDasSubcategorias(id, categoria.getFonteReceita());
+    }
 
     return categoriaMapper.paraResponse(categoria);
   }
@@ -128,10 +133,51 @@ public class CategoriaService {
     return categoriaMapper.paraResponse(categoria);
   }
 
-  private Usuario buscarUsuario(UUID usuarioId) {
-    return usuarioRepository
-        .findById(usuarioId)
-        .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
+  @Transactional(readOnly = true)
+  public Categoria buscarCategoriaAtiva(UUID categoriaId, UUID usuarioId) {
+    Categoria categoria = buscarCategoriaDoUsuario(categoriaId, usuarioId);
+
+    if (!Boolean.TRUE.equals(categoria.getAtiva())) {
+      throw new BusinessException("A categoria informada está inativa.");
+    }
+
+    return categoria;
+  }
+
+  @Transactional(readOnly = true)
+  public void validarCategoriaDoUsuario(UUID categoriaId, UUID usuarioId) {
+    if (categoriaId != null) {
+      buscarCategoriaDoUsuario(categoriaId, usuarioId);
+    }
+  }
+
+  @Transactional(readOnly = true)
+  public List<Categoria> listarTodasDoUsuario(UUID usuarioId) {
+    return categoriaRepository.buscarTodasDoUsuario(usuarioId);
+  }
+
+  private FonteReceita definirFonte(
+      TipoCategoria tipo, Categoria categoriaPai, FonteReceita fonteInformada) {
+    if (!TipoCategoria.RECEITA.equals(tipo)) {
+      return null;
+    }
+
+    if (categoriaPai != null) {
+      return categoriaPai.getFonteReceita();
+    }
+
+    return fonteInformada == null ? FonteReceita.ATIVA : fonteInformada;
+  }
+
+  private void validarMudancaDeTipo(Categoria categoria, boolean possuiSubcategorias) {
+    if (possuiSubcategorias) {
+      throw new BusinessException(
+          "Não é possível alterar o tipo de uma categoria que possui subcategorias.");
+    }
+    if (categoriaRepository.estaEmUso(categoria.getId())) {
+      throw new BusinessException(
+          "Não é possível alterar o tipo de uma categoria que já tem lançamentos ou previsto.");
+    }
   }
 
   private Categoria buscarCategoriaDoUsuario(UUID categoriaId, UUID usuarioId) {
@@ -157,7 +203,7 @@ public class CategoriaService {
 
     if (categoriaPai.getCategoriaPai() != null) {
       throw new BusinessException(
-          "A categoria pai informada já é uma subcategoria. O MVP permite apenas dois níveis.");
+          "A categoria pai informada já é uma subcategoria. São permitidos apenas dois níveis.");
     }
 
     return categoriaPai;

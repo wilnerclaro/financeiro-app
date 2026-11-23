@@ -1,0 +1,68 @@
+.linhas {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.linhas li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e3);
+  min-height: 52px;
+  padding: var(--e2) var(--e4);
+}
+
+.linhas li + li {
+  border-top: 1px solid var(--p-content-border-color);
+}
+
+.linhas li.grupo {
+  background: var(--p-content-hover-background);
+}
+
+.linhas li.sub .nome {
+  padding-left: var(--e6);
+}
+
+.nome {
+  min-width: 0;
+  font-size: 14px;
+}
+
+:host ::ng-deep .campo-valor {
+  width: 9.5rem;
+  text-align: right;
+}
+
+.soma {
+  padding-right: var(--e3);
+}
+
+.rodape {
+  position: sticky;
+  bottom: var(--e4);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e3);
+  padding: var(--e3) var(--e4);
+}
+
+.repetir {
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+  font-size: 14px;
+}
+
+.acoes {
+  margin-left: auto;
+}
+
+@media (max-width: 700px) {
+  .rodape {
+    bottom: 88px;
+  }
+}

@@ -4,6 +4,7 @@ import br.com.financeiro.api.categoria.dto.AtualizarCategoriaRequest;
 import br.com.financeiro.api.categoria.dto.CategoriaResponse;
 import br.com.financeiro.api.categoria.dto.CriarCategoriaRequest;
 import br.com.financeiro.api.categoria.enums.TipoCategoria;
+import br.com.financeiro.api.security.UsuarioLogado;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,7 +28,8 @@ public interface CategoriaApiDoc {
       responseCode = "400",
       description = "Requisição inválida ou regra de negócio violada")
   @ApiResponse(responseCode = "404", description = "Usuário ou categoria pai não encontrada")
-  ResponseEntity<CategoriaResponse> criar(@Valid @RequestBody CriarCategoriaRequest request);
+  ResponseEntity<CategoriaResponse> criar(
+      @UsuarioLogado UUID usuarioId, @Valid @RequestBody CriarCategoriaRequest request);
 
   @Operation(
       summary = "Listar categorias",
@@ -35,7 +37,7 @@ public interface CategoriaApiDoc {
   @ApiResponse(responseCode = "200", description = "Categorias listadas com sucesso")
   @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
   ResponseEntity<Page<CategoriaResponse>> listar(
-      @RequestParam UUID usuarioId,
+      @UsuarioLogado UUID usuarioId,
       @RequestParam(required = false) TipoCategoria tipo,
       @RequestParam(required = false) Boolean ativa,
       Pageable pageable);
@@ -44,7 +46,7 @@ public interface CategoriaApiDoc {
   @ApiResponse(responseCode = "200", description = "Categoria encontrada")
   @ApiResponse(responseCode = "404", description = "Categoria não encontrada")
   ResponseEntity<CategoriaResponse> buscarPorId(
-      @PathVariable UUID id, @RequestParam UUID usuarioId);
+      @PathVariable UUID id, @UsuarioLogado UUID usuarioId);
 
   @Operation(
       summary = "Atualizar categoria",
@@ -56,17 +58,19 @@ public interface CategoriaApiDoc {
       description = "Requisição inválida ou regra de negócio violada")
   @ApiResponse(responseCode = "404", description = "Categoria não encontrada")
   ResponseEntity<CategoriaResponse> atualizar(
-      @PathVariable UUID id, @Valid @RequestBody AtualizarCategoriaRequest request);
+      @PathVariable UUID id,
+      @UsuarioLogado UUID usuarioId,
+      @Valid @RequestBody AtualizarCategoriaRequest request);
 
   @Operation(summary = "Inativar categoria", description = "Inativa uma categoria financeira.")
   @ApiResponse(responseCode = "204", description = "Categoria inativada com sucesso")
   @ApiResponse(responseCode = "400", description = "Categoria possui subcategorias ativas")
   @ApiResponse(responseCode = "404", description = "Categoria não encontrada")
-  ResponseEntity<Void> inativar(@PathVariable UUID id, @RequestParam UUID usuarioId);
+  ResponseEntity<Void> inativar(@PathVariable UUID id, @UsuarioLogado UUID usuarioId);
 
   @Operation(summary = "Ativar categoria", description = "Reativa uma categoria financeira.")
   @ApiResponse(responseCode = "200", description = "Categoria ativada com sucesso")
   @ApiResponse(responseCode = "400", description = "Categoria pai inativa")
   @ApiResponse(responseCode = "404", description = "Categoria não encontrada")
-  ResponseEntity<CategoriaResponse> ativar(@PathVariable UUID id, @RequestParam UUID usuarioId);
+  ResponseEntity<CategoriaResponse> ativar(@PathVariable UUID id, @UsuarioLogado UUID usuarioId);
 }

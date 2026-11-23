@@ -1,0 +1,92 @@
+p {
+  margin: 0;
+}
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e3);
+}
+
+.rolagem-x {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.busca {
+  flex: 1;
+  max-width: 340px;
+}
+
+.busca input {
+  width: 100%;
+}
+
+.carregando {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+}
+
+.totais {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--e4);
+  padding: var(--e4) var(--e6);
+}
+
+.valor {
+  white-space: nowrap;
+}
+
+.cancelado .medio,
+.cancelado .valor {
+  text-decoration: line-through;
+  color: var(--p-text-muted-color);
+}
+
+.espaco {
+  width: 32px;
+}
+
+.nada {
+  padding: var(--e4);
+  text-align: center;
+}
+
+.dialogo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e4);
+}
+
+@media (max-width: 600px) {
+  .busca {
+    max-width: none;
+  }
+
+  .totais {
+    padding: var(--e3) var(--e4);
+  }
+
+  .lista > li {
+    flex-wrap: wrap;
+    padding: var(--e3);
+  }
+
+  .lista .txt {
+    flex-basis: 100%;
+  }
+
+  .lista .valor {
+    margin-left: auto;
+  }
+}
+.acoes-cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e3);
+}

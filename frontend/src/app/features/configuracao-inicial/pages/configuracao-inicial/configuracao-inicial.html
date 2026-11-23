@@ -1,0 +1,281 @@
+<div class="pagina surgir">
+  @if (erroInicial()) {
+    <app-estado-erro
+      titulo="Não foi possível abrir seus primeiros passos."
+      mensagem="Tente novamente. Suas escolhas salvas foram mantidas."
+      (tentar)="carregar()"
+    />
+  } @else if (carregando()) {
+    <p-skeleton height="3rem" />
+    <p-skeleton height="20rem" />
+  } @else {
+    <div class="assistente">
+      <nav class="etapas" aria-label="Etapas da configuração inicial">
+        <p class="rotulo">PRIMEIROS PASSOS</p>
+        @for (passo of passos; track passo.etapa; let i = $index) {
+          <button
+            type="button"
+            [disabled]="salvando() || i + 1 > indice()"
+            [attr.aria-current]="etapa() === passo.etapa ? 'step' : null"
+            (click)="irPara(passo.etapa)"
+          >
+            <span class="numero">{{ i + 1 }}</span>{{ passo.nome }}
+          </button>
+        }
+        <p class="aux">Um passo de cada vez.<br />Você pode revisar suas escolhas.</p>
+      </nav>
+      <section class="conteudo" aria-live="polite">
+        <p class="aux progresso">
+          {{ indice() > 0 && indice() < 5 ? 'Etapa ' + indice() + ' de 4' : 'Primeiros passos' }}
+        </p>
+        @switch (etapa()) {
+          @case ('BOAS_VINDAS') {
+            <h1 class="titulo-pagina">Organize seu ponto de partida</h1>
+            <p class="aux introducao">
+              Primeiro, defina onde quer chegar. Depois, planeje o mês e acompanhe seu dinheiro.
+            </p>
+            <ol class="superficie boas-vindas">
+              <li>
+                <h2 class="titulo-secao">Defina seu objetivo</h2>
+                <p class="aux">A renda passiva mensal que você deseja alcançar.</p>
+              </li>
+              <li>
+                <h2 class="titulo-secao">Planeje seu mês</h2>
+                <p class="aux">O que você prevê receber e gastar.</p>
+              </li>
+              <li>
+                <h2 class="titulo-secao">Prepare suas contas</h2>
+                <p class="aux">Onde seu dinheiro está e o saldo de partida.</p>
+              </li>
+              <li>
+                <h2 class="titulo-secao">Faça seu primeiro lançamento</h2>
+                <p class="aux">Registre o que aconteceu, quando estiver pronto.</p>
+              </li>
+            </ol>
+          }
+          @case ('OBJETIVO') {
+            <h1 class="titulo-pagina">Onde você quer chegar?</h1>
+            <p class="aux introducao">
+              Quanto você gostaria de receber por mês sem depender do seu trabalho?
+            </p>
+            <div class="superficie painel">
+              <label for="objetivo" class="rotulo-campo">Renda passiva mensal desejada</label>
+              <p-inputnumber
+                inputId="objetivo"
+                mode="currency"
+                currency="BRL"
+                locale="pt-BR"
+                [min]="0"
+                [ngModel]="objetivo()"
+                (ngModelChange)="objetivo.set($event)"
+                (onFocus)="selecionarValor($event)"
+                (click)="selecionarValor($event)"
+                [disabled]="salvando()"
+                fluid
+              />
+              <p class="aux">
+                Pense no valor que gostaria de ter disponível para manter seu padrão de vida. Você
+                pode mudar esse objetivo depois.
+              </p>
+              <div class="explicacao">
+                <h2 class="titulo-secao">Seu objetivo e o Independenciômetro</h2>
+                <p class="aux">
+                  O objetivo é uma referência para o futuro. O Independenciômetro continua
+                  acompanhando quanto das suas despesas reais é coberto por renda passiva.
+                </p>
+              </div>
+            </div>
+          }
+          @case ('ORCAMENTO') {
+            <h1 class="titulo-pagina">Planeje {{ nomeMes() }}</h1>
+            <p class="aux introducao">
+              Preencha o previsto. Seus lançamentos vão preencher o realizado.
+            </p>
+            <div class="periodo">
+              <app-seletor-mes [mes]="mes()" (mesChange)="trocarMes($event)" />
+            </div>
+            <div class="superficie painel">
+              @for (bloco of blocos(); track bloco.tipo) {
+                <h2
+                  class="titulo-secao"
+                  [class.rec]="bloco.tipo === 'RECEITA'"
+                  [class.des]="bloco.tipo === 'DESPESA'"
+                >
+                  {{ bloco.titulo }}
+                </h2>
+                <div class="linha cabecalho aux">
+                  <span>Categoria</span><span>Previsto</span><span>Realizado</span>
+                </div>
+                @for (linha of bloco.linhas; track linha.id) {
+                  <div class="linha" [class.subitem]="linha.sub">
+                    <label [for]="'previsto-' + linha.id">{{ linha.nome }}</label>
+                    @if (linha.editavel) {
+                      <p-inputnumber
+                        [inputId]="'previsto-' + linha.id"
+                        [ariaLabel]="linha.nome + ', previsto'"
+                        mode="currency"
+                        currency="BRL"
+                        locale="pt-BR"
+                        [min]="0"
+                        [ngModel]="valor(linha)"
+                        (ngModelChange)="editar(linha.id, $event)"
+                        (onFocus)="selecionarValor($event)"
+                        (click)="selecionarValor($event)"
+                        [disabled]="salvando()"
+                        fluid
+                      />
+                    } @else {
+                      <strong class="num">{{ brl(totalGrupo(linha)) }}</strong>
+                    }
+                    <span class="num aux">{{ brl(linha.realizado) }}</span>
+                  </div>
+                } @empty {
+                  <p class="aux">Nenhuma categoria disponível.</p>
+                }
+              }
+              <div class="resumo">
+                <h2 class="titulo-secao">Sobra prevista</h2>
+                <strong class="valor num" [class.ok]="sobra() >= 0" [class.des]="sobra() < 0">{{
+                  brl(sobra())
+                }}</strong>
+              </div>
+              @if (sobra() < 0) {
+                <p class="des">Você planejou gastar {{ brl(-sobra()) }} a mais do que receber.</p>
+              }
+              <p class="aux">O previsto não cria lançamentos nem altera o saldo das contas.</p>
+            </div>
+          }
+          @case ('CONTAS') {
+            <h1 class="titulo-pagina">Onde seu dinheiro está hoje?</h1>
+            <p class="aux introducao">
+              Reaproveite suas contas ou cadastre uma para conectar os lançamentos ao saldo certo.
+            </p>
+            <div class="superficie painel">
+              @for (conta of contas(); track conta.id) {
+                <div class="conta">
+                  <div>
+                    <h2 class="titulo-secao">{{ conta.nome }}</h2>
+                    <p class="aux">
+                      {{ rotuloDoTipo(conta.tipo) }} · saldo atual {{ brl(conta.saldoAtual) }}
+                    </p>
+                  </div>
+                  <div class="acoes-conta">
+                    <p-button
+                      label="Editar"
+                      severity="secondary"
+                      [text]="true"
+                      (onClick)="abrirConta(conta, 'editar')"
+                    /><p-button
+                      label="Corrigir saldo inicial"
+                      severity="secondary"
+                      [text]="true"
+                      (onClick)="abrirConta(conta, 'saldo')"
+                    />
+                  </div>
+                </div>
+              } @empty {
+                <p class="aux">Você ainda não tem uma conta ativa cadastrada.</p>
+              }
+              <div>
+                <p-button
+                  [label]="
+                    contas().length ? 'Adicionar outra conta' : 'Cadastrar minha primeira conta'
+                  "
+                  [outlined]="true"
+                  (onClick)="abrirConta()"
+                />
+              </div>
+              <p class="aux">
+                Informe o saldo antes dos lançamentos que você vai registrar. O saldo inicial não
+                conta como receita do mês.
+              </p>
+            </div>
+          }
+          @case ('LANCAMENTO') {
+            <h1 class="titulo-pagina">Registre o que aconteceu</h1>
+            <p class="aux introducao">
+              Seu planejamento está pronto. Agora você pode acompanhar o realizado.
+            </p>
+            <div class="superficie painel">
+              <h2 class="titulo-secao">Seu primeiro lançamento</h2>
+              <p class="aux">
+                Use suas contas e categorias para registrar uma receita ou despesa. Compras no
+                cartão entram na fatura.
+              </p>
+              <p class="aux">
+                Você também pode concluir agora e registrar quando houver uma movimentação.
+              </p>
+            </div>
+          }
+          @case ('CONCLUIDO') {
+            <h1 class="titulo-pagina">Seu ponto de partida está pronto</h1>
+            <p class="aux introducao">
+              Suas escolhas foram salvas. Você pode revisá-las quando precisar.
+            </p>
+            <div class="superficie painel">
+              <div class="resumo">
+                <div>
+                  <p class="aux">Renda passiva mensal desejada</p>
+                  <strong class="valor num">{{ brl(objetivo() ?? 0) }}</strong>
+                </div>
+                <p-button label="Revisar objetivo" [text]="true" (onClick)="irPara('OBJETIVO')" />
+              </div>
+              <div class="resumo">
+                <div>
+                  <p class="aux">Sobra prevista · {{ nomeMes() }}</p>
+                  <strong class="num">{{ brl(sobra()) }}</strong>
+                </div>
+                <p-button label="Revisar orçamento" [text]="true" (onClick)="irPara('ORCAMENTO')" />
+              </div>
+              <div class="resumo">
+                <p>{{ contas().length }} conta(s) ativa(s) disponível(is)</p>
+                <p-button label="Revisar contas" [text]="true" (onClick)="irPara('CONTAS')" />
+              </div>
+            </div>
+          }
+        }
+        @if (erro()) {
+          <p class="erro" role="alert">{{ erro() }}</p>
+        }
+        <footer class="acoes">
+          @if (etapa() !== 'CONCLUIDO') {
+            <p-button
+              label="Continuar depois"
+              severity="secondary"
+              [text]="true"
+              [disabled]="salvando()"
+              (onClick)="pausar()"
+            />
+          }
+          <div class="direita">
+            @if (indice() > 0 && etapa() !== 'CONCLUIDO') {
+              <p-button
+                label="Voltar"
+                severity="secondary"
+                [outlined]="true"
+                [disabled]="salvando()"
+                (onClick)="voltar()"
+              />
+            }
+            @if (etapa() === 'LANCAMENTO') {
+              <p-button
+                label="Concluir sem lançar"
+                severity="secondary"
+                [outlined]="true"
+                [disabled]="salvando()"
+                (onClick)="concluir()"
+              />
+            }
+            <p-button [label]="rotuloContinuar()" [loading]="salvando()" (onClick)="continuar()" />
+          </div>
+        </footer>
+      </section>
+    </div>
+  }
+</div>
+<app-conta-dialogo
+  [modo]="modoConta()"
+  [conta]="contaEmEdicao()"
+  (fechar)="modoConta.set(null)"
+  (salvo)="contaSalva($event)"
+/>

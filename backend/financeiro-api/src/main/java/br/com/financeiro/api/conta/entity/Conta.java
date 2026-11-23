@@ -13,8 +13,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -60,6 +63,16 @@ public class Conta {
   @Column(nullable = false)
   private Boolean ativa;
 
+  @Column(name = "dia_fechamento")
+  private Integer diaFechamento;
+
+  @Column(name = "dia_vencimento")
+  private Integer diaVencimento;
+
+  @Version
+  @Column(nullable = false)
+  private Long versao;
+
   @CreationTimestamp
   @Column(name = "criado_em", nullable = false, updatable = false)
   private OffsetDateTime criadoEm;
@@ -67,4 +80,33 @@ public class Conta {
   @UpdateTimestamp
   @Column(name = "atualizado_em", nullable = false)
   private OffsetDateTime atualizadoEm;
+
+  public void creditar(BigDecimal valor) {
+    saldoAtual = saldoAtual.add(valor);
+  }
+
+  public void debitar(BigDecimal valor) {
+    saldoAtual = saldoAtual.subtract(valor);
+  }
+
+  public boolean ehCartaoDeCredito() {
+    return TipoConta.CARTAO_CREDITO.equals(tipo);
+  }
+
+  public LocalDate vencimentoDaFatura(LocalDate dataCompra) {
+    YearMonth mesDaCompra = YearMonth.from(dataCompra);
+    YearMonth mesDoFechamento =
+        dataCompra.getDayOfMonth() <= diaFechamento ? mesDaCompra : mesDaCompra.plusMonths(1);
+    return mesDoVencimento(mesDoFechamento).atDay(diaVencimento);
+  }
+
+  public LocalDate fechamentoDaFatura(YearMonth mesDoVencimento) {
+    YearMonth mesDoFechamento =
+        diaVencimento > diaFechamento ? mesDoVencimento : mesDoVencimento.minusMonths(1);
+    return mesDoFechamento.atDay(diaFechamento);
+  }
+
+  private YearMonth mesDoVencimento(YearMonth mesDoFechamento) {
+    return diaVencimento > diaFechamento ? mesDoFechamento : mesDoFechamento.plusMonths(1);
+  }
 }

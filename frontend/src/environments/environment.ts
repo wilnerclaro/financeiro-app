@@ -1,0 +1,4 @@
+export const environment = {
+  primeuiLicense:
+    'eyJpZCI6ImE4YjdjZmUzLTFhYzgtNDdiNS1hZjk4LWNjYmQ5MmY2YzAxZiIsInByb2R1Y3QiOiJwcmltZXVpIiwidGllciI6ImNvbW11bml0eSIsInR5cGUiOiJkZXYiLCJpYXQiOjE3OTQ2NjgzNjksImV4cCI6MTgyNjIwNDM2OX0._Hx4QJtoK3Mqs98FtozaHn3PWeqszMI8Fuwf1doGJm5x3Ut5GlJ_phpD8MgXcIVQeUHbOzgPDsH1k48CJuGjBg',
+};

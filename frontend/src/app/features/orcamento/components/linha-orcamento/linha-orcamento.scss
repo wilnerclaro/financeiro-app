@@ -1,0 +1,211 @@
+:host {
+  display: grid;
+  grid-template-columns: var(--colunas-orc);
+  align-items: center;
+  gap: var(--e4);
+  min-height: 52px;
+  padding: var(--e2) var(--e4);
+}
+
+:host(.grupo) {
+  font-weight: 500;
+}
+
+:host(.subitem) {
+  min-height: 40px;
+  font-size: 13px;
+  color: var(--p-text-muted-color);
+}
+
+:host(.subitem) .c-nome {
+  padding-left: 22px;
+  color: var(--p-text-color);
+}
+
+:host(.total) {
+  font-weight: 600;
+}
+
+p {
+  margin: 0;
+}
+
+.c-nome {
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+  min-width: 0;
+}
+
+.nome,
+.alternar span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.alternar {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e2);
+  min-width: 0;
+  min-height: 32px;
+  margin-left: -4px;
+  padding: 0 var(--e1);
+  border: 0;
+  border-radius: var(--r-ctl);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.alternar:hover {
+  background: var(--p-content-hover-background);
+}
+
+.c-prev,
+.c-real,
+.c-desv {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.c-uso {
+  display: grid;
+  grid-template-columns: minmax(48px, 1fr) 56px 128px;
+  align-items: center;
+  gap: var(--e2);
+  min-width: 0;
+}
+
+.c-uso.sem-previsto .selo {
+  grid-column: 3;
+}
+
+.pct {
+  text-align: right;
+}
+
+.selo.largo {
+  justify-self: start;
+}
+
+.c-resumo {
+  display: none;
+}
+
+.selo.estreito {
+  display: none;
+}
+
+.rot {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--p-text-muted-color);
+}
+
+@media (max-width: 760px) {
+  :host {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas:
+      'nome nome nome'
+      'uso uso uso'
+      'prev real desv';
+    gap: var(--e2) var(--e3);
+    padding: var(--e3) var(--e4);
+  }
+
+  :host(.subitem) {
+    padding-left: calc(var(--e4) + 22px);
+  }
+
+  :host(.subitem) .c-nome {
+    padding-left: 0;
+  }
+
+  .c-nome {
+    grid-area: nome;
+    justify-content: space-between;
+  }
+
+  .c-prev {
+    grid-area: prev;
+  }
+
+  .c-real {
+    grid-area: real;
+  }
+
+  .c-desv {
+    grid-area: desv;
+  }
+
+  .c-uso {
+    grid-area: uso;
+    grid-template-columns: minmax(0, 1fr) 56px;
+  }
+
+  .c-uso.sem-previsto,
+  .selo.largo {
+    display: none;
+  }
+
+  .selo.estreito {
+    display: inline-flex;
+  }
+
+  .c-prev,
+  .c-real,
+  .c-desv {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    font-size: 13px;
+  }
+
+  .c-desv {
+    text-align: right;
+    align-items: flex-end;
+  }
+
+  .rot {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+  }
+
+  :host(.subitem) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'nome resumo'
+      'uso uso';
+    row-gap: var(--e1);
+  }
+
+  :host(.subitem) .c-prev,
+  :host(.subitem) .c-real,
+  :host(.subitem) .c-desv {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  :host(.subitem) .c-resumo {
+    display: block;
+    grid-area: resumo;
+    white-space: nowrap;
+  }
+}

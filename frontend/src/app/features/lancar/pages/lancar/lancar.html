@@ -1,0 +1,376 @@
+<div class="pagina surgir formulario">
+  <header class="cab">
+    <div>
+      <h1 class="titulo-pagina">{{ editando() ? 'Editar lançamento' : 'Novo lançamento' }}</h1>
+      <p class="aux">
+        {{ editando() ? 'Ajuste o que mudou e salve.' : 'Valor, categoria e pronto.' }}
+      </p>
+    </div>
+  </header>
+
+  @if (lancamentoRegistrado()) {
+    <section class="superficie corpo" aria-live="polite">
+      <h2 class="titulo-secao">Seu lançamento foi registrado.</h2>
+      @if (erroNaConclusao()) {
+        <p class="aux">
+          Falta concluir sua configuração inicial. Tentar novamente não repete o lançamento.
+        </p>
+        <p-button label="Tentar concluir novamente" (onClick)="concluirConfiguracao()" />
+      } @else {
+        <p class="aux">Concluindo seus primeiros passos…</p>
+        <p-skeleton height="2rem" />
+      }
+    </section>
+  } @else if (base.error()) {
+    <app-estado-erro
+      titulo="Não foi possível abrir o formulário."
+      mensagem="Verifique a conexão e tente de novo."
+      (tentar)="tentarDeNovo()"
+    />
+  } @else if (base.isLoading()) {
+    <div class="superficie corpo">
+      <p-skeleton height="2.5rem" />
+      <p-skeleton height="3.5rem" />
+      <p-skeleton height="6rem" />
+      <p-skeleton height="2.5rem" />
+    </div>
+  } @else {
+    <form class="superficie corpo" (ngSubmit)="salvar(false)" novalidate>
+      @if (!editando()) {
+        <p-selectbutton
+          [options]="tipos"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="tipo()"
+          (ngModelChange)="escolherTipo($event)"
+          name="tipo"
+          [allowEmpty]="false"
+          ariaLabelledBy="rotulo-tipo"
+          class="tipos"
+        />
+        <span id="rotulo-tipo" class="sr-only">Tipo do lançamento</span>
+      }
+
+      <div class="campo">
+        <label for="valor" class="rotulo-campo">Valor</label>
+        <p-inputnumber
+          inputId="valor"
+          name="valor"
+          mode="currency"
+          currency="BRL"
+          locale="pt-BR"
+          [min]="0"
+          [ngModel]="valor()"
+          (ngModelChange)="valor.set($event)"
+          [autofocus]="!editando()"
+          inputStyleClass="valor"
+          [invalid]="tentouSalvar() && !!erros().valor"
+          placeholder="R$ 0,00"
+          fluid
+        />
+        @if (tentouSalvar() && erros().valor) {
+          <small class="erro">{{ erros().valor }}</small>
+        }
+      </div>
+
+      @if (ehTransferencia()) {
+        <div class="duas">
+          <div class="campo">
+            <label for="origem" class="rotulo-campo">De</label>
+            <p-select
+              inputId="origem"
+              name="origem"
+              [options]="opcoesDeConta()"
+              [ngModel]="contaId()"
+              (ngModelChange)="escolherConta($event)"
+              placeholder="Conta de origem"
+              [invalid]="tentouSalvar() && !!erros().conta"
+              fluid
+            />
+          </div>
+          <div class="campo">
+            <label for="destino" class="rotulo-campo">Para</label>
+            <p-select
+              inputId="destino"
+              name="destino"
+              [options]="opcoesDeDestino()"
+              [ngModel]="contaDestinoId()"
+              (ngModelChange)="contaDestinoId.set($event)"
+              placeholder="Conta de destino"
+              [invalid]="tentouSalvar() && !!erros().destino"
+              fluid
+            />
+            @if (tentouSalvar() && erros().destino) {
+              <small class="erro">{{ erros().destino }}</small>
+            }
+          </div>
+        </div>
+      } @else {
+        <fieldset class="categoria">
+          <legend class="sr-only">Categoria</legend>
+          <div class="duas">
+            <div class="campo">
+              <label for="grupo" class="rotulo-campo">Categoria</label>
+              <p-select
+                #seletorDeGrupo
+                inputId="grupo"
+                name="grupo"
+                ariaLabel="Categoria"
+                [options]="grupos()"
+                [ngModel]="grupoId()"
+                (ngModelChange)="escolherGrupo($event)"
+                [filter]="true"
+                filterBy="label"
+                placeholder="Escolha a categoria"
+                [invalid]="tentouSalvar() && !!erros().categoria"
+                emptyMessage="Nenhuma categoria"
+                emptyFilterMessage="Nenhuma categoria com esse nome"
+                [resetFilterOnHide]="true"
+                (onFilter)="filtroDoGrupo.set($event.filter)"
+                (onHide)="filtroDoGrupo.set('')"
+                fluid
+              >
+                <ng-template #footer>
+                  <button
+                    type="button"
+                    class="cadastrar-na-lista"
+                    (click)="cadastrarGrupo(seletorDeGrupo)"
+                  >
+                    <app-icone [icone]="icones.Plus" [tamanho]="16" />
+                    {{
+                      filtroDoGrupo().trim()
+                        ? 'Cadastrar “' + filtroDoGrupo().trim() + '”'
+                        : 'Cadastrar categoria'
+                    }}
+                  </button>
+                </ng-template>
+              </p-select>
+              @if (tentouSalvar() && erros().categoria) {
+                <small class="erro">{{ erros().categoria }}</small>
+              }
+            </div>
+            <div class="campo">
+              <label for="subcategoria" class="rotulo-campo">Subcategoria</label>
+              <p-select
+                #seletorDeSubcategoria
+                inputId="subcategoria"
+                name="subcategoria"
+                ariaLabel="Subcategoria"
+                [options]="subcategorias()"
+                [ngModel]="subcategoriaId()"
+                (ngModelChange)="subcategoriaId.set($event)"
+                [disabled]="!grupoEscolhido()"
+                [filter]="true"
+                filterBy="label"
+                [showClear]="true"
+                [placeholder]="placeholderDaSubcategoria()"
+                emptyMessage="Esta categoria ainda não tem subcategorias"
+                emptyFilterMessage="Nenhuma subcategoria com esse nome"
+                [resetFilterOnHide]="true"
+                (onFilter)="filtroDaSubcategoria.set($event.filter)"
+                (onHide)="filtroDaSubcategoria.set('')"
+                fluid
+              >
+                <ng-template #footer>
+                  <button
+                    type="button"
+                    class="cadastrar-na-lista"
+                    (click)="cadastrarSubcategoria(seletorDeSubcategoria)"
+                  >
+                    <app-icone [icone]="icones.Plus" [tamanho]="16" />
+                    {{
+                      filtroDaSubcategoria().trim()
+                        ? 'Cadastrar “' + filtroDaSubcategoria().trim() + '”'
+                        : 'Nova subcategoria em ' + grupoEscolhido()?.label
+                    }}
+                  </button>
+                </ng-template>
+              </p-select>
+              @if (subcategorias().length && !subcategoriaId()) {
+                <small class="aux"
+                  >Opcional. Sem ela, entra direto em {{ grupoEscolhido()?.label }}.</small
+                >
+              }
+            </div>
+          </div>
+        </fieldset>
+
+        <div class="campo">
+          <label for="conta" class="rotulo-campo">Conta</label>
+          @if (contas().length) {
+            <p-select
+              inputId="conta"
+              name="conta"
+              [options]="opcoesDeConta()"
+              [ngModel]="contaId()"
+              (ngModelChange)="escolherConta($event)"
+              placeholder="Escolha a conta"
+              [invalid]="tentouSalvar() && !!erros().conta"
+              fluid
+            />
+          } @else {
+            <p-button
+              label="Cadastre uma conta primeiro"
+              [outlined]="true"
+              (onClick)="cadastrandoConta.set(true)"
+            />
+          }
+          @if (tentouSalvar() && erros().conta) {
+            <small class="erro">{{ erros().conta }}</small>
+          }
+        </div>
+      }
+
+      @if (ehTransferencia() && contas().length < 2) {
+        <p-button
+          [label]="contas().length ? 'Cadastrar conta de destino' : 'Cadastre uma conta primeiro'"
+          [outlined]="true"
+          (onClick)="cadastrandoConta.set(true)"
+        />
+      }
+
+      <div class="duas">
+        <div class="campo">
+          <label for="data" class="rotulo-campo">{{
+            ehCartao() ? 'Data da compra' : 'Data'
+          }}</label>
+          <p-datepicker
+            inputId="data"
+            name="data"
+            [ngModel]="data()"
+            (ngModelChange)="data.set($event ?? data())"
+            dateFormat="dd/mm/yy"
+            [showIcon]="true"
+            iconDisplay="input"
+            fluid
+          />
+        </div>
+        @if (!ehTransferencia()) {
+          <div class="campo pago">
+            @if (ehCartao()) {
+              <p class="aux dica">
+                <app-icone [icone]="icones.CreditCard" />
+                Entra na fatura do cartão e fica pendente até você pagar a fatura.
+              </p>
+            } @else {
+              <label for="pago" class="rotulo-campo">{{ rotuloDoPago() }}</label>
+              <p-toggleswitch
+                inputId="pago"
+                name="pago"
+                [ngModel]="ficaPago()"
+                (ngModelChange)="pago.set($event)"
+                [disabled]="!podeMarcarPago()"
+              />
+              @if (dataFutura()) {
+                <small class="aux">Data futura fica pendente.</small>
+              }
+            }
+          </div>
+        }
+      </div>
+
+      <button
+        type="button"
+        class="mais link"
+        [attr.aria-expanded]="maisDetalhes()"
+        aria-controls="detalhes"
+        (click)="maisDetalhes.set(!maisDetalhes())"
+      >
+        {{ maisDetalhes() ? 'Menos detalhes' : 'Mais detalhes' }}
+        <app-icone
+          [icone]="maisDetalhes() ? icones.ChevronUp : icones.ChevronDown"
+          [tamanho]="14"
+        />
+      </button>
+
+      @if (maisDetalhes()) {
+        <div id="detalhes" class="detalhes">
+          <div class="campo">
+            <label for="descricao" class="rotulo-campo">Descrição</label>
+            <input
+              pInputText
+              id="descricao"
+              name="descricao"
+              maxlength="180"
+              [ngModel]="descricao()"
+              (ngModelChange)="descricao.set($event)"
+              [placeholder]="nomeDaCategoria() || 'Usa o nome da categoria'"
+            />
+          </div>
+          @if (!ehTransferencia() && !ficaPago() && !ehCartao()) {
+            <div class="campo">
+              <label for="vencimento" class="rotulo-campo">Vencimento</label>
+              <p-datepicker
+                inputId="vencimento"
+                name="vencimento"
+                [ngModel]="vencimento()"
+                (ngModelChange)="vencimento.set($event)"
+                dateFormat="dd/mm/yy"
+                placeholder="Mesmo dia da data"
+                [showClear]="true"
+                fluid
+              />
+            </div>
+          }
+          @if (!ehTransferencia()) {
+            <div class="campo">
+              <label for="observacao" class="rotulo-campo">Observação</label>
+              <textarea
+                pTextarea
+                id="observacao"
+                name="observacao"
+                rows="2"
+                [ngModel]="observacao()"
+                (ngModelChange)="observacao.set($event)"
+              ></textarea>
+            </div>
+          }
+        </div>
+      }
+
+      <div class="botoes">
+        @if (editando()) {
+          <p-button
+            label="Cancelar"
+            severity="secondary"
+            [outlined]="true"
+            routerLink="/lancamentos"
+          />
+        } @else if (primeirosPassos()) {
+          <p-button
+            label="Voltar à configuração"
+            routerLink="/configuracao-inicial"
+            severity="secondary"
+            [outlined]="true"
+          />
+        } @else {
+          <p-button
+            label="Lançar e fazer outro"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="salvando()"
+            (onClick)="salvar(true)"
+          />
+        }
+        <p-button
+          type="submit"
+          [label]="editando() ? 'Salvar' : primeirosPassos() ? 'Registrar e concluir' : 'Lançar'"
+          [loading]="salvando()"
+        />
+      </div>
+    </form>
+  }
+</div>
+
+<app-categoria-dialogo
+  [pedido]="novaCategoria()"
+  [grupos]="gruposParaNovaCategoria()"
+  (fechar)="novaCategoria.set(null)"
+  (salva)="categoriaCriada($event)"
+/>
+
+<app-conta-dialogo
+  [modo]="cadastrandoConta() ? 'criar' : null"
+  (fechar)="cadastrandoConta.set(false)"
+  (salvo)="contaCriada($event)"
+/>
