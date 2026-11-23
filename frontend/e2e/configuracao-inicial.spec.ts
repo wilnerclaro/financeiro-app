@@ -125,3 +125,30 @@ test('retenta somente a conclusão quando o primeiro lançamento já foi registr
   expect(api.tentativasDeConclusao()).toBe(2);
   expect(api.app.lancamentosCriados).toHaveLength(1);
 });
+
+test('acha a categoria do orçamento pela busca e grava o previsto', async ({ page }) => {
+  await preparar(page, { rendaPassivaDesejada: 6000, etapa: 'ORCAMENTO' });
+  const gravados: unknown[] = [];
+  await page.route('**/api/orcamentos/2026/11', async (rota) => {
+    if (rota.request().method() === 'PUT') {
+      gravados.push(rota.request().postDataJSON());
+    }
+    await rota.fallback();
+  });
+  await entrarNoFluxo(page);
+  await expect(page.getByRole('button', { name: /^Receitas ativas/ })).toHaveAttribute(
+    'aria-expanded',
+    'false',
+  );
+  await page.getByRole('button', { name: 'Despesas', exact: true }).click();
+  await page.getByRole('searchbox', { name: 'Buscar categoria' }).fill('padaria');
+  const padaria = page.getByLabel('Padaria, previsto');
+  await padaria.fill('150');
+  await padaria.blur();
+  await expect(page.getByText('Despesas R$ 1.150,00')).toBeVisible();
+  await page.getByRole('button', { name: 'Preparar minhas contas' }).click();
+
+  await expect
+    .poll(() => gravados)
+    .toEqual([{ itens: [{ categoriaId: 'padaria', valorPrevisto: 150 }] }]);
+});

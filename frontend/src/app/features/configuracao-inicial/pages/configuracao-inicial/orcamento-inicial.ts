@@ -7,6 +7,7 @@ export interface LinhaInicial {
   realizado: number;
   editavel: boolean;
   sub: boolean;
+  raiz: boolean;
   filhos: string[];
 }
 
@@ -71,6 +72,7 @@ export function linhasIniciais(
       realizado: raiz.realizado,
       editavel: raiz.ativa && !filhos.length,
       sub: !!raiz.paiId,
+      raiz: true,
       filhos: filhos.map((f) => f.id),
     });
     for (const filho of filhos) {
@@ -81,6 +83,7 @@ export function linhasIniciais(
         realizado: filho.realizado,
         editavel: filho.ativa,
         sub: true,
+        raiz: false,
         filhos: [],
       });
     }

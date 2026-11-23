@@ -67,6 +67,7 @@ describe('linhasIniciais', () => {
         realizado: 0,
         editavel: true,
         sub: true,
+        raiz: true,
         filhos: [],
       },
     ]);

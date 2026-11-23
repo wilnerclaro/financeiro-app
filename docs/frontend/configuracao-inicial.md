@@ -11,6 +11,10 @@ e persiste no servidor para permitir retomada entre acessos.
 3. Orçamento carrega o previsto e o realizado da competência escolhida.
    Alterações usam o contrato existente de orçamento, preservando itens que
    não foram editados. Preencher o previsto não cria lançamentos.
+   A tela mostra uma aba por vez (Receitas ou Despesas), tem busca por nome
+   (sem diferenciar acento) e cada grupo abre e fecha mostrando o total
+   previsto e o realizado. O resumo com receitas, despesas e sobra previstas
+   fica fixo no rodapé enquanto a lista rola (pedido do Wilner em 23/11/2026).
 4. Contas reaproveita contas ativas existentes e permite cadastrar outra.
    Saldo inicial não é receita; cartão mantém fechamento e vencimento.
 5. Primeiro lançamento abre o formulário existente, com a opção de concluir
