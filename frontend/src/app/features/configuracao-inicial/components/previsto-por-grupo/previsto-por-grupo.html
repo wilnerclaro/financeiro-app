@@ -1,0 +1,106 @@
+<div class="ferramentas">
+  <p-selectbutton
+    [options]="opcoesDeTipo()"
+    optionLabel="label"
+    optionValue="value"
+    [ngModel]="tipo()"
+    (ngModelChange)="trocarTipo($event)"
+    [allowEmpty]="false"
+    ariaLabelledBy="rotulo-tipo-previsto"
+    class="tipos"
+  />
+  <span id="rotulo-tipo-previsto" class="sr-only">Mostrar receitas ou despesas</span>
+  <p-iconfield iconPosition="left" class="busca">
+    <p-inputicon><app-icone [icone]="icones.Search" /></p-inputicon>
+    <input
+      pInputText
+      type="search"
+      placeholder="Buscar categoria"
+      aria-label="Buscar categoria"
+      [ngModel]="busca()"
+      (ngModelChange)="busca.set($event)"
+    />
+  </p-iconfield>
+  @if (!buscando() && gruposComFilhos().length) {
+    <button type="button" class="link alternar-todos" (click)="alternarTodos()">
+      {{ todosAbertos() ? 'Fechar todos os grupos' : 'Abrir todos os grupos' }}
+    </button>
+  }
+</div>
+
+<div class="linha cabecalho aux">
+  <span>Categoria</span>
+  <span>Previsto</span><span>Realizado</span>
+</div>
+
+@for (grupo of grupos(); track grupo.raiz.id) {
+  @if (grupo.filhos.length) {
+    <button
+      type="button"
+      class="linha cab-grupo"
+      [attr.aria-expanded]="aberto(grupo)"
+      [attr.aria-controls]="'filhos-' + grupo.raiz.id"
+      (click)="alternar(grupo)"
+    >
+      <span class="nome">
+        <app-icone
+          class="seta"
+          [class.recolhida]="!aberto(grupo)"
+          [icone]="icones.ChevronDown"
+          [tamanho]="16"
+        />
+        <span>{{ grupo.raiz.nome }}</span>
+        <small class="aux">{{ grupo.filhos.length }}</small>
+      </span>
+      <strong class="num">{{ brl(totalDoGrupo(grupo)) }}</strong>
+      <span class="num aux">{{ brl(grupo.raiz.realizado) }}</span>
+    </button>
+    @if (aberto(grupo)) {
+      <div [id]="'filhos-' + grupo.raiz.id">
+        @for (filho of grupo.filhos; track filho.id) {
+          <ng-container *ngTemplateOutlet="linhaTpl; context: { $implicit: filho }" />
+        }
+      </div>
+    }
+  } @else {
+    <ng-container *ngTemplateOutlet="linhaTpl; context: { $implicit: grupo.raiz }" />
+  }
+} @empty {
+  <div class="vazio">
+    @if (buscando()) {
+      <p class="aux">Nenhuma categoria com “{{ busca().trim() }}” em {{ bloco()?.titulo }}.</p>
+      @if (resultadoNoOutroTipo(); as outro) {
+        <button type="button" class="link" (click)="trocarTipo(outro.tipo)">
+          Ver {{ outro.quantidade }} em {{ outro.titulo }}
+        </button>
+      }
+    } @else {
+      <p class="aux">Nenhuma categoria disponível.</p>
+    }
+  </div>
+}
+
+<ng-template #linhaTpl let-linha>
+  <div class="linha" [class.subitem]="!linha.raiz">
+    <label [for]="'previsto-' + linha.id">{{ linha.nome }}</label>
+    @if (linha.editavel) {
+      <p-inputnumber
+        [inputId]="'previsto-' + linha.id"
+        [ariaLabel]="linha.nome + ', previsto'"
+        mode="currency"
+        currency="BRL"
+        locale="pt-BR"
+        [min]="0"
+        [ngModel]="valor(linha)"
+        (ngModelChange)="editar.emit({ id: linha.id, valor: $event })"
+        (onFocus)="selecionarValor($event)"
+        (click)="selecionarValor($event)"
+        [disabled]="desabilitado()"
+        fluid
+      />
+    } @else {
+      <strong class="num">{{ brl(valor(linha)) }}</strong>
+    }
+    <span class="num aux">{{ brl(linha.realizado) }}</span>
+  </div>
+</ng-template>

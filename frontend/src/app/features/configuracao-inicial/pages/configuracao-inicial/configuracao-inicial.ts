@@ -33,6 +33,10 @@ import {
   ModoDoDialogo,
 } from '../../../contas/components/conta-dialogo/conta-dialogo';
 import { rotuloDoTipo } from '../../../contas/tipos-de-conta';
+import {
+  BlocoDoPrevisto,
+  PrevistoPorGrupo,
+} from '../../components/previsto-por-grupo/previsto-por-grupo';
 import { LinhaInicial, linhasIniciais } from './orcamento-inicial';
 
 const ETAPAS: EtapaConfiguracaoInicial[] = [
@@ -46,7 +50,16 @@ const ETAPAS: EtapaConfiguracaoInicial[] = [
 
 @Component({
   selector: 'app-configuracao-inicial',
-  imports: [FormsModule, Button, InputNumber, Skeleton, EstadoErro, SeletorMes, ContaDialogo],
+  imports: [
+    FormsModule,
+    Button,
+    InputNumber,
+    Skeleton,
+    EstadoErro,
+    SeletorMes,
+    ContaDialogo,
+    PrevistoPorGrupo,
+  ],
   templateUrl: './configuracao-inicial.html',
   styleUrl: './configuracao-inicial.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -89,7 +102,7 @@ export class ConfiguracaoInicialPagina {
   protected readonly nomeMes = computed(() =>
     this.configuracao() ? rotuloDoMes(this.mes().ano, this.mes().mes) : '',
   );
-  protected readonly blocos = computed(() => [
+  protected readonly blocos = computed<BlocoDoPrevisto[]>(() => [
     {
       titulo: 'Receitas',
       tipo: 'RECEITA',
@@ -101,16 +114,26 @@ export class ConfiguracaoInicialPagina {
       linhas: linhasIniciais(this.categorias(), this.relatorio(), 'DESPESA'),
     },
   ]);
-  protected readonly sobra = computed(() => {
-    let centavos = Math.round((this.relatorio()?.saldo.previsto ?? 0) * 100);
+  protected readonly previsto = computed(() => {
+    const relatorio = this.relatorio();
+    const centavos = { RECEITA: 0, DESPESA: 0 };
     for (const bloco of this.blocos()) {
       for (const linha of bloco.linhas.filter((l) => l.editavel)) {
-        const delta = Math.round(this.valor(linha) * 100) - Math.round(linha.previsto * 100);
-        centavos += bloco.tipo === 'RECEITA' ? delta : -delta;
+        centavos[bloco.tipo] +=
+          Math.round(this.valor(linha) * 100) - Math.round(linha.previsto * 100);
       }
     }
-    return centavos / 100;
+    return {
+      receitas:
+        (Math.round((relatorio?.receitas.total.previsto ?? 0) * 100) + centavos.RECEITA) / 100,
+      despesas:
+        (Math.round((relatorio?.despesas.total.previsto ?? 0) * 100) + centavos.DESPESA) / 100,
+      saldo:
+        (Math.round((relatorio?.saldo.previsto ?? 0) * 100) + centavos.RECEITA - centavos.DESPESA) /
+        100,
+    };
   });
+  protected readonly sobra = computed(() => this.previsto().saldo);
   protected readonly rotuloContinuar = computed(
     () =>
       ({
@@ -158,17 +181,6 @@ export class ConfiguracaoInicialPagina {
 
   protected valor(linha: LinhaInicial): number {
     return this.editados().get(linha.id) ?? linha.previsto;
-  }
-
-  protected totalGrupo(linha: LinhaInicial): number {
-    const linhas = this.blocos().flatMap((b) => b.linhas);
-    const delta = linhas
-      .filter((l) => linha.filhos.includes(l.id))
-      .reduce(
-        (soma, l) => soma + Math.round(this.valor(l) * 100) - Math.round(l.previsto * 100),
-        0,
-      );
-    return (Math.round(linha.previsto * 100) + delta) / 100;
   }
 
   protected editar(id: string, valor: number | null): void {
