@@ -1,0 +1,68 @@
+<p-dialog
+  [header]="titulo()"
+  [visible]="!!pedido()"
+  (visibleChange)="$event ? null : fechar.emit()"
+  [modal]="true"
+  [draggable]="false"
+  appendTo="body"
+  [style]="{ width: 'min(440px, 92vw)' }"
+>
+  <form class="corpo" (ngSubmit)="salvar()" novalidate>
+    <div class="campo">
+      <label for="nova-categoria-nome" class="rotulo-campo">Nome</label>
+      <input
+        pInputText
+        id="nova-categoria-nome"
+        name="nome"
+        maxlength="100"
+        [ngModel]="nome()"
+        (ngModelChange)="nome.set($event)"
+        [invalid]="tentouSalvar() && !!erroDoNome()"
+        placeholder="Ex.: Feira, Freelance"
+      />
+      @if (tentouSalvar() && erroDoNome()) {
+        <small class="erro">{{ erroDoNome() }}</small>
+      }
+    </div>
+    <div class="campo">
+      <label for="nova-categoria-pai" class="rotulo-campo">Dentro de</label>
+      <p-select
+        inputId="nova-categoria-pai"
+        name="pai"
+        ariaLabel="Dentro de"
+        [options]="grupos()"
+        [ngModel]="paiId()"
+        (ngModelChange)="paiId.set($event)"
+        [showClear]="true"
+        [filter]="true"
+        filterBy="label"
+        placeholder="Nenhum (vira um grupo)"
+        appendTo="body"
+        fluid
+      />
+    </div>
+    @if (mostraFonte()) {
+      <div class="campo">
+        <label for="nova-categoria-fonte" class="rotulo-campo">Fonte da receita</label>
+        <p-select
+          inputId="nova-categoria-fonte"
+          name="fonte"
+          ariaLabel="Fonte da receita"
+          [options]="fontes"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="fonte()"
+          (ngModelChange)="fonte.set($event)"
+          appendTo="body"
+          fluid
+        />
+        <small class="aux">A renda passiva entra no índice de independência financeira.</small>
+      </div>
+    }
+    <button type="submit" hidden></button>
+  </form>
+  <ng-template #footer>
+    <p-button label="Voltar" severity="secondary" [outlined]="true" (onClick)="fechar.emit()" />
+    <p-button label="Salvar categoria" [loading]="salvando()" (onClick)="salvar()" />
+  </ng-template>
+</p-dialog>

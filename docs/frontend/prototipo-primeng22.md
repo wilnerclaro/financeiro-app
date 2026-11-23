@@ -128,7 +128,7 @@ Regras: a barra do mês fica verde quando a sobra é 30% ou mais do que entrou, 
 
 - Tipo em `p-selectbutton` com ícone: Despesa, Receita, Transferência.
 - Valor grande no centro (`p-inputnumber` BRL): vermelho em despesa, azul em receita, neutro em transferência. Descrição abaixo.
-- Categoria: grade com as sete mais usadas; a escolhida fica com borda primária. Em transferência a grade dá lugar a "Sai de" e "Entra em" (`p-select`) e ao aviso de que transferência não conta como receita nem despesa.
+- Categoria: duas listas suspensas lado a lado, "Categoria" (grupos do tipo) e "Subcategoria" (só as do grupo escolhido, opcional). As duas têm pesquisa e, no rodapé, "Cadastrar categoria" (ou "Cadastrar “texto pesquisado”"), que abre o diálogo de nova categoria já com o nome e o grupo e deixa a nova escolhida. O mesmo rodapé existe na categoria de cada linha da importação de extrato. Sem grade de chips nem lista aberta, pedido do Wilner em 18/11/2026. Em transferência a grade dá lugar a "Sai de" e "Entra em" (`p-select`) e ao aviso de que transferência não conta como receita nem despesa.
 - Conta (`p-select`) e Quando (`p-datepicker`), com rótulo flutuante (`p-floatlabel`).
 - "Já paguei" (`p-toggleswitch`): tira o valor do saldo agora; desligado agenda com vencimento.
 - "Mais detalhes" em `p-accordion`: competência e observação.

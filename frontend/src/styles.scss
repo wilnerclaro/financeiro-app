@@ -461,3 +461,84 @@ button:focus-visible {
 .tabela-simples tbody tr:last-child td {
   border-bottom: 0;
 }
+
+.cab-secao {
+  display: flex;
+  align-items: center;
+  gap: var(--e3);
+  width: 100%;
+  min-height: 48px;
+  padding: var(--e2) var(--e4);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-content-border-radius);
+  background: var(--p-content-hover-background);
+  color: var(--p-text-color);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cab-secao:focus-visible {
+  outline: 2px solid var(--p-primary-color);
+  outline-offset: 2px;
+}
+
+.cab-secao .titulo {
+  display: flex;
+  flex: 1;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 var(--e2);
+}
+
+.cab-secao .valor {
+  margin-left: auto;
+}
+
+.cab-secao .seta {
+  display: inline-flex;
+  transition: transform 0.15s ease;
+}
+
+.cab-secao .seta.recolhida {
+  transform: rotate(-90deg);
+}
+
+.cadastrar-na-lista {
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--e2) var(--e3);
+  border: 0;
+  border-top: 1px solid var(--p-content-border-color);
+  background: none;
+  color: var(--p-primary-color);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cadastrar-na-lista:hover {
+  background: var(--p-content-hover-background);
+}
+
+.cadastrar-na-lista:focus-visible {
+  outline: 2px solid var(--p-primary-color);
+  outline-offset: -2px;
+}
+
+@media (max-width: 760px) {
+  .cab-secao {
+    flex-wrap: wrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cab-secao .seta {
+    transition: none;
+  }
+}

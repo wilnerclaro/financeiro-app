@@ -152,7 +152,7 @@ No tema claro, `--amb` e `--lar` dão 2,5:1 e 3,0:1 como texto, abaixo do AA. Te
 
 ### Fluxos e regras de produto
 
-- **Lançar em segundos.** Valor primeiro, categoria por toque nas mais usadas, conta e data com padrão ("Hoje", última conta), "Já paguei" ligado. Meta: lançamento comum em até 3 toques, sem abrir select. Competência, vencimento e observação ficam recolhidos. Ação "Novo lançamento" visível em toda tela, com atalho N no desktop. No celular, barra inferior com botão central de lançar.
+- **Lançar em segundos.** Valor primeiro, categoria em duas listas suspensas (Categoria e Subcategoria, sem lista aberta na tela, decisão do Wilner em 18/11/2026), conta e data com padrão ("Hoje", última conta), "Já paguei" ligado. Competência, vencimento e observação ficam recolhidos. Ação "Novo lançamento" visível em toda tela, com atalho N no desktop. No celular, barra inferior com botão central de lançar.
 - **Previsto x Realizado sempre lado a lado**, nunca em abas separadas; o desvio aparece junto, com sinal e cor.
 - **Despesa em dois níveis** (grupo → subitem): o grupo mostra a soma e o subitem expande.
 - **Orçamento** tem visões Mês e Ano. O Ano mostra receitas (fonte ativa e passiva) e despesas por grupo nos 12 meses, previsto x realizado, total, média, evolução contra o mês anterior, economizado com as linhas de 30% e 50% e o Independenciômetro mês a mês. Lançar tem três tipos: despesa, receita e transferência (resgate e aplicação são transferência e não contam no orçamento). Investimentos e Metas e sonhos ficam fora por enquanto.

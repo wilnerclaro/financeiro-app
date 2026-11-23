@@ -2,7 +2,15 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { CATEGORIAS, CONTAS, conta, pagina } from '../../../../../testing/dados-de-teste';
+import { Select } from 'primeng/select';
+import {
+  CATEGORIAS,
+  CONTAS,
+  categoria,
+  conta,
+  pagina,
+  provedoresDeTeste,
+} from '../../../../../testing/dados-de-teste';
 import { ItemExtrato } from '../../../../shared/api/importacoes-api';
 import { ImportacaoDeExtrato } from '../../state/importacao-de-extrato';
 import { ImportarExtrato } from './importar-extrato';
@@ -31,7 +39,12 @@ describe('Importar extrato', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        ...provedoresDeTeste(),
+      ],
     });
     http = TestBed.inject(HttpTestingController);
     importacao = TestBed.inject(ImportacaoDeExtrato);
@@ -156,6 +169,104 @@ describe('Importar extrato', () => {
     expect(tela()['linhas']()).toEqual([]);
     expect(tela()['resultado']()).toBeNull();
     expect(tela()['etapa']()).toBe('enviar');
+  });
+
+  it('separa receitas e despesas em blocos que recolhem, cada um com as categorias do tipo', async () => {
+    await abrir();
+    arquivo();
+    tela()['revisar']();
+    responderRevisao([
+      ITEM,
+      { ...ITEM, identificador: 'fit2', descricao: 'Padaria', valor: 20.5 },
+      { ...ITEM, identificador: 'fit3', descricao: 'Salário', valor: 8000, tipo: 'RECEITA' },
+    ]);
+    await fixture.whenStable();
+
+    const resumo = tela()
+      ['secoes']()
+      .map((s) => [s.titulo, s.linhas.length, s.total, s.semCategoria]);
+    expect(resumo).toEqual([
+      ['Receitas', 1, 8000, 1],
+      ['Despesas', 2, 120.5, 2],
+    ]);
+    const cabecalhos = () =>
+      Array.from(elemento().querySelectorAll<HTMLButtonElement>('.cab-secao'));
+    expect(cabecalhos().map((b) => b.getAttribute('aria-expanded'))).toEqual(['true', 'true']);
+    expect(cabecalhos()[1].textContent).toContain('2 sem categoria');
+    expect(
+      tela()
+        ['categoriasPorTipo']()
+        .RECEITA.map((o) => o.label),
+    ).toEqual(['Receitas ativas', 'Receitas ativas › Salários']);
+
+    cabecalhos()[1].click();
+    await fixture.whenStable();
+    expect(cabecalhos()[1].getAttribute('aria-expanded')).toBe('false');
+    expect(elemento().querySelector('#lista-DESPESA')).toBeNull();
+    expect(elemento().querySelector('#lista-RECEITA')).not.toBeNull();
+
+    tela()['categorizar']('fit3', 'cat-salario');
+    expect(tela()['secoes']()[0].semCategoria).toBe(0);
+    tela()['alternarSecao']('DESPESA');
+    expect(tela()['recolhidas']().size).toBe(0);
+    tela()['alternarSecao']('RECEITA');
+    tela()['recomecar']();
+    expect(tela()['recolhidas']().size).toBe(0);
+  });
+
+  it('cadastra a categoria que faltou e já aplica na linha', async () => {
+    await abrir();
+    arquivo();
+    tela()['revisar']();
+    responderRevisao([{ ...ITEM, tipo: 'RECEITA', descricao: 'Freela' }]);
+    await fixture.whenStable();
+    const seletor = { hide: vi.fn() } as unknown as Select;
+    tela()['filtroDaCategoria'].set('Freelance');
+    tela()['cadastrarCategoria'](tela()['linhas']()[0], seletor);
+    expect(seletor.hide).toHaveBeenCalled();
+    expect(tela()['novaCategoria']()).toEqual({
+      tipo: 'RECEITA',
+      categoriaPaiId: null,
+      nome: 'Freelance',
+    });
+    expect(tela()['gruposParaNovaCategoria']()).toEqual([
+      { label: 'Receitas ativas', value: 'cat-renda' },
+    ]);
+
+    const freelance = categoria({
+      id: 'cat-freela',
+      categoriaPaiId: 'cat-renda',
+      nomeCategoriaPai: 'Receitas ativas',
+      nome: 'Freelance',
+      tipo: 'RECEITA',
+    });
+    tela()['categoriaCriada'](freelance);
+    expect(tela()['novaCategoria']()).toBeNull();
+    expect(tela()['linhas']()[0].categoriaId).toBe('cat-freela');
+    expect(
+      tela()
+        ['categoriasPorTipo']()
+        .RECEITA.map((o) => o.label),
+    ).toContain('Receitas ativas › Freelance');
+
+    tela()['fecharNovaCategoria']();
+    tela()['categoriaCriada'](freelance);
+    expect(tela()['categoriasPorTipo']().RECEITA).toHaveLength(3);
+    tela()['recomecar']();
+    expect(tela()['categoriasPorTipo']().RECEITA).toHaveLength(2);
+  });
+
+  it('mostra só o bloco do tipo que veio no extrato', async () => {
+    await abrir();
+    arquivo();
+    tela()['revisar']();
+    responderRevisao();
+    await fixture.whenStable();
+    expect(
+      tela()
+        ['secoes']()
+        .map((s) => s.titulo),
+    ).toEqual(['Despesas']);
   });
 
   it('deixa desmarcado o que parece já lançado e mostra o banco do arquivo', async () => {

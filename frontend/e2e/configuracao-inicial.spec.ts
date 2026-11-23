@@ -108,7 +108,10 @@ test('retenta somente a conclusão quando o primeiro lançamento já foi registr
   await page.goto('/lancar?configuracaoInicial=true');
   await expect(page.getByLabel('Valor')).toBeFocused();
   await page.keyboard.type('45,90');
-  await page.getByRole('button', { name: 'Supermercado' }).click();
+  await page.getByRole('combobox', { name: 'Categoria', exact: true }).click();
+  await page.getByRole('option', { name: /Alimentação/ }).click();
+  await page.getByRole('combobox', { name: 'Subcategoria', exact: true }).click();
+  await page.getByRole('option', { name: 'Supermercado' }).click();
   api.falharProximaConclusao();
   await page.getByRole('button', { name: 'Registrar e concluir' }).click();
 
