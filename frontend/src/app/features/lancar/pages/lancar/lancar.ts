@@ -12,7 +12,7 @@ import {
 import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { ChevronDown, ChevronUp, CreditCard } from 'lucide';
+import { ChevronDown, ChevronUp, CreditCard, Plus } from 'lucide';
 import { Button } from 'primeng/button';
 import { DatePicker } from 'primeng/datepicker';
 import { InputNumber } from 'primeng/inputnumber';
@@ -29,6 +29,7 @@ import {
   Inicio,
   Lancamento,
   LancamentoRequest,
+  TipoCategoria,
   TipoLancamento,
   TransferenciaRequest,
 } from '../../../../shared/api/api.models';
@@ -45,6 +46,10 @@ import { Avisos } from '../../../../shared/util/avisos';
 import { deDate, hojeIso, paraDate } from '../../../../shared/util/datas';
 import { brl } from '../../../../shared/util/formatacao';
 import { valorDe } from '../../../../shared/util/recurso';
+import {
+  CategoriaDialogo,
+  NovaCategoria,
+} from '../../../categorias/components/categoria-dialogo/categoria-dialogo';
 import { ContaDialogo } from '../../../contas/components/conta-dialogo/conta-dialogo';
 
 type TipoDoFormulario = TipoLancamento | 'TRANSFERENCIA';
@@ -60,6 +65,12 @@ interface Opcao {
   label: string;
   value: string;
 }
+
+interface GrupoDeCategoria extends Opcao {
+  subcategorias: Opcao[];
+}
+
+const porRotulo = (a: Opcao, b: Opcao) => a.label.localeCompare(b.label, 'pt-BR');
 
 const TIPOS: { label: string; value: TipoDoFormulario }[] = [
   { label: 'Despesa', value: 'DESPESA' },
@@ -83,6 +94,7 @@ const TIPOS: { label: string; value: TipoDoFormulario }[] = [
     ToggleSwitch,
     EstadoErro,
     Icone,
+    CategoriaDialogo,
     ContaDialogo,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -110,12 +122,14 @@ export class Lancar {
   protected readonly concluindoConfiguracao = signal(false);
   protected readonly erroNaConclusao = signal(false);
 
-  protected readonly icones = { ChevronDown, ChevronUp, CreditCard };
+  protected readonly icones = { ChevronDown, ChevronUp, CreditCard, Plus };
   protected readonly tipos = TIPOS;
 
   protected readonly tipo = signal<TipoDoFormulario>('DESPESA');
   protected readonly valor = signal<number | null>(null);
-  protected readonly categoriaId = signal<string | null>(null);
+  protected readonly grupoId = signal<string | null>(null);
+  protected readonly subcategoriaId = signal<string | null>(null);
+  protected readonly categoriaId = computed(() => this.subcategoriaId() ?? this.grupoId());
   protected readonly contaId = signal<string | null>(null);
   protected readonly contaDestinoId = signal<string | null>(null);
   protected readonly data = signal<Date>(paraDate(hojeIso(this.agora())));
@@ -127,6 +141,10 @@ export class Lancar {
   protected readonly salvando = signal(false);
   protected readonly tentouSalvar = signal(false);
   protected readonly cadastrandoConta = signal(false);
+  protected readonly novaCategoria = signal<NovaCategoria | null>(null);
+  protected readonly filtroDoGrupo = signal('');
+  protected readonly filtroDaSubcategoria = signal('');
+  private readonly categoriasCriadas = signal<Categoria[]>([]);
 
   protected readonly base = rxResource({
     params: () => ({ id: this.id() }),
@@ -152,26 +170,50 @@ export class Lancar {
   protected readonly podeMarcarPago = computed(() => !this.ehCartao() && !this.dataFutura());
   protected readonly ficaPago = computed(() => this.podeMarcarPago() && this.pago());
 
-  protected readonly opcoesDeCategoria = computed<Opcao[]>(() => {
-    const tipo = this.tipo();
-    return (valorDe(this.base)?.categorias ?? [])
-      .filter((c) => c.tipo === tipo)
-      .map((c) => ({
-        label: c.nomeCategoriaPai ? `${c.nomeCategoriaPai} › ${c.nome}` : c.nome,
-        value: c.id,
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
+  private readonly categorias = computed(() => {
+    const todas = [...(valorDe(this.base)?.categorias ?? []), ...this.categoriasCriadas()];
+    return [...new Map(todas.map((c) => [c.id, c])).values()];
   });
 
-  protected readonly sugestoes = computed<Opcao[]>(() => {
-    const disponiveis = new Set(this.opcoesDeCategoria().map((o) => o.value));
-    return (valorDe(this.base)?.rapido?.categoriasMaisUsadas ?? [])
-      .filter((c) => disponiveis.has(c.categoriaId))
-      .map((c) => ({ label: c.nome, value: c.categoriaId }));
+  protected readonly grupos = computed<GrupoDeCategoria[]>(() => {
+    const tipo = this.tipo();
+    const doTipo = this.categorias().filter((c) => c.tipo === tipo);
+    const ids = new Set(doTipo.map((c) => c.id));
+    return doTipo
+      .filter((c) => !c.categoriaPaiId || !ids.has(c.categoriaPaiId))
+      .map((raiz) => ({
+        label: raiz.nomeCategoriaPai ? `${raiz.nomeCategoriaPai} › ${raiz.nome}` : raiz.nome,
+        value: raiz.id,
+        subcategorias: doTipo
+          .filter((c) => c.categoriaPaiId === raiz.id)
+          .map((c) => ({ label: c.nome, value: c.id }))
+          .sort(porRotulo),
+      }))
+      .sort(porRotulo);
   });
+
+  protected readonly grupoEscolhido = computed(() =>
+    this.grupos().find((g) => g.value === this.grupoId()),
+  );
+
+  protected readonly subcategorias = computed(() => this.grupoEscolhido()?.subcategorias ?? []);
+
+  protected readonly placeholderDaSubcategoria = computed(() => {
+    if (!this.grupoEscolhido()) {
+      return 'Escolha a categoria antes';
+    }
+    return this.subcategorias().length ? 'Escolha a subcategoria' : 'Nenhuma ainda';
+  });
+
+  protected readonly gruposParaNovaCategoria = computed(() =>
+    this.categorias()
+      .filter((c) => c.tipo === this.tipo() && !c.categoriaPaiId)
+      .map((c) => ({ label: c.nome, value: c.id }))
+      .sort(porRotulo),
+  );
 
   protected readonly nomeDaCategoria = computed(() => {
-    const categoria = valorDe(this.base)?.categorias.find((c) => c.id === this.categoriaId());
+    const categoria = this.categorias().find((c) => c.id === this.categoriaId());
     return categoria?.nome ?? '';
   });
 
@@ -202,8 +244,27 @@ export class Lancar {
       return;
     }
     this.tipo.set(tipo);
-    this.categoriaId.set(null);
+    this.escolherGrupo(null);
     this.contaDestinoId.set(null);
+  }
+
+  protected escolherGrupo(grupoId: string | null): void {
+    this.grupoId.set(grupoId);
+    this.subcategoriaId.set(null);
+  }
+
+  protected cadastrarGrupo(seletor: Select): void {
+    this.abrirNovaCategoria(seletor, null, this.filtroDoGrupo());
+  }
+
+  protected cadastrarSubcategoria(seletor: Select): void {
+    this.abrirNovaCategoria(seletor, this.grupoId(), this.filtroDaSubcategoria());
+  }
+
+  protected categoriaCriada(categoria: Categoria): void {
+    this.categoriasCriadas.update((criadas) => [...criadas, categoria]);
+    this.escolherCategoria(this.categorias(), categoria.id);
+    this.novaCategoria.set(null);
   }
 
   protected escolherConta(contaId: string | null): void {
@@ -313,7 +374,7 @@ export class Lancar {
     if (lancamento) {
       this.tipo.set(lancamento.tipo);
       this.valor.set(lancamento.valor);
-      this.categoriaId.set(lancamento.categoriaId);
+      this.escolherCategoria(dados.categorias, lancamento.categoriaId);
       this.contaId.set(lancamento.contaId);
       this.data.set(paraDate(lancamento.dataCompra ?? lancamento.dataCompetencia));
       this.pago.set(lancamento.status === 'PAGO');
@@ -327,6 +388,18 @@ export class Lancar {
       const sugerida = dados.contas.find((c) => c.id === dados.rapido?.contaId);
       this.contaId.set((sugerida ?? dados.contas[0])?.id ?? null);
     }
+  }
+
+  private abrirNovaCategoria(seletor: Select, categoriaPaiId: string | null, nome: string): void {
+    seletor.hide();
+    this.novaCategoria.set({ tipo: this.tipo() as TipoCategoria, categoriaPaiId, nome });
+  }
+
+  private escolherCategoria(categorias: Categoria[], categoriaId: string): void {
+    const categoria = categorias.find((c) => c.id === categoriaId);
+    const temGrupo = categorias.some((c) => c.id === categoria?.categoriaPaiId);
+    this.grupoId.set(temGrupo ? categoria!.categoriaPaiId : categoriaId);
+    this.subcategoriaId.set(temGrupo ? categoriaId : null);
   }
 
   private descricaoFinal(): string {
@@ -369,7 +442,7 @@ export class Lancar {
 
   private limparParaOutro(): void {
     this.valor.set(null);
-    this.categoriaId.set(null);
+    this.escolherGrupo(null);
     this.descricao.set('');
     this.vencimento.set(null);
     this.observacao.set('');

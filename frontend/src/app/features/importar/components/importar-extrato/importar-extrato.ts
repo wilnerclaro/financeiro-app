@@ -10,13 +10,14 @@ import {
 import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Check, FileText, Upload } from 'lucide';
+import { Check, ChevronDown, FileText, Plus, Upload } from 'lucide';
 import { Button } from 'primeng/button';
 import { Dialog } from 'primeng/dialog';
 import { Select } from 'primeng/select';
 import { Skeleton } from 'primeng/skeleton';
 import { finalize, forkJoin } from 'rxjs';
 import { mensagemDoErro } from '../../../../core/error-handling/erro-api';
+import { Categoria } from '../../../../shared/api/api.models';
 import { CategoriasApi } from '../../../../shared/api/categorias-api';
 import { ContasApi } from '../../../../shared/api/contas-api';
 import {
@@ -28,6 +29,10 @@ import { EstadoErro } from '../../../../shared/components/estado-erro/estado-err
 import { Icone } from '../../../../shared/components/icone/icone';
 import { brl, dataCurta } from '../../../../shared/util/formatacao';
 import { valorDe } from '../../../../shared/util/recurso';
+import {
+  CategoriaDialogo,
+  NovaCategoria,
+} from '../../../categorias/components/categoria-dialogo/categoria-dialogo';
 import { ImportacaoDeExtrato } from '../../state/importacao-de-extrato';
 
 interface LinhaDoExtrato extends ItemExtrato {
@@ -36,6 +41,22 @@ interface LinhaDoExtrato extends ItemExtrato {
 }
 
 type Etapa = 'enviar' | 'revisar' | 'pronto';
+
+type Tipo = ItemExtrato['tipo'];
+
+interface SecaoDoExtrato {
+  tipo: Tipo;
+  titulo: string;
+  sinal: string;
+  linhas: LinhaDoExtrato[];
+  total: number;
+  semCategoria: number;
+}
+
+const SECOES: { tipo: Tipo; titulo: string; sinal: string }[] = [
+  { tipo: 'RECEITA', titulo: 'Receitas', sinal: '+' },
+  { tipo: 'DESPESA', titulo: 'Despesas', sinal: '−' },
+];
 
 const ETAPAS: { valor: Etapa; rotulo: string }[] = [
   { valor: 'enviar', rotulo: 'Enviar arquivo' },
@@ -47,7 +68,7 @@ const LIMITE_EM_BYTES = 2 * 1024 * 1024;
 
 @Component({
   selector: 'app-importar-extrato',
-  imports: [FormsModule, Button, Dialog, Select, Skeleton, EstadoErro, Icone],
+  imports: [FormsModule, Button, Dialog, Select, Skeleton, EstadoErro, Icone, CategoriaDialogo],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './importar-extrato.html',
   styleUrl: './importar-extrato.scss',
@@ -60,7 +81,7 @@ export class ImportarExtrato {
   private readonly destroyRef = inject(DestroyRef);
   protected readonly importacao = inject(ImportacaoDeExtrato);
 
-  protected readonly icones = { Check, FileText, Upload };
+  protected readonly icones = { Check, ChevronDown, FileText, Plus, Upload };
   protected readonly etapas = ETAPAS;
   protected readonly brl = brl;
   protected readonly dataCurta = dataCurta;
@@ -73,6 +94,11 @@ export class ImportarExtrato {
   protected readonly erro = signal('');
   protected readonly banco = signal<string | null>(null);
   protected readonly resultado = signal<ResultadoImportacao | null>(null);
+  protected readonly recolhidas = signal<ReadonlySet<Tipo>>(new Set());
+  protected readonly novaCategoria = signal<NovaCategoria | null>(null);
+  protected readonly filtroDaCategoria = signal('');
+  private readonly linhaDaNovaCategoria = signal<string | null>(null);
+  private readonly categoriasCriadas = signal<Categoria[]>([]);
 
   protected readonly dados = rxResource({
     params: () => this.importacao.aberta() || undefined,
@@ -99,8 +125,12 @@ export class ImportarExtrato {
   protected readonly nomeConta = computed(
     () => this.contas().find((c) => c.id === this.contaId())?.nome ?? '',
   );
+  private readonly categorias = computed(() => {
+    const todas = [...(valorDe(this.dados)?.categorias ?? []), ...this.categoriasCriadas()];
+    return [...new Map(todas.map((c) => [c.id, c])).values()];
+  });
   protected readonly categoriasPorTipo = computed(() => {
-    const categorias = valorDe(this.dados)?.categorias ?? [];
+    const categorias = this.categorias();
     const opcoes = (tipo: 'RECEITA' | 'DESPESA') =>
       categorias
         .filter((c) => c.tipo === tipo)
@@ -110,6 +140,12 @@ export class ImportarExtrato {
         }));
     return { RECEITA: opcoes('RECEITA'), DESPESA: opcoes('DESPESA') };
   });
+  protected readonly gruposParaNovaCategoria = computed(() =>
+    this.categorias()
+      .filter((c) => c.tipo === this.novaCategoria()?.tipo && !c.categoriaPaiId)
+      .map((c) => ({ label: c.nome, value: c.id }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR')),
+  );
   protected readonly selecionadas = computed(() =>
     this.linhas().filter((l) => l.selecionado && l.importavel && !l.jaImportado),
   );
@@ -118,6 +154,15 @@ export class ImportarExtrato {
   );
   protected readonly podeConfirmar = computed(
     () => this.selecionadas().length > 0 && !this.faltamCategorias() && !this.ocupado(),
+  );
+  protected readonly secoes = computed<SecaoDoExtrato[]>(() =>
+    SECOES.map((secao) => ({
+      ...secao,
+      linhas: this.linhas().filter((l) => l.tipo === secao.tipo),
+      total: this.total(secao.tipo),
+      semCategoria: this.selecionadas().filter((l) => l.tipo === secao.tipo && !l.categoriaId)
+        .length,
+    })).filter((secao) => secao.linhas.length),
   );
   protected readonly totalReceitas = computed(() => this.total('RECEITA'));
   protected readonly totalDespesas = computed(() => this.total('DESPESA'));
@@ -186,10 +231,41 @@ export class ImportarExtrato {
     );
   }
 
+  protected alternarSecao(tipo: Tipo): void {
+    this.recolhidas.update((recolhidas) => {
+      const proximas = new Set(recolhidas);
+      if (!proximas.delete(tipo)) {
+        proximas.add(tipo);
+      }
+      return proximas;
+    });
+  }
+
   protected categorizar(id: string, categoriaId: string | null): void {
     this.linhas.update((linhas) =>
       linhas.map((l) => (l.identificador === id ? { ...l, categoriaId } : l)),
     );
+  }
+
+  protected cadastrarCategoria(linha: LinhaDoExtrato, seletor: Select): void {
+    const nome = this.filtroDaCategoria();
+    seletor.hide();
+    this.linhaDaNovaCategoria.set(linha.identificador);
+    this.novaCategoria.set({ tipo: linha.tipo, categoriaPaiId: null, nome });
+  }
+
+  protected categoriaCriada(categoria: Categoria): void {
+    this.categoriasCriadas.update((criadas) => [...criadas, categoria]);
+    const linha = this.linhaDaNovaCategoria();
+    if (linha) {
+      this.categorizar(linha, categoria.id);
+    }
+    this.fecharNovaCategoria();
+  }
+
+  protected fecharNovaCategoria(): void {
+    this.novaCategoria.set(null);
+    this.linhaDaNovaCategoria.set(null);
   }
 
   protected confirmar(): void {
@@ -259,11 +335,13 @@ export class ImportarExtrato {
     this.linhas.set([]);
     this.banco.set(null);
     this.resultado.set(null);
+    this.recolhidas.set(new Set());
+    this.categoriasCriadas.set([]);
     this.erro.set('');
     this.etapa.set('enviar');
   }
 
-  private total(tipo: 'RECEITA' | 'DESPESA'): number {
+  private total(tipo: Tipo): number {
     return (
       this.selecionadas()
         .filter((l) => l.tipo === tipo)

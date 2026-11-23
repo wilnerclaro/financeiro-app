@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { entrar, simularApiDoApp } from './api-simulada-app';
 
-test('lança uma despesa comum em três toques', async ({ page, isMobile }) => {
+test('lança uma despesa escolhendo categoria e subcategoria', async ({ page, isMobile }) => {
   const api = await simularApiDoApp(page);
   await entrar(page);
   await expect(page.getByRole('heading', { name: 'Resumo de novembro' })).toBeVisible();
@@ -14,7 +14,10 @@ test('lança uma despesa comum em três toques', async ({ page, isMobile }) => {
   await abrir.click();
   await expect(page.getByLabel('Valor')).toBeFocused();
   await page.keyboard.type('45,90');
-  await page.getByRole('button', { name: 'Supermercado' }).click();
+  await page.getByRole('combobox', { name: 'Categoria', exact: true }).click();
+  await page.getByRole('option', { name: /Alimentação/ }).click();
+  await page.getByRole('combobox', { name: 'Subcategoria', exact: true }).click();
+  await page.getByRole('option', { name: 'Supermercado' }).click();
   await page.getByRole('button', { name: 'Lançar', exact: true }).click();
 
   await expect(page.getByText('Lançamento salvo')).toBeVisible();
@@ -92,3 +95,45 @@ for (const rota of ['/', '/orcamento', '/orcamento/ano', '/lancamentos', '/conta
     expect(await brilho()).toBe('none');
   });
 }
+
+test('cadastra pela lista a categoria que não encontrou e lança nela', async ({ page }) => {
+  const api = await simularApiDoApp(page);
+  const criadas: unknown[] = [];
+  await page.route('**/api/categorias', async (rota) => {
+    const corpo = rota.request().postDataJSON();
+    criadas.push(corpo);
+    await rota.fulfill({
+      status: 201,
+      json: { ...corpo, id: 'feira', nomeCategoriaPai: 'Alimentação', ativa: true },
+    });
+  });
+  await entrar(page);
+  await page.goto('/lancar');
+  await page.getByLabel('Valor').fill('30');
+  await page.getByRole('combobox', { name: 'Categoria', exact: true }).click();
+  await page.getByRole('option', { name: /Alimentação/ }).click();
+  const filtro = page.locator('input.p-select-filter');
+  await expect(filtro).toHaveCount(0);
+  await page.getByRole('combobox', { name: 'Subcategoria', exact: true }).click();
+  await expect(page.getByRole('option', { name: 'Supermercado' })).toBeVisible();
+  await filtro.fill('Feira');
+  await expect(page.getByText('Nenhuma subcategoria com esse nome').first()).toBeVisible();
+  await page.getByRole('button', { name: 'Cadastrar “Feira”' }).click();
+
+  const dialogo = page.getByRole('dialog', { name: 'Nova subcategoria' });
+  await expect(dialogo.getByLabel('Nome')).toHaveValue('Feira');
+  await dialogo.getByRole('button', { name: 'Salvar categoria' }).click();
+  await expect(dialogo).toBeHidden();
+  await expect(page.getByRole('combobox', { name: 'Subcategoria', exact: true })).toHaveText(
+    'Feira',
+  );
+  await page.getByRole('button', { name: 'Lançar', exact: true }).click();
+
+  await expect(page).toHaveURL(/\/lancamentos$/);
+  expect(criadas).toEqual([
+    { nome: 'Feira', tipo: 'DESPESA', categoriaPaiId: 'g1', fonteReceita: null },
+  ]);
+  expect(api.lancamentosCriados).toEqual([
+    expect.objectContaining({ categoriaId: 'feira', descricao: 'Feira', valor: 30 }),
+  ]);
+});

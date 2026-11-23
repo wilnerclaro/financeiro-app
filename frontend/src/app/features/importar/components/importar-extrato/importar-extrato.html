@@ -139,70 +139,127 @@
             Desmarque o que não deseja importar. O que parece já lançado nesta conta vem desmarcado:
             marque só se for outra transação.
           </p>
-          <ul class="superficie transacoes">
-            @for (linha of linhas(); track linha.identificador; let i = $index) {
-              <li class="transacao" [class.bloqueada]="linha.jaImportado || !linha.importavel">
-                <label class="selecionar"
-                  ><input
-                    type="checkbox"
-                    [ngModel]="linha.selecionado"
-                    [disabled]="ocupado() || linha.jaImportado || !linha.importavel"
-                    (ngModelChange)="selecionar(linha.identificador, $event)"
-                    [attr.aria-label]="'Importar ' + linha.descricao"
-                /></label>
-                <div class="descricao">
-                  <h4>{{ linha.descricao }}</h4>
-                  <p class="aux">
-                    {{ dataCurta(linha.data) }} ·
-                    {{ linha.tipo === 'RECEITA' ? 'Receita' : 'Despesa' }}
-                    @if (linha.jaImportado) {
-                      · <span class="selo">Já importada</span>
-                    } @else if (!linha.importavel) {
-                      · <span class="selo">Não importável</span>
-                    } @else if (linha.possivelDuplicado) {
-                      · <span class="selo amb">Parece já lançada</span>
-                    } @else if (!linha.selecionado) {
-                      · <span class="selo">Ignorada</span>
-                    }
-                  </p>
-                  @if (linha.motivo) {
-                    <p class="aux">{{ linha.motivo }}</p>
-                  } @else if (linha.possivelDuplicado && !linha.jaImportado) {
-                    <p class="aux">Já existe um lançamento com o mesmo valor nesta data.</p>
-                  }
-                </div>
+          @for (secao of secoes(); track secao.tipo) {
+            <section class="secao" [attr.aria-labelledby]="'secao-' + secao.tipo">
+              <button
+                type="button"
+                class="cab-secao"
+                [id]="'secao-' + secao.tipo"
+                [attr.aria-expanded]="!recolhidas().has(secao.tipo)"
+                [attr.aria-controls]="'lista-' + secao.tipo"
+                (click)="alternarSecao(secao.tipo)"
+              >
+                <app-icone
+                  class="seta"
+                  [class.recolhida]="recolhidas().has(secao.tipo)"
+                  [icone]="icones.ChevronDown"
+                  [tamanho]="18"
+                />
+                <span class="titulo">
+                  <span class="medio">{{ secao.titulo }}</span>
+                  <span class="aux">{{ secao.linhas.length }} transação(ões)</span>
+                </span>
+                @if (secao.semCategoria) {
+                  <span class="selo amb">{{ secao.semCategoria }} sem categoria</span>
+                }
                 <strong
                   class="num valor"
-                  [class.rec]="linha.tipo === 'RECEITA'"
-                  [class.des]="linha.tipo === 'DESPESA'"
-                  >{{ linha.tipo === 'RECEITA' ? '+' : '−' }} {{ brl(linha.valor) }}</strong
+                  [class.rec]="secao.tipo === 'RECEITA'"
+                  [class.des]="secao.tipo === 'DESPESA'"
+                  >{{ secao.sinal }} {{ brl(secao.total) }}</strong
                 >
-                @if (linha.importavel && !linha.jaImportado) {
-                  <div class="campo categoria">
-                    <label [for]="'categoria-extrato-' + i" class="sr-only">Categoria</label
-                    ><p-select
-                      [inputId]="'categoria-extrato-' + i"
-                      [ariaLabel]="'Categoria de ' + linha.descricao"
-                      [options]="categoriasPorTipo()[linha.tipo]"
-                      [ngModel]="linha.categoriaId"
-                      (ngModelChange)="categorizar(linha.identificador, $event)"
-                      [disabled]="ocupado() || !linha.selecionado"
-                      [filter]="true"
-                      filterBy="label"
-                      [showClear]="true"
-                      [invalid]="linha.selecionado && !linha.categoriaId"
-                      placeholder="Escolha a categoria"
-                      emptyMessage="Nenhuma categoria compatível"
-                      appendTo="body"
-                      fluid
-                    />
-                  </div>
-                }
-              </li>
-            } @empty {
-              <li class="transacao">O arquivo não contém transações para revisar.</li>
-            }
-          </ul>
+              </button>
+              @if (!recolhidas().has(secao.tipo)) {
+                <ul class="superficie transacoes" [id]="'lista-' + secao.tipo">
+                  @for (linha of secao.linhas; track linha.identificador; let i = $index) {
+                    <li
+                      class="transacao"
+                      [class.bloqueada]="linha.jaImportado || !linha.importavel"
+                    >
+                      <label class="selecionar"
+                        ><input
+                          type="checkbox"
+                          [ngModel]="linha.selecionado"
+                          [disabled]="ocupado() || linha.jaImportado || !linha.importavel"
+                          (ngModelChange)="selecionar(linha.identificador, $event)"
+                          [attr.aria-label]="'Importar ' + linha.descricao"
+                      /></label>
+                      <div class="descricao">
+                        <h4>{{ linha.descricao }}</h4>
+                        <p class="aux">
+                          {{ dataCurta(linha.data) }}
+                          @if (linha.jaImportado) {
+                            · <span class="selo">Já importada</span>
+                          } @else if (!linha.importavel) {
+                            · <span class="selo">Não importável</span>
+                          } @else if (linha.possivelDuplicado) {
+                            · <span class="selo amb">Parece já lançada</span>
+                          } @else if (!linha.selecionado) {
+                            · <span class="selo">Ignorada</span>
+                          }
+                        </p>
+                        @if (linha.motivo) {
+                          <p class="aux">{{ linha.motivo }}</p>
+                        } @else if (linha.possivelDuplicado && !linha.jaImportado) {
+                          <p class="aux">Já existe um lançamento com o mesmo valor nesta data.</p>
+                        }
+                      </div>
+                      <strong
+                        class="num valor"
+                        [class.rec]="linha.tipo === 'RECEITA'"
+                        [class.des]="linha.tipo === 'DESPESA'"
+                        >{{ linha.tipo === 'RECEITA' ? '+' : '−' }} {{ brl(linha.valor) }}</strong
+                      >
+                      @if (linha.importavel && !linha.jaImportado) {
+                        <div class="campo categoria">
+                          <label [for]="'categoria-' + secao.tipo + '-' + i" class="sr-only"
+                            >Categoria</label
+                          ><p-select
+                            #seletor
+                            [inputId]="'categoria-' + secao.tipo + '-' + i"
+                            [ariaLabel]="'Categoria de ' + linha.descricao"
+                            [options]="categoriasPorTipo()[linha.tipo]"
+                            [ngModel]="linha.categoriaId"
+                            (ngModelChange)="categorizar(linha.identificador, $event)"
+                            [disabled]="ocupado() || !linha.selecionado"
+                            [filter]="true"
+                            filterBy="label"
+                            [showClear]="true"
+                            [invalid]="linha.selecionado && !linha.categoriaId"
+                            placeholder="Escolha a categoria"
+                            emptyMessage="Nenhuma categoria compatível"
+                            emptyFilterMessage="Nenhuma categoria com esse nome"
+                            [resetFilterOnHide]="true"
+                            (onFilter)="filtroDaCategoria.set($event.filter)"
+                            (onHide)="filtroDaCategoria.set('')"
+                            appendTo="body"
+                            fluid
+                          >
+                            <ng-template #footer>
+                              <button
+                                type="button"
+                                class="cadastrar-na-lista"
+                                (click)="cadastrarCategoria(linha, seletor)"
+                              >
+                                <app-icone [icone]="icones.Plus" [tamanho]="16" />
+                                {{
+                                  filtroDaCategoria().trim()
+                                    ? 'Cadastrar “' + filtroDaCategoria().trim() + '”'
+                                    : 'Cadastrar categoria'
+                                }}
+                              </button>
+                            </ng-template>
+                          </p-select>
+                        </div>
+                      }
+                    </li>
+                  }
+                </ul>
+              }
+            </section>
+          } @empty {
+            <p class="superficie transacao">O arquivo não contém transações para revisar.</p>
+          }
         </section>
       } @else {
         <div class="pronto" aria-live="polite">
@@ -281,3 +338,10 @@
     }
   </ng-template>
 </p-dialog>
+
+<app-categoria-dialogo
+  [pedido]="novaCategoria()"
+  [grupos]="gruposParaNovaCategoria()"
+  (fechar)="fecharNovaCategoria()"
+  (salva)="categoriaCriada($event)"
+/>

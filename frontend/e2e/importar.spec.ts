@@ -120,6 +120,11 @@ test('revisa o PDF do banco, exige categoria e importa sem duplicar itens conhec
   await expect(
     page.getByRole('checkbox', { name: 'Importar Compra anterior', exact: true }),
   ).not.toBeChecked();
+  const revisao = page.getByRole('dialog', { name: 'Importar extrato' });
+  const despesas = revisao.getByRole('button', { name: /^Despesas/ });
+  await expect(despesas).toHaveAttribute('aria-expanded', 'true');
+  await expect(despesas).toContainText('1 sem categoria');
+  await expect(revisao.getByRole('button', { name: /^Receitas/ })).toHaveCount(0);
   const confirmar = page.getByRole('button', { name: 'Confirmar importação' });
   await expect(confirmar).toBeDisabled();
   await page.getByRole('combobox', { name: 'Categoria de COMPRA DÉBITO PADARIA' }).click();

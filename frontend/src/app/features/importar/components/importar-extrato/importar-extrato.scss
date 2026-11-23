@@ -172,6 +172,11 @@
   gap: var(--e3);
 }
 
+.secao {
+  display: grid;
+  gap: var(--e2);
+}
+
 .transacoes {
   margin: 0;
   padding: 0;

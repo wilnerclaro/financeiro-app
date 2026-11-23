@@ -106,41 +106,93 @@
           </div>
         </div>
       } @else {
-        <fieldset class="campo">
-          <legend class="rotulo-campo">Categoria</legend>
-          @if (sugestoes().length) {
-            <div class="chips">
-              @for (s of sugestoes(); track s.value) {
-                <button
-                  type="button"
-                  class="chip"
-                  [class.escolhido]="categoriaId() === s.value"
-                  [attr.aria-pressed]="categoriaId() === s.value"
-                  (click)="categoriaId.set(s.value)"
-                >
-                  {{ s.label }}
-                </button>
+        <fieldset class="categoria">
+          <legend class="sr-only">Categoria</legend>
+          <div class="duas">
+            <div class="campo">
+              <label for="grupo" class="rotulo-campo">Categoria</label>
+              <p-select
+                #seletorDeGrupo
+                inputId="grupo"
+                name="grupo"
+                ariaLabel="Categoria"
+                [options]="grupos()"
+                [ngModel]="grupoId()"
+                (ngModelChange)="escolherGrupo($event)"
+                [filter]="true"
+                filterBy="label"
+                placeholder="Escolha a categoria"
+                [invalid]="tentouSalvar() && !!erros().categoria"
+                emptyMessage="Nenhuma categoria"
+                emptyFilterMessage="Nenhuma categoria com esse nome"
+                [resetFilterOnHide]="true"
+                (onFilter)="filtroDoGrupo.set($event.filter)"
+                (onHide)="filtroDoGrupo.set('')"
+                fluid
+              >
+                <ng-template #footer>
+                  <button
+                    type="button"
+                    class="cadastrar-na-lista"
+                    (click)="cadastrarGrupo(seletorDeGrupo)"
+                  >
+                    <app-icone [icone]="icones.Plus" [tamanho]="16" />
+                    {{
+                      filtroDoGrupo().trim()
+                        ? 'Cadastrar “' + filtroDoGrupo().trim() + '”'
+                        : 'Cadastrar categoria'
+                    }}
+                  </button>
+                </ng-template>
+              </p-select>
+              @if (tentouSalvar() && erros().categoria) {
+                <small class="erro">{{ erros().categoria }}</small>
               }
             </div>
-          }
-          <p-select
-            inputId="categoria"
-            name="categoria"
-            [options]="opcoesDeCategoria()"
-            [ngModel]="categoriaId()"
-            (ngModelChange)="categoriaId.set($event)"
-            [filter]="true"
-            filterBy="label"
-            [placeholder]="sugestoes().length ? 'Outra categoria' : 'Escolha a categoria'"
-            ariaLabel="Categoria"
-            [invalid]="tentouSalvar() && !!erros().categoria"
-            emptyMessage="Nenhuma categoria"
-            emptyFilterMessage="Nenhuma categoria com esse nome"
-            fluid
-          />
-          @if (tentouSalvar() && erros().categoria) {
-            <small class="erro">{{ erros().categoria }}</small>
-          }
+            <div class="campo">
+              <label for="subcategoria" class="rotulo-campo">Subcategoria</label>
+              <p-select
+                #seletorDeSubcategoria
+                inputId="subcategoria"
+                name="subcategoria"
+                ariaLabel="Subcategoria"
+                [options]="subcategorias()"
+                [ngModel]="subcategoriaId()"
+                (ngModelChange)="subcategoriaId.set($event)"
+                [disabled]="!grupoEscolhido()"
+                [filter]="true"
+                filterBy="label"
+                [showClear]="true"
+                [placeholder]="placeholderDaSubcategoria()"
+                emptyMessage="Esta categoria ainda não tem subcategorias"
+                emptyFilterMessage="Nenhuma subcategoria com esse nome"
+                [resetFilterOnHide]="true"
+                (onFilter)="filtroDaSubcategoria.set($event.filter)"
+                (onHide)="filtroDaSubcategoria.set('')"
+                fluid
+              >
+                <ng-template #footer>
+                  <button
+                    type="button"
+                    class="cadastrar-na-lista"
+                    (click)="cadastrarSubcategoria(seletorDeSubcategoria)"
+                  >
+                    <app-icone [icone]="icones.Plus" [tamanho]="16" />
+                    {{
+                      filtroDaSubcategoria().trim()
+                        ? 'Cadastrar “' + filtroDaSubcategoria().trim() + '”'
+                        : 'Nova subcategoria em ' + grupoEscolhido()?.label
+                    }}
+                  </button>
+                </ng-template>
+              </p-select>
+              @if (subcategorias().length && !subcategoriaId()) {
+                <small class="aux"
+                  >Opcional. Sem ela, entra direto em {{ grupoEscolhido()?.label }}.</small
+                >
+              }
+            </div>
+          </div>
         </fieldset>
 
         <div class="campo">
@@ -309,6 +361,13 @@
     </form>
   }
 </div>
+
+<app-categoria-dialogo
+  [pedido]="novaCategoria()"
+  [grupos]="gruposParaNovaCategoria()"
+  (fechar)="novaCategoria.set(null)"
+  (salva)="categoriaCriada($event)"
+/>
 
 <app-conta-dialogo
   [modo]="cadastrandoConta() ? 'criar' : null"

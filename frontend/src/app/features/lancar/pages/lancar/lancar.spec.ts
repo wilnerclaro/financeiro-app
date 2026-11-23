@@ -4,9 +4,11 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { Router, provideRouter } from '@angular/router';
 import { MessageService } from 'primeng/api';
+import { Select } from 'primeng/select';
 import {
   CATEGORIAS,
   CONTAS,
+  categoria,
   inicio,
   lancamento,
   pagina,
@@ -57,19 +59,128 @@ describe('Lancar', () => {
     await fixture.whenStable();
   }
 
+  function escolherCategoria(grupoId: string, subcategoriaId: string | null = null): void {
+    tela()['escolherGrupo'](grupoId);
+    tela()['subcategoriaId'].set(subcategoriaId);
+  }
+
   function botao(rotulo: string): HTMLButtonElement {
     return Array.from(el().querySelectorAll<HTMLButtonElement>('button')).find((b) =>
       b.textContent?.includes(rotulo),
     )!;
   }
 
-  it('abre com a conta sugerida e as categorias mais usadas', async () => {
+  it('abre com a conta sugerida e a categoria em lista suspensa, sem chips', async () => {
     await carregarNovo();
 
     expect(tela()['contaId']()).toBe('c2');
-    const chips = Array.from(el().querySelectorAll('.chip')).map((c) => c.textContent?.trim());
-    expect(chips).toEqual(['Supermercado', 'Padaria']);
+    expect(el().querySelector('.chip')).toBeNull();
+    expect(el().querySelector('#grupo')).not.toBeNull();
+    expect(texto()).toContain('Escolha a categoria antes');
     expect(texto()).toContain('Já paguei');
+  });
+
+  it('agrupa as categorias do tipo escolhido pela categoria pai', async () => {
+    await carregarNovo();
+
+    expect(
+      tela()
+        ['grupos']()
+        .map((g) => [g.label, g.subcategorias.map((s) => s.label)]),
+    ).toEqual([
+      ['Alimentação', ['Padaria', 'Supermercado']],
+      ['Moradia', ['Conta de luz']],
+      ['Pet', []],
+    ]);
+    tela()['escolherTipo']('RECEITA');
+    expect(
+      tela()
+        ['grupos']()
+        .map((g) => g.label),
+    ).toEqual(['Receitas ativas']);
+  });
+
+  it('a subcategoria depende do grupo e é opcional', async () => {
+    await carregarNovo();
+    escolherCategoria('cat-alimentacao', 'cat-padaria');
+    expect(tela()['categoriaId']()).toBe('cat-padaria');
+
+    tela()['escolherGrupo']('cat-moradia');
+    expect(tela()['subcategoriaId']()).toBeNull();
+    expect(tela()['categoriaId']()).toBe('cat-moradia');
+    await fixture.whenStable();
+    expect(texto()).toContain('Opcional. Sem ela, entra direto em Moradia.');
+
+    tela()['escolherGrupo']('cat-pet');
+    await fixture.whenStable();
+    expect(tela()['subcategorias']()).toEqual([]);
+    expect(texto()).toContain('Nenhuma ainda');
+  });
+
+  it('cadastra a categoria que não achou na pesquisa e já deixa escolhida', async () => {
+    await carregarNovo();
+    const seletor = { hide: vi.fn() } as unknown as Select;
+    tela()['filtroDoGrupo'].set('Educação');
+    tela()['cadastrarGrupo'](seletor);
+    expect(seletor.hide).toHaveBeenCalled();
+    expect(tela()['novaCategoria']()).toEqual({
+      tipo: 'DESPESA',
+      categoriaPaiId: null,
+      nome: 'Educação',
+    });
+    expect(
+      tela()
+        ['gruposParaNovaCategoria']()
+        .map((g) => g.label),
+    ).toEqual(['Alimentação', 'Moradia', 'Pet']);
+
+    const educacao = categoria({
+      id: 'cat-educacao',
+      categoriaPaiId: null,
+      nomeCategoriaPai: null,
+      nome: 'Educação',
+    });
+    tela()['categoriaCriada'](educacao);
+    expect(tela()['novaCategoria']()).toBeNull();
+    expect(tela()['grupoId']()).toBe('cat-educacao');
+
+    tela()['filtroDaSubcategoria'].set('Cursos');
+    tela()['cadastrarSubcategoria'](seletor);
+    expect(tela()['novaCategoria']()).toEqual(
+      expect.objectContaining({ categoriaPaiId: 'cat-educacao', nome: 'Cursos' }),
+    );
+    tela()['categoriaCriada'](
+      categoria({
+        id: 'cat-cursos',
+        categoriaPaiId: 'cat-educacao',
+        nomeCategoriaPai: 'Educação',
+        nome: 'Cursos',
+      }),
+    );
+    expect(tela()['grupoId']()).toBe('cat-educacao');
+    expect(tela()['subcategoriaId']()).toBe('cat-cursos');
+    expect(
+      tela()
+        ['grupos']()
+        .find((g) => g.value === 'cat-educacao')?.subcategorias,
+    ).toEqual([{ label: 'Cursos', value: 'cat-cursos' }]);
+    expect(tela()['nomeDaCategoria']()).toBe('Cursos');
+  });
+
+  it('subcategoria cujo grupo está inativo vira grupo com o caminho no nome', async () => {
+    criar();
+    http.expectOne('/api/contas?ativa=true&size=200&sort=nome').flush(pagina(CONTAS));
+    http
+      .expectOne('/api/categorias?ativa=true&size=500&sort=nome')
+      .flush(pagina(CATEGORIAS.filter((c) => c.id !== 'cat-moradia')));
+    http.expectOne('/api/dashboard-financeiro/inicio').flush(inicio());
+    await fixture.whenStable();
+
+    expect(
+      tela()
+        ['grupos']()
+        .map((g) => g.label),
+    ).toContain('Moradia › Conta de luz');
   });
 
   it('não envia sem valor nem categoria', async () => {
@@ -85,7 +196,7 @@ describe('Lancar', () => {
     await carregarNovo();
     fixture.componentRef.setInput('configuracaoInicial', 'true');
     tela()['valor'].set(50);
-    tela()['categoriaId'].set('cat-mercado');
+    escolherCategoria('cat-alimentacao', 'cat-mercado');
     tela()['salvar'](false);
     http.expectOne('/api/lancamentos-financeiros').flush(lancamento());
     const configuracao = {
@@ -122,7 +233,7 @@ describe('Lancar', () => {
     http.expectOne('/api/dashboard-financeiro/inicio').flush(inicio());
     await fixture.whenStable();
     tela()['valor'].set(1500);
-    tela()['categoriaId'].set('cat-mercado');
+    escolherCategoria('cat-alimentacao', 'cat-mercado');
     tela()['descricao'].set('Compra planejada');
 
     botao('Cadastre uma conta primeiro').click();
@@ -150,7 +261,7 @@ describe('Lancar', () => {
     await carregarNovo();
     const avisos = vi.spyOn(TestBed.inject(MessageService), 'add');
     tela()['valor'].set(45.9);
-    botao('Supermercado').click();
+    escolherCategoria('cat-alimentacao', 'cat-mercado');
     tela()['salvar'](false);
 
     const pedido = http.expectOne('/api/lancamentos-financeiros');
@@ -175,7 +286,7 @@ describe('Lancar', () => {
     await carregarNovo();
     tela()['escolherTipo']('RECEITA');
     tela()['valor'].set(8000);
-    tela()['categoriaId'].set('cat-salario');
+    escolherCategoria('cat-renda', 'cat-salario');
     tela()['maisDetalhes'].set(true);
     tela()['descricao'].set('  Salário de novembro ');
     tela()['observacao'].set('Empresa X');
@@ -199,6 +310,7 @@ describe('Lancar', () => {
 
     expect(tela()['valor']()).toBeNull();
     expect(tela()['categoriaId']()).toBeNull();
+    expect(tela()['grupoId']()).toBeNull();
     expect(tela()['tipo']()).toBe('RECEITA');
     expect(router.navigateByUrl).not.toHaveBeenCalled();
   });
@@ -245,7 +357,7 @@ describe('Lancar', () => {
     await carregarNovo();
     const avisos = vi.spyOn(TestBed.inject(MessageService), 'add');
     tela()['valor'].set(10);
-    tela()['categoriaId'].set('cat-mercado');
+    escolherCategoria('cat-alimentacao', 'cat-mercado');
     tela()['salvar'](false);
     http
       .expectOne('/api/lancamentos-financeiros')
@@ -257,7 +369,7 @@ describe('Lancar', () => {
     expect(tela()['salvando']()).toBe(false);
   });
 
-  it('sem sugestão usa a primeira conta e segue sem as mais usadas', async () => {
+  it('sem sugestão usa a primeira conta', async () => {
     criar();
     http.expectOne('/api/contas?ativa=true&size=200&sort=nome').flush(pagina(CONTAS));
     http.expectOne('/api/categorias?ativa=true&size=500&sort=nome').flush(pagina(CATEGORIAS));
@@ -267,7 +379,6 @@ describe('Lancar', () => {
     await fixture.whenStable();
 
     expect(tela()['contaId']()).toBe('c1');
-    expect(el().querySelector('.chip')).toBeNull();
   });
 
   it('edita um lançamento existente', async () => {
@@ -288,11 +399,26 @@ describe('Lancar', () => {
 
     expect(texto()).toContain('Editar lançamento');
     expect(tela()['observacao']()).toBe('parcela');
+    expect(tela()['grupoId']()).toBe('cat-alimentacao');
+    expect(tela()['subcategoriaId']()).toBe('cat-mercado');
     tela()['salvar'](false);
     const pedido = http.expectOne('/api/lancamentos-financeiros/l9');
     expect(pedido.request.method).toBe('PUT');
     expect(pedido.request.body.dataCompetencia).toBe('2026-11-02');
     pedido.flush(lancamento());
+  });
+
+  it('edita um lançamento feito direto no grupo', async () => {
+    criar('l8');
+    http.expectOne('/api/contas?ativa=true&size=200&sort=nome').flush(pagina(CONTAS));
+    http.expectOne('/api/categorias?ativa=true&size=500&sort=nome').flush(pagina(CATEGORIAS));
+    http
+      .expectOne('/api/lancamentos-financeiros/l8')
+      .flush(lancamento({ id: 'l8', categoriaId: 'cat-moradia', nomeCategoria: 'Moradia' }));
+    await fixture.whenStable();
+
+    expect(tela()['grupoId']()).toBe('cat-moradia');
+    expect(tela()['subcategoriaId']()).toBeNull();
   });
 
   it('mostra erro quando não consegue abrir e tenta de novo', async () => {
