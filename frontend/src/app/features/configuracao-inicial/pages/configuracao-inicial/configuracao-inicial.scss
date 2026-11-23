@@ -74,24 +74,6 @@
 .periodo {
   margin-bottom: var(--e4);
 }
-.linha {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 150px 110px;
-  gap: var(--e3);
-  align-items: center;
-  padding: var(--e2) 0;
-  border-bottom: 1px solid var(--p-content-border-color);
-}
-.linha > :last-child,
-.linha > strong {
-  text-align: right;
-}
-.linha label {
-  overflow-wrap: anywhere;
-}
-.subitem label {
-  padding-left: var(--e4);
-}
 .resumo,
 .conta {
   display: flex;
@@ -101,6 +83,14 @@
   gap: var(--e4);
   padding: var(--e4) 0;
   border-bottom: 1px solid var(--p-content-border-color);
+}
+.resumo.fixo {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin-top: var(--e2);
+  background: var(--p-content-background);
+  border-top: 1px solid var(--p-content-border-color);
 }
 .acoes-conta,
 .direita {
@@ -124,6 +114,21 @@
   color: var(--des);
   margin-top: var(--e4);
 }
+@media (max-width: 700px) {
+  .resumo.fixo {
+    bottom: calc(65px + env(safe-area-inset-bottom));
+    flex-wrap: nowrap;
+    gap: var(--e2);
+    padding: var(--e3) 0;
+  }
+  .resumo.fixo .aux {
+    font-size: 12px;
+  }
+  .resumo.fixo .valor {
+    font-size: 18px;
+    white-space: nowrap;
+  }
+}
 @media (max-width: 850px) {
   .assistente {
     grid-template-columns: 1fr;
@@ -135,16 +140,6 @@
 @media (max-width: 500px) {
   .painel {
     padding: var(--e4);
-  }
-  .linha {
-    grid-template-columns: minmax(0, 1fr) 110px 85px;
-    gap: var(--e1);
-  }
-  .linha > :last-child {
-    font-size: 12px;
-  }
-  .subitem label {
-    padding-left: 0;
   }
   .direita {
     width: 100%;

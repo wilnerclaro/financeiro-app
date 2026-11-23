@@ -99,6 +99,19 @@ describe('Configuração inicial', () => {
     http.expectNone(URL);
   });
 
+  it('mostra receitas, despesas e sobra previstas somando as edições', async () => {
+    await carregar({ etapa: 'ORCAMENTO' });
+    const base = tela()['previsto']();
+    tela()['editar']('cat-mercado', base.despesas + 1000);
+    tela()['editar']('cat-salario', null);
+    const depois = tela()['previsto']();
+    expect(depois.despesas).toBeGreaterThan(base.despesas);
+    expect(tela()['sobra']()).toBe(depois.saldo);
+    await fixture.whenStable();
+    expect(fixture.nativeElement.textContent).toContain('Sobra prevista');
+    expect(fixture.nativeElement.querySelector('app-previsto-por-grupo')).not.toBeNull();
+  });
+
   it('troca o mês somente depois de carregar e persistir a nova competência', async () => {
     await carregar({ etapa: 'ORCAMENTO' });
     tela()['trocarMes']({ ano: 2027, mes: 1 });

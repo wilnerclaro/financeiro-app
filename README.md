@@ -163,7 +163,8 @@ documentação completa fica no Swagger (`/swagger-ui.html`).
 ## Publicar numa VPS
 
 Para colocar o app no ar com HTTPS e backup diário, siga
-[docs/DEPLOY-VPS.md](docs/DEPLOY-VPS.md).
+[docs/DEPLOY-VPS.md](docs/DEPLOY-VPS.md). A produção roda a branch `main`:
+publicar é abrir um PR de `develop` para `main` e mesclar.
 
 ## Problemas comuns
 

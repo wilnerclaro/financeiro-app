@@ -95,46 +95,20 @@
               <app-seletor-mes [mes]="mes()" (mesChange)="trocarMes($event)" />
             </div>
             <div class="superficie painel">
-              @for (bloco of blocos(); track bloco.tipo) {
-                <h2
-                  class="titulo-secao"
-                  [class.rec]="bloco.tipo === 'RECEITA'"
-                  [class.des]="bloco.tipo === 'DESPESA'"
-                >
-                  {{ bloco.titulo }}
-                </h2>
-                <div class="linha cabecalho aux">
-                  <span>Categoria</span><span>Previsto</span><span>Realizado</span>
+              <app-previsto-por-grupo
+                [blocos]="blocos()"
+                [editados]="editados()"
+                [desabilitado]="salvando()"
+                (editar)="editar($event.id, $event.valor)"
+              />
+              <div class="resumo fixo">
+                <div>
+                  <h2 class="titulo-secao">Sobra prevista</h2>
+                  <p class="aux num">
+                    <span class="rec">Receitas {{ brl(previsto().receitas) }}</span> ·
+                    <span class="des">Despesas {{ brl(previsto().despesas) }}</span>
+                  </p>
                 </div>
-                @for (linha of bloco.linhas; track linha.id) {
-                  <div class="linha" [class.subitem]="linha.sub">
-                    <label [for]="'previsto-' + linha.id">{{ linha.nome }}</label>
-                    @if (linha.editavel) {
-                      <p-inputnumber
-                        [inputId]="'previsto-' + linha.id"
-                        [ariaLabel]="linha.nome + ', previsto'"
-                        mode="currency"
-                        currency="BRL"
-                        locale="pt-BR"
-                        [min]="0"
-                        [ngModel]="valor(linha)"
-                        (ngModelChange)="editar(linha.id, $event)"
-                        (onFocus)="selecionarValor($event)"
-                        (click)="selecionarValor($event)"
-                        [disabled]="salvando()"
-                        fluid
-                      />
-                    } @else {
-                      <strong class="num">{{ brl(totalGrupo(linha)) }}</strong>
-                    }
-                    <span class="num aux">{{ brl(linha.realizado) }}</span>
-                  </div>
-                } @empty {
-                  <p class="aux">Nenhuma categoria disponível.</p>
-                }
-              }
-              <div class="resumo">
-                <h2 class="titulo-secao">Sobra prevista</h2>
                 <strong class="valor num" [class.ok]="sobra() >= 0" [class.des]="sobra() < 0">{{
                   brl(sobra())
                 }}</strong>
