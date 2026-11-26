@@ -104,7 +104,7 @@ Estas decisões foram aprovadas pelo usuário (Wilner). São requisitos confirma
 
 ### Stack e biblioteca (14/11/2026)
 
-- Angular 22, PrimeNG 22, `@primeuix/themes` 3, preset Aura com primário esmeralda, modo escuro pela classe `app-dark` (escuro é o padrão, com troca manual).
+- Angular 22, PrimeNG 22, `@primeuix/themes` 3, preset Aura com primário esmeralda, modo escuro pela classe `app-dark` (claro é o padrão, com troca manual).
 - Licença PrimeUI Community, chave em `frontend/src/environments/`. Vence em 14/11/2027: renovar antes em https://primeui.dev/licenses/community.
 - No PrimeNG 22, `p-card`, `p-message`, `p-chip`, `p-table`, `p-treetable` e `p-selectbutton` usam `class` em vez de `styleClass`. `p-button` ainda aceita `styleClass`.
 - Ícones: **Lucide** (pacote `lucide`, sem wrapper Angular; o `lucide-angular` não aceita Angular 22), 16px, traço 1,75, renderizado por um componente de ícone do projeto. `primeicons` fica só onde o PrimeNG usa por dentro. Não misture os dois no conteúdo da tela.
