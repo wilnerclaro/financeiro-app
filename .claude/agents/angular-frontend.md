@@ -219,7 +219,7 @@ Regras:
 - Receita sempre azul, despesa sempre vermelha; escala do orçamento verde,
   amarelo, laranja e vermelho, igual em todas as telas. Cor nunca é o único
   sinal.
-- Dois temas pela classe `app-dark` no `html`: o escuro é o padrão, o botão
+- Dois temas pela classe `app-dark` no `html`: o claro é o padrão, o botão
   sol/lua troca e a escolha fica guardada (`core/config/tema.ts`).
 - Sem sobrescrita CSS arbitrária, sem estilo inline desnecessário, sem
   duplicar componente existente. Wrapper só quando agregar valor concreto.
