@@ -25,9 +25,9 @@ export class Tema {
 
   private preferenciaInicial(): boolean {
     try {
-      return localStorage.getItem(CHAVE_TEMA) !== 'claro';
+      return localStorage.getItem(CHAVE_TEMA) === 'escuro';
     } catch {
-      return true;
+      return false;
     }
   }
 }

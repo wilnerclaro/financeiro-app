@@ -26,7 +26,7 @@ O front usa PrimeNG 22 sobre Angular 22. A decisão foi tomada em 14/11/2026, de
 | PrimeNG | 22.1.5, com `@primeuix/themes` 3 e `primeicons` |
 | Gráficos | chart.js, via `p-chart` |
 | Tema | Preset Aura com primário esmeralda (`definePreset`), ripple ligado |
-| Modo escuro | Classe `app-dark` no `html`; o escuro é o padrão e o botão sol/lua troca |
+| Modo escuro | Classe `app-dark` no `html`; o claro é o padrão e o botão sol/lua troca |
 | Rotas | `withHashLocation` e `withViewTransitions` |
 | Fonte | Inter |
 | Avisos | `p-toast` no topo central, um `MessageService` para o app todo |
@@ -195,7 +195,7 @@ A conta conciliada com o previsto não soma nas saídas: só marca o previsto co
 
 - [ ] Angular 22 e PrimeNG 22 com tema Aura em verde esmeralda
 - [ ] Chave Community configurada; nenhum selo "Invalid PrimeUI License"
-- [ ] Tema escuro padrão e sol/lua trocando tudo, inclusive gráficos
+- [ ] Tema claro padrão e sol/lua trocando tudo, inclusive gráficos
 - [ ] Receita sempre azul e despesa sempre vermelha, nos dois temas
 - [ ] Escala do orçamento igual em todas as telas
 - [ ] Menu com os cinco destinos e item ativo destacado
